@@ -1,106 +1,102 @@
-import { getDb } from "./db";
+import { supabase } from "./db";
 
-export function getPolls() {
-  const db = getDb();
-  return db.prepare(`
-    SELECT p.*,
-      (SELECT COUNT(*) FROM responses r WHERE r.poll_id = p.id) as response_count,
-      (SELECT COUNT(*) FROM roster_members rm WHERE rm.poll_id = p.id) as member_count
-    FROM polls p ORDER BY p.created_at DESC
-  `).all() as { id: string; title: string; phase: string; response_count: number; member_count: number }[];
+export async function getPolls() {
+  const { data: polls } = await supabase
+    .from("polls")
+    .select("*")
+    .order("created_at", { ascending: false });
+
+  if (!polls) return [];
+
+  // Get counts for each poll
+  return Promise.all(polls.map(async (p) => {
+    const { count: response_count } = await supabase
+      .from("responses")
+      .select("*", { count: "exact", head: true })
+      .eq("poll_id", p.id);
+    const { count: member_count } = await supabase
+      .from("roster_members")
+      .select("*", { count: "exact", head: true })
+      .eq("poll_id", p.id);
+    return { ...p, response_count: response_count ?? 0, member_count: member_count ?? 0 };
+  }));
 }
 
-export function getPoll(id: string) {
-  const db = getDb();
-  const poll = db.prepare(`SELECT * FROM polls WHERE id = ?`).get(id) as Record<string, unknown> | undefined;
+export async function getPoll(id: string) {
+  const { data: poll } = await supabase.from("polls").select("*").eq("id", id).single();
   if (!poll) return null;
 
-  const options = db.prepare(`SELECT * FROM options WHERE poll_id = ? ORDER BY sort_order`).all(id);
-  const members = db.prepare(`SELECT * FROM roster_members WHERE poll_id = ?`).all(id);
-  const tokens = db.prepare(`SELECT * FROM poll_tokens WHERE poll_id = ?`).all(id);
-  const responses = db.prepare(`SELECT * FROM responses WHERE poll_id = ?`).all(id);
+  const { data: options } = await supabase.from("options").select("*").eq("poll_id", id).order("sort_order");
+  const { data: members } = await supabase.from("roster_members").select("*").eq("poll_id", id);
+  const { data: tokens } = await supabase.from("poll_tokens").select("*").eq("poll_id", id);
+  const { data: responses } = await supabase.from("responses").select("*").eq("poll_id", id);
 
-  return { ...poll, options, members, tokens, responses };
+  return { ...poll, options: options ?? [], members: members ?? [], tokens: tokens ?? [], responses: responses ?? [] };
 }
 
-export function getPollResults(pollId: string) {
-  const db = getDb();
-
-  const poll = db.prepare(`SELECT * FROM polls WHERE id = ?`).get(pollId) as Record<string, unknown> | undefined;
+export async function getPollResults(pollId: string) {
+  const { data: poll } = await supabase.from("polls").select("*").eq("id", pollId).single();
   if (!poll) return null;
 
-  const options = db.prepare(`SELECT * FROM options WHERE poll_id = ? ORDER BY sort_order`).all(pollId) as {
-    id: string; label: string; starts_at: string; capacity: number | null; confirmed: number; sort_order: number;
-  }[];
+  const { data: options } = await supabase.from("options").select("*").eq("poll_id", pollId).order("sort_order");
+  if (!options) return null;
 
-  const totalResponses = (db.prepare(`SELECT COUNT(*) as c FROM responses WHERE poll_id = ?`).get(pollId) as { c: number }).c;
-  const votedCount = (db.prepare(`SELECT COUNT(*) as c FROM responses WHERE poll_id = ? AND response_type = 'voted'`).get(pollId) as { c: number }).c;
-  const notInterestedCount = (db.prepare(`SELECT COUNT(*) as c FROM responses WHERE poll_id = ? AND response_type = 'not_interested'`).get(pollId) as { c: number }).c;
-  const noneWorkCount = (db.prepare(`SELECT COUNT(*) as c FROM responses WHERE poll_id = ? AND response_type = 'none_work'`).get(pollId) as { c: number }).c;
-  const inflexibleCount = (db.prepare(`SELECT COUNT(*) as c FROM responses WHERE poll_id = ? AND flexibility = 'inflexible' AND response_type = 'voted'`).get(pollId) as { c: number }).c;
+  // Fetch all responses and slots in bulk (avoid N+1)
+  const { data: allResponses } = await supabase.from("responses").select("*").eq("poll_id", pollId);
+  const { data: allSlots } = await supabase
+    .from("response_slots")
+    .select("*, responses!inner(poll_id, response_type)")
+    .eq("responses.poll_id", pollId);
+  const { data: allOffers } = await supabase
+    .from("offers")
+    .select("*, responses!inner(poll_id, member_id)")
+    .eq("responses.poll_id", pollId);
+
+  const responses = allResponses ?? [];
+  const slots = allSlots ?? [];
+  const offers = allOffers ?? [];
+
+  const votedResponses = responses.filter((r) => r.response_type === "voted");
+  const totalResponses = responses.length;
+  const votedCount = votedResponses.length;
+  const notInterestedCount = responses.filter((r) => r.response_type === "not_interested").length;
+  const noneWorkCount = responses.filter((r) => r.response_type === "none_work").length;
+  const inflexibleCount = votedResponses.filter((r) => r.flexibility === "inflexible").length;
   const flexibleCount = votedCount - inflexibleCount;
 
+  // Build slot stats
+  const votedSlots = slots.filter((s) => s.responses?.response_type === "voted");
+
   const slotStats = options.map((opt) => {
-    const available = (db.prepare(`
-      SELECT COUNT(*) as c FROM response_slots rs
-      JOIN responses r ON r.id = rs.response_id
-      WHERE rs.option_id = ? AND rs.status = 'available' AND r.response_type = 'voted'
-    `).get(opt.id) as { c: number }).c;
+    const optSlots = votedSlots.filter((s) => s.option_id === opt.id);
+    const available = optSlots.filter((s) => s.status === "available").length;
+    const unable = optSlots.filter((s) => s.status === "unable").length;
 
-    const unable = (db.prepare(`
-      SELECT COUNT(*) as c FROM response_slots rs
-      JOIN responses r ON r.id = rs.response_id
-      WHERE rs.option_id = ? AND rs.status = 'unable' AND r.response_type = 'voted'
-    `).get(opt.id) as { c: number }).c;
+    // Criticality: voters for whom this is their only available slot
+    const availableResponseIds = new Set(optSlots.filter((s) => s.status === "available").map((s) => s.response_id));
+    let onlyOption = 0;
+    for (const rid of availableResponseIds) {
+      const allAvailForVoter = votedSlots.filter((s) => s.response_id === rid && s.status === "available");
+      if (allAvailForVoter.length === 1) onlyOption++;
+    }
 
-    const onlyOption = (db.prepare(`
-      SELECT COUNT(*) as c FROM responses r
-      WHERE r.poll_id = ? AND r.response_type = 'voted'
-      AND r.id IN (
-        SELECT rs1.response_id FROM response_slots rs1
-        WHERE rs1.option_id = ? AND rs1.status = 'available'
-      )
-      AND (
-        SELECT COUNT(*) FROM response_slots rs2
-        WHERE rs2.response_id = r.id AND rs2.status = 'available'
-      ) = 1
-    `).get(pollId, opt.id) as { c: number }).c;
-
-    const bordaRows = db.prepare(`
-      SELECT rs.rank,
-        (SELECT COUNT(*) FROM response_slots rs2 WHERE rs2.response_id = rs.response_id AND rs2.status = 'available') as n_available
-      FROM response_slots rs
-      JOIN responses r ON r.id = rs.response_id
-      WHERE rs.option_id = ? AND rs.status = 'available' AND r.response_type = 'voted'
-    `).all(opt.id) as { rank: number | null; n_available: number }[];
-
+    // Borda score
     let bordaScore = 0;
-    for (const row of bordaRows) {
-      if (row.rank != null) {
-        bordaScore += Math.max(0, row.n_available - row.rank + 1);
+    for (const s of optSlots.filter((s) => s.status === "available")) {
+      const nAvail = votedSlots.filter((vs) => vs.response_id === s.response_id && vs.status === "available").length;
+      if (s.rank != null) {
+        bordaScore += Math.max(0, nAvail - s.rank + 1);
       } else {
         bordaScore += 0.5;
       }
     }
 
-    const inflexAvailable = (db.prepare(`
-      SELECT COUNT(*) as c FROM response_slots rs
-      JOIN responses r ON r.id = rs.response_id
-      WHERE rs.option_id = ? AND rs.status = 'available' AND r.flexibility = 'inflexible' AND r.response_type = 'voted'
-    `).get(opt.id) as { c: number }).c;
+    // Inflexible breakdown
+    const inflexResponseIds = new Set(votedResponses.filter((r) => r.flexibility === "inflexible").map((r) => r.id));
+    const inflexAvailable = optSlots.filter((s) => s.status === "available" && inflexResponseIds.has(s.response_id)).length;
+    const inflexUnable = optSlots.filter((s) => s.status === "unable" && inflexResponseIds.has(s.response_id)).length;
 
-    const inflexUnable = (db.prepare(`
-      SELECT COUNT(*) as c FROM response_slots rs
-      JOIN responses r ON r.id = rs.response_id
-      WHERE rs.option_id = ? AND rs.status = 'unable' AND r.flexibility = 'inflexible' AND r.response_type = 'voted'
-    `).get(opt.id) as { c: number }).c;
-
-    // Count offers for this slot
-    const assignedCount = (db.prepare(`
-      SELECT COUNT(*) as c FROM offers o
-      JOIN responses r ON r.id = o.response_id
-      WHERE o.option_id = ? AND r.poll_id = ?
-    `).get(opt.id, pollId) as { c: number }).c;
+    const assignedCount = offers.filter((o) => o.option_id === opt.id).length;
 
     return {
       ...opt,
@@ -114,36 +110,49 @@ export function getPollResults(pollId: string) {
     };
   });
 
-  const members = db.prepare(`
-    SELECT rm.id, rm.name, rm.email, pt.used_at,
-      r.id as response_id, r.flexibility, r.response_type
-    FROM roster_members rm
-    LEFT JOIN poll_tokens pt ON pt.member_id = rm.id AND pt.poll_id = ?
-    LEFT JOIN responses r ON r.member_id = rm.id AND r.poll_id = ?
-    WHERE rm.poll_id = ?
-    ORDER BY rm.name
-  `).all(pollId, pollId, pollId) as {
-    id: string; name: string; email: string; used_at: string | null;
-    response_id: string | null; flexibility: string | null; response_type: string | null;
-  }[];
+  // Members with response info
+  const { data: members } = await supabase
+    .from("roster_members")
+    .select("id, name, email")
+    .eq("poll_id", pollId)
+    .order("name");
 
-  const memberSlots = db.prepare(`
-    SELECT rs.response_id, rs.option_id, rs.status, rs.rank
-    FROM response_slots rs
-    JOIN responses r ON r.id = rs.response_id
-    WHERE r.poll_id = ? AND r.response_type = 'voted'
-  `).all(pollId) as { response_id: string; option_id: string; status: string; rank: number | null }[];
+  const { data: tokens } = await supabase.from("poll_tokens").select("member_id, used_at").eq("poll_id", pollId);
 
-  const offers = db.prepare(`
-    SELECT o.response_id, o.option_id, rm.name, rm.email
-    FROM offers o
-    JOIN responses r ON r.id = o.response_id
-    JOIN roster_members rm ON rm.id = r.member_id
-    WHERE r.poll_id = ?
-  `).all(pollId) as { response_id: string; option_id: string; name: string; email: string }[];
+  const tokenMap = new Map((tokens ?? []).map((t) => [t.member_id, t.used_at]));
+  const responseMap = new Map(responses.map((r) => [r.member_id, r]));
 
-  // Has assignments been run?
-  const hasOffers = offers.length > 0;
+  const membersWithInfo = (members ?? []).map((m) => ({
+    id: m.id,
+    name: m.name,
+    email: m.email,
+    used_at: tokenMap.get(m.id) ?? null,
+    response_id: responseMap.get(m.id)?.id ?? null,
+    flexibility: responseMap.get(m.id)?.flexibility ?? null,
+    response_type: responseMap.get(m.id)?.response_type ?? null,
+  }));
+
+  const memberSlots = votedSlots.map((s) => ({
+    response_id: s.response_id,
+    option_id: s.option_id,
+    status: s.status,
+    rank: s.rank,
+  }));
+
+  // Offers with member info
+  const memberIdMap = new Map(responses.map((r) => [r.id, r.member_id]));
+  const memberNameMap = new Map((members ?? []).map((m) => [m.id, { name: m.name, email: m.email }]));
+
+  const offersWithNames = offers.map((o) => {
+    const memberId = memberIdMap.get(o.response_id);
+    const member = memberId ? memberNameMap.get(memberId) : null;
+    return {
+      response_id: o.response_id,
+      option_id: o.option_id,
+      name: member?.name ?? "",
+      email: member?.email ?? "",
+    };
+  });
 
   return {
     poll,
@@ -154,79 +163,98 @@ export function getPollResults(pollId: string) {
     noneWorkCount,
     flexibleCount,
     inflexibleCount,
-    members,
+    members: membersWithInfo,
     memberSlots,
-    offers,
-    hasOffers,
+    offers: offersWithNames,
+    hasOffers: offers.length > 0,
   };
 }
 
-export function getSlotAttendees(pollId: string, optionId: string) {
-  const db = getDb();
-
-  const option = db.prepare(`SELECT * FROM options WHERE id = ? AND poll_id = ?`).get(optionId, pollId) as {
-    id: string; label: string; starts_at: string; capacity: number | null; confirmed: number;
-  } | undefined;
+export async function getSlotAttendees(pollId: string, optionId: string) {
+  const { data: option } = await supabase.from("options").select("*").eq("id", optionId).eq("poll_id", pollId).single();
   if (!option) return null;
 
-  const poll = db.prepare(`SELECT id, title, phase FROM polls WHERE id = ?`).get(pollId) as {
-    id: string; title: string; phase: string;
+  const { data: poll } = await supabase.from("polls").select("id, title, phase").eq("id", pollId).single();
+
+  // Get all offers for this slot
+  const { data: offerRows } = await supabase
+    .from("offers")
+    .select("response_id, option_id")
+    .eq("option_id", optionId);
+
+  const offerResponseIds = new Set((offerRows ?? []).map((o) => o.response_id));
+
+  // Get all responses that marked this slot available
+  const { data: availSlots } = await supabase
+    .from("response_slots")
+    .select("response_id, option_id, status, rank")
+    .eq("option_id", optionId)
+    .eq("status", "available");
+
+  const availResponseIds = (availSlots ?? []).map((s) => s.response_id);
+  const slotRankMap = new Map((availSlots ?? []).map((s) => [s.response_id, s.rank]));
+
+  // Get response details
+  const { data: responseRows } = await supabase
+    .from("responses")
+    .select("id, member_id, flexibility, response_type")
+    .eq("poll_id", pollId)
+    .eq("response_type", "voted")
+    .in("id", availResponseIds.length > 0 ? availResponseIds : ["__none__"]);
+
+  const responseMap = new Map((responseRows ?? []).map((r) => [r.id, r]));
+  const memberIds = [...new Set((responseRows ?? []).map((r) => r.member_id))];
+
+  const { data: memberRows } = await supabase
+    .from("roster_members")
+    .select("id, name, email")
+    .in("id", memberIds.length > 0 ? memberIds : ["__none__"]);
+
+  const memberMap = new Map((memberRows ?? []).map((m) => [m.id, m]));
+
+  function buildList(responseIds: string[]) {
+    return responseIds
+      .map((rid) => {
+        const resp = responseMap.get(rid);
+        if (!resp) return null;
+        const member = memberMap.get(resp.member_id);
+        if (!member) return null;
+        return {
+          name: member.name,
+          email: member.email,
+          flexibility: resp.flexibility,
+          rank: slotRankMap.get(rid) ?? null,
+        };
+      })
+      .filter(Boolean)
+      .sort((a, b) => (a!.rank ?? 999) - (b!.rank ?? 999) || a!.name.localeCompare(b!.name)) as { name: string; email: string; flexibility: string; rank: number | null }[];
+  }
+
+  const assignedIds = availResponseIds.filter((rid) => offerResponseIds.has(rid));
+  const waitlistIds = availResponseIds.filter((rid) => !offerResponseIds.has(rid));
+
+  return {
+    poll,
+    option,
+    assigned: buildList(assignedIds),
+    waitlist: buildList(waitlistIds),
+    allAvailable: buildList(availResponseIds),
   };
-
-  // Assigned members (have offers)
-  const assigned = db.prepare(`
-    SELECT rm.name, rm.email, r.flexibility, rs.rank
-    FROM offers o
-    JOIN responses r ON r.id = o.response_id
-    JOIN roster_members rm ON rm.id = r.member_id
-    LEFT JOIN response_slots rs ON rs.response_id = r.id AND rs.option_id = o.option_id
-    WHERE o.option_id = ? AND r.poll_id = ?
-    ORDER BY COALESCE(rs.rank, 999), rm.name
-  `).all(optionId, pollId) as { name: string; email: string; flexibility: string; rank: number | null }[];
-
-  // Available but NOT assigned (waitlist / overflow)
-  const waitlist = db.prepare(`
-    SELECT rm.name, rm.email, r.flexibility, rs.rank
-    FROM response_slots rs
-    JOIN responses r ON r.id = rs.response_id
-    JOIN roster_members rm ON rm.id = r.member_id
-    WHERE rs.option_id = ? AND rs.status = 'available' AND r.poll_id = ? AND r.response_type = 'voted'
-    AND r.id NOT IN (SELECT o.response_id FROM offers o WHERE o.option_id = ?)
-    ORDER BY COALESCE(rs.rank, 999), rm.name
-  `).all(optionId, pollId, optionId) as { name: string; email: string; flexibility: string; rank: number | null }[];
-
-  // All who marked available (for pre-assignment view)
-  const allAvailable = db.prepare(`
-    SELECT rm.name, rm.email, r.flexibility, rs.rank
-    FROM response_slots rs
-    JOIN responses r ON r.id = rs.response_id
-    JOIN roster_members rm ON rm.id = r.member_id
-    WHERE rs.option_id = ? AND rs.status = 'available' AND r.poll_id = ? AND r.response_type = 'voted'
-    ORDER BY COALESCE(rs.rank, 999), rm.name
-  `).all(optionId, pollId) as { name: string; email: string; flexibility: string; rank: number | null }[];
-
-  return { poll, option, assigned, waitlist, allAvailable };
 }
 
-export function getVoteData(token: string) {
-  const db = getDb();
-  const tokenRow = db.prepare(
-    `SELECT token, poll_id, member_id, used_at FROM poll_tokens WHERE token = ?`
-  ).get(token) as { token: string; poll_id: string; member_id: string; used_at: string | null } | undefined;
-
+export async function getVoteData(token: string) {
+  const { data: tokenRow } = await supabase.from("poll_tokens").select("*").eq("token", token).single();
   if (!tokenRow) return null;
 
-  const poll = db.prepare(`SELECT * FROM polls WHERE id = ?`).get(tokenRow.poll_id) as Record<string, unknown>;
-  const options = db.prepare(`SELECT * FROM options WHERE poll_id = ? ORDER BY sort_order`).all(tokenRow.poll_id) as {
-    id: string; label: string; starts_at: string; capacity: number | null; sort_order: number;
-  }[];
-  const member = db.prepare(`SELECT * FROM roster_members WHERE id = ?`).get(tokenRow.member_id) as { id: string; name: string; email: string };
+  const { data: poll } = await supabase.from("polls").select("*").eq("id", tokenRow.poll_id).single();
+  const { data: options } = await supabase.from("options").select("*").eq("poll_id", tokenRow.poll_id).order("sort_order");
+  const { data: member } = await supabase.from("roster_members").select("*").eq("id", tokenRow.member_id).single();
 
   return {
     token: tokenRow.token,
     used: !!tokenRow.used_at,
     poll,
-    options,
+    options: options ?? [],
     member,
   };
 }

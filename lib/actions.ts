@@ -1,32 +1,25 @@
 "use server";
 
-import { getDb } from "./db";
+import { supabase } from "./db";
 import { randomUUID } from "crypto";
 import { revalidatePath } from "next/cache";
 
-// ---- Polls ----
-
 export async function createPoll(formData: FormData) {
-  const db = getDb();
   const id = randomUUID();
   const title = formData.get("title") as string;
-  const description = formData.get("description") as string || "";
-  const location = formData.get("location") as string || "";
-  const deadline = formData.get("deadline") as string || null;
+  const description = (formData.get("description") as string) || "";
+  const location = (formData.get("location") as string) || "";
+  const deadline = (formData.get("deadline") as string) || null;
 
-  db.prepare(
-    `INSERT INTO polls (id, title, description, location, deadline) VALUES (?, ?, ?, ?, ?)`
-  ).run(id, title, description, location, deadline);
+  await supabase.from("polls").insert({ id, title, description, location, deadline });
 
   const slotsJson = formData.get("slots") as string;
   if (slotsJson) {
     const slots: { label: string; starts_at: string; capacity: number | null }[] = JSON.parse(slotsJson);
-    const stmt = db.prepare(
-      `INSERT INTO options (id, poll_id, label, starts_at, capacity, sort_order) VALUES (?, ?, ?, ?, ?, ?)`
-    );
-    for (let i = 0; i < slots.length; i++) {
-      stmt.run(randomUUID(), id, slots[i].label, slots[i].starts_at, slots[i].capacity, i);
-    }
+    const rows = slots.map((s, i) => ({
+      id: randomUUID(), poll_id: id, label: s.label, starts_at: s.starts_at, capacity: s.capacity, sort_order: i,
+    }));
+    await supabase.from("options").insert(rows);
   }
 
   revalidatePath("/");
@@ -34,34 +27,19 @@ export async function createPoll(formData: FormData) {
 }
 
 export async function addSlotToPoll(pollId: string, label: string, startsAt: string) {
-  const db = getDb();
-  const maxOrder = db.prepare(
-    `SELECT COALESCE(MAX(sort_order), -1) as m FROM options WHERE poll_id = ?`
-  ).get(pollId) as { m: number };
-  db.prepare(
-    `INSERT INTO options (id, poll_id, label, starts_at, sort_order) VALUES (?, ?, ?, ?, ?)`
-  ).run(randomUUID(), pollId, label, startsAt, maxOrder.m + 1);
+  const { data } = await supabase.from("options").select("sort_order").eq("poll_id", pollId).order("sort_order", { ascending: false }).limit(1);
+  const maxOrder = data?.[0]?.sort_order ?? -1;
+  await supabase.from("options").insert({ id: randomUUID(), poll_id: pollId, label, starts_at: startsAt, sort_order: maxOrder + 1 });
   revalidatePath(`/poll/${pollId}`);
 }
 
 export async function addMembers(pollId: string, members: { name: string; email: string }[]) {
-  const db = getDb();
-  const memberStmt = db.prepare(
-    `INSERT INTO roster_members (id, poll_id, name, email) VALUES (?, ?, ?, ?)`
-  );
-  const tokenStmt = db.prepare(
-    `INSERT INTO poll_tokens (token, poll_id, member_id) VALUES (?, ?, ?)`
-  );
-
-  const insertAll = db.transaction(() => {
-    for (const m of members) {
-      const memberId = randomUUID();
-      const token = randomUUID();
-      memberStmt.run(memberId, pollId, m.name, m.email);
-      tokenStmt.run(token, pollId, memberId);
-    }
-  });
-  insertAll();
+  for (const m of members) {
+    const memberId = randomUUID();
+    const token = randomUUID();
+    await supabase.from("roster_members").insert({ id: memberId, poll_id: pollId, name: m.name, email: m.email });
+    await supabase.from("poll_tokens").insert({ token, poll_id: pollId, member_id: memberId });
+  }
   revalidatePath(`/poll/${pollId}`);
 }
 
@@ -71,119 +49,118 @@ export async function submitVote(
   slots: { optionId: string; status: "available" | "unable"; rank: number | null }[],
   responseType: "voted" | "not_interested" | "none_work" = "voted"
 ) {
-  const db = getDb();
-
-  const tokenRow = db.prepare(
-    `SELECT token, poll_id, member_id, used_at FROM poll_tokens WHERE token = ?`
-  ).get(token) as { token: string; poll_id: string; member_id: string; used_at: string | null } | undefined;
-
+  const { data: tokenRow } = await supabase.from("poll_tokens").select("*").eq("token", token).single();
   if (!tokenRow) throw new Error("Invalid voting link");
   if (tokenRow.used_at) throw new Error("You have already voted");
 
-  const poll = db.prepare(`SELECT phase FROM polls WHERE id = ?`).get(tokenRow.poll_id) as { phase: string };
-  if (poll.phase !== "polling") throw new Error("This poll is no longer accepting votes");
+  const { data: poll } = await supabase.from("polls").select("phase").eq("id", tokenRow.poll_id).single();
+  if (poll?.phase !== "polling") throw new Error("This poll is no longer accepting votes");
 
   const responseId = randomUUID();
 
-  const insert = db.transaction(() => {
-    db.prepare(
-      `INSERT INTO responses (id, poll_id, member_id, flexibility, response_type) VALUES (?, ?, ?, ?, ?)`
-    ).run(responseId, tokenRow.poll_id, tokenRow.member_id, flexibility, responseType);
-
-    // Only insert slot responses for normal votes
-    if (responseType === "voted") {
-      const slotStmt = db.prepare(
-        `INSERT INTO response_slots (response_id, option_id, status, rank) VALUES (?, ?, ?, ?)`
-      );
-      for (const s of slots) {
-        slotStmt.run(responseId, s.optionId, s.status, s.rank);
-      }
-    }
-
-    db.prepare(`UPDATE poll_tokens SET used_at = datetime('now') WHERE token = ?`).run(token);
+  await supabase.from("responses").insert({
+    id: responseId, poll_id: tokenRow.poll_id, member_id: tokenRow.member_id, flexibility, response_type: responseType,
   });
-  insert();
+
+  if (responseType === "voted") {
+    const rows = slots.map((s) => ({
+      response_id: responseId, option_id: s.optionId, status: s.status, rank: s.rank,
+    }));
+    await supabase.from("response_slots").insert(rows);
+  }
+
+  await supabase.from("poll_tokens").update({ used_at: new Date().toISOString() }).eq("token", token);
 
   revalidatePath(`/poll/${tokenRow.poll_id}`);
 }
 
 export async function updatePhase(pollId: string, phase: "polling" | "confirming" | "notified") {
-  const db = getDb();
-  db.prepare(`UPDATE polls SET phase = ? WHERE id = ?`).run(phase, pollId);
+  await supabase.from("polls").update({ phase }).eq("id", pollId);
   revalidatePath(`/poll/${pollId}`);
 }
 
 export async function toggleConfirmed(optionId: string) {
-  const db = getDb();
-  db.prepare(`UPDATE options SET confirmed = NOT confirmed WHERE id = ?`).run(optionId);
+  const { data } = await supabase.from("options").select("confirmed").eq("id", optionId).single();
+  await supabase.from("options").update({ confirmed: data?.confirmed ? 0 : 1 }).eq("id", optionId);
 }
 
 export async function updateCapacity(optionId: string, capacity: number | null) {
-  const db = getDb();
-  db.prepare(`UPDATE options SET capacity = ? WHERE id = ?`).run(capacity, optionId);
+  await supabase.from("options").update({ capacity }).eq("id", optionId);
 }
 
-// Assign members to confirmed slots WITHOUT changing phase or sending notifications
 export async function assignMembers(pollId: string) {
-  const db = getDb();
-
   // Clear previous offers
-  db.prepare(`DELETE FROM offers WHERE response_id IN (SELECT id FROM responses WHERE poll_id = ?)`).run(pollId);
+  const { data: respIds } = await supabase.from("responses").select("id").eq("poll_id", pollId);
+  if (respIds && respIds.length > 0) {
+    await supabase.from("offers").delete().in("response_id", respIds.map((r) => r.id));
+  }
 
-  // Get confirmed options with capacity
-  const confirmedOptions = db.prepare(
-    `SELECT id, capacity FROM options WHERE poll_id = ? AND confirmed = 1 ORDER BY sort_order`
-  ).all(pollId) as { id: string; capacity: number | null }[];
+  // Get confirmed options
+  const { data: confirmedOptions } = await supabase
+    .from("options")
+    .select("id, capacity")
+    .eq("poll_id", pollId)
+    .eq("confirmed", 1)
+    .order("sort_order");
+
+  if (!confirmedOptions) return;
 
   const capacityLeft = new Map<string, number>();
   for (const opt of confirmedOptions) {
     capacityLeft.set(opt.id, opt.capacity ?? Infinity);
   }
 
-  // Get voted responses sorted by constraint (fewest available confirmed slots first)
-  const responses = db.prepare(`
-    SELECT r.id as response_id, r.member_id, r.flexibility,
-           COUNT(CASE WHEN rs.status = 'available' AND o.confirmed = 1 THEN 1 END) as available_count
-    FROM responses r
-    JOIN response_slots rs ON rs.response_id = r.id
-    JOIN options o ON o.id = rs.option_id
-    WHERE r.poll_id = ? AND r.response_type = 'voted'
-    GROUP BY r.id
-    ORDER BY available_count ASC, CASE WHEN r.flexibility = 'inflexible' THEN 0 ELSE 1 END
-  `).all(pollId) as { response_id: string; member_id: string; flexibility: string; available_count: number }[];
+  const confirmedIds = new Set(confirmedOptions.map((o) => o.id));
 
-  const offerStmt = db.prepare(
-    `INSERT INTO offers (response_id, option_id) VALUES (?, ?)`
-  );
+  // Get all voted responses with their slots
+  const { data: responses } = await supabase
+    .from("responses")
+    .select("id, member_id, flexibility")
+    .eq("poll_id", pollId)
+    .eq("response_type", "voted");
 
-  const assignAll = db.transaction(() => {
-    for (const resp of responses) {
-      const slots = db.prepare(`
-        SELECT rs.option_id, rs.rank
-        FROM response_slots rs
-        JOIN options o ON o.id = rs.option_id
-        WHERE rs.response_id = ? AND rs.status = 'available' AND o.confirmed = 1
-        ORDER BY COALESCE(rs.rank, 999999)
-      `).all(resp.response_id) as { option_id: string; rank: number | null }[];
+  const { data: allSlots } = await supabase
+    .from("response_slots")
+    .select("response_id, option_id, status, rank")
+    .in("response_id", (responses ?? []).map((r) => r.id));
 
-      for (const slot of slots) {
-        const remaining = capacityLeft.get(slot.option_id) ?? 0;
-        if (remaining > 0) {
-          offerStmt.run(resp.response_id, slot.option_id);
-          capacityLeft.set(slot.option_id, remaining - 1);
-        }
+  // Sort responses by constraint (fewest available confirmed slots)
+  const respWithCount = (responses ?? []).map((r) => {
+    const availConfirmed = (allSlots ?? []).filter(
+      (s) => s.response_id === r.id && s.status === "available" && confirmedIds.has(s.option_id)
+    ).length;
+    return { ...r, availConfirmed };
+  }).sort((a, b) => {
+    if (a.availConfirmed !== b.availConfirmed) return a.availConfirmed - b.availConfirmed;
+    if (a.flexibility === "inflexible" && b.flexibility !== "inflexible") return -1;
+    if (b.flexibility === "inflexible" && a.flexibility !== "inflexible") return 1;
+    return 0;
+  });
+
+  const offersToInsert: { response_id: string; option_id: string }[] = [];
+
+  for (const resp of respWithCount) {
+    const availSlots = (allSlots ?? [])
+      .filter((s) => s.response_id === resp.id && s.status === "available" && confirmedIds.has(s.option_id))
+      .sort((a, b) => (a.rank ?? 999999) - (b.rank ?? 999999));
+
+    for (const slot of availSlots) {
+      const remaining = capacityLeft.get(slot.option_id) ?? 0;
+      if (remaining > 0) {
+        offersToInsert.push({ response_id: resp.id, option_id: slot.option_id });
+        capacityLeft.set(slot.option_id, remaining - 1);
       }
     }
-  });
-  assignAll();
+  }
+
+  if (offersToInsert.length > 0) {
+    await supabase.from("offers").insert(offersToInsert);
+  }
 
   revalidatePath(`/poll/${pollId}`);
 }
 
-// Send notifications and move to notified phase (separate from assignment)
 export async function sendNotifications(pollId: string) {
-  const db = getDb();
-  db.prepare(`UPDATE polls SET phase = 'notified' WHERE id = ?`).run(pollId);
-  // TODO: actually send emails via Resend
+  await supabase.from("polls").update({ phase: "notified" }).eq("id", pollId);
   revalidatePath(`/poll/${pollId}`);
 }
