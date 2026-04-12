@@ -46,6 +46,55 @@ type Results = {
   offers: { response_id: string; option_id: string; name: string; email: string }[];
 };
 
+// Find the best N slots that maximize coverage
+function findBestCombo(
+  options: SlotStat[],
+  votedMembers: Member[],
+  memberSlots: MemberSlot[],
+  n: number
+): { ids: Set<string>; covered: number; seats: number } {
+  if (n >= options.length) {
+    const ids = new Set(options.map((o) => o.id));
+    const covered = countCovered(ids, votedMembers, memberSlots);
+    const seats = options.reduce((s, o) => s + (o.capacity ?? 0), 0);
+    return { ids, covered, seats };
+  }
+
+  let bestIds = new Set<string>();
+  let bestCovered = -1;
+  let bestSeats = 0;
+
+  // Generate all combinations of size n
+  function combos(start: number, current: string[]) {
+    if (current.length === n) {
+      const ids = new Set(current);
+      const covered = countCovered(ids, votedMembers, memberSlots);
+      if (covered > bestCovered) {
+        bestCovered = covered;
+        bestIds = ids;
+        bestSeats = current.reduce((s, id) => {
+          const opt = options.find((o) => o.id === id);
+          return s + (opt?.capacity ?? 0);
+        }, 0);
+      }
+      return;
+    }
+    for (let i = start; i < options.length; i++) {
+      current.push(options[i].id);
+      combos(i + 1, current);
+      current.pop();
+    }
+  }
+  combos(0, []);
+  return { ids: bestIds, covered: bestCovered, seats: bestSeats };
+}
+
+function countCovered(selectedIds: Set<string>, votedMembers: Member[], memberSlots: MemberSlot[]): number {
+  return votedMembers.filter((m) =>
+    memberSlots.some((ms) => ms.response_id === m.response_id && ms.status === "available" && selectedIds.has(ms.option_id))
+  ).length;
+}
+
 export function LiveResults({ pollId }: { pollId: string }) {
   const [data, setData] = useState<Results | null>(null);
   const [selectedSlots, setSelectedSlots] = useState<Set<string>>(new Set());
@@ -84,16 +133,16 @@ export function LiveResults({ pollId }: { pollId: string }) {
   }
 
   const votedMembers = data.members.filter((m) => m.response_id && m.response_type === "voted");
-  const coveredMembers = votedMembers.filter((m) => {
-    const memberVotes = data.memberSlots.filter(
-      (ms) => ms.response_id === m.response_id && ms.status === "available" && selectedSlots.has(ms.option_id)
-    );
-    return memberVotes.length > 0;
-  });
+  const coveredMembers = votedMembers.filter((m) =>
+    data.memberSlots.some((ms) => ms.response_id === m.response_id && ms.status === "available" && selectedSlots.has(ms.option_id))
+  );
   const strandedCount = votedMembers.length - coveredMembers.length;
   const coveragePct = votedMembers.length > 0
     ? Math.round((coveredMembers.length / votedMembers.length) * 100)
     : 0;
+  const totalSeats = data.options
+    .filter((o) => selectedSlots.has(o.id))
+    .reduce((s, o) => s + (o.capacity ?? 0), 0);
 
   function toggleSlot(id: string) {
     setSelectedSlots((prev) => {
@@ -102,6 +151,11 @@ export function LiveResults({ pollId }: { pollId: string }) {
       else next.add(id);
       return next;
     });
+  }
+
+  function applyBest(n: number) {
+    const result = findBestCombo(data!.options, votedMembers, data!.memberSlots, n);
+    setSelectedSlots(result.ids);
   }
 
   function generateClaudeExport(): string {
@@ -113,23 +167,18 @@ export function LiveResults({ pollId }: { pollId: string }) {
     if (data!.noneWorkCount > 0) text += `  ${data!.noneWorkCount} want to attend but no dates work\n`;
     if (data!.notInterestedCount > 0) text += `  ${data!.notInterestedCount} not interested\n`;
     text += `\n`;
-
     for (const opt of data!.options) {
       text += `Slot: ${opt.label} — ${new Date(opt.starts_at).toLocaleString()}`;
       if (opt.capacity) text += ` (${opt.capacity} seats)`;
       text += `\n`;
       text += `  Available: ${opt.available}   Unable: ${opt.unable}\n`;
       text += `  Only-option for: ${opt.onlyOption} voters\n`;
-      text += `  Borda score: ${opt.bordaScore}\n`;
-      text += `  Inflexible: ${opt.inflexAvailable} available, ${opt.inflexUnable} unable\n\n`;
+      text += `  Preference score: ${opt.bordaScore}\n`;
+      text += `  Rigid: ${opt.inflexAvailable} available, ${opt.inflexUnable} unable\n\n`;
     }
-
     text += `Coverage preview:\n`;
-    const selectedLabels = Array.from(selectedSlots)
-      .map((id) => data!.options.find((o) => o.id === id)?.label)
-      .filter(Boolean);
+    const selectedLabels = Array.from(selectedSlots).map((id) => data!.options.find((o) => o.id === id)?.label).filter(Boolean);
     text += `  Selected (${selectedLabels.join(" + ")}): ${coveredMembers.length}/${votedMembers.length}\n`;
-
     return text;
   }
 
@@ -142,7 +191,7 @@ export function LiveResults({ pollId }: { pollId: string }) {
   const maxAvailable = Math.max(1, ...data.options.map((o) => o.available));
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3 flex-wrap">
@@ -150,16 +199,11 @@ export function LiveResults({ pollId }: { pollId: string }) {
           <span className="text-xs text-stone-400 tabular-nums">{data.votedCount} voted</span>
           {data.noneWorkCount > 0 && (
             <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-600 dark:text-amber-400 font-medium">
-              {data.noneWorkCount} want to attend, no dates work
+              {data.noneWorkCount} no dates work
             </span>
           )}
           {data.notInterestedCount > 0 && (
             <span className="text-[10px] text-stone-400">{data.notInterestedCount} not interested</span>
-          )}
-          {data.inflexibleCount > 0 && (
-            <span className="text-[10px] text-stone-400">
-              ({data.inflexibleCount} inflexible)
-            </span>
           )}
           {refreshing && <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse" />}
         </div>
@@ -175,6 +219,67 @@ export function LiveResults({ pollId }: { pollId: string }) {
         </div>
       </div>
 
+      {/* Best combo optimizer */}
+      <div className="rounded-lg border border-indigo-200 dark:border-indigo-900/50 bg-indigo-50/30 dark:bg-indigo-950/10 p-4">
+        <div className="flex items-center justify-between gap-4 flex-wrap">
+          <div>
+            <div className="text-xs font-medium text-indigo-700 dark:text-indigo-300">Find best combination</div>
+            <div className="text-[11px] text-indigo-500 dark:text-indigo-400 mt-0.5">Auto-picks the dates that seat the most people</div>
+          </div>
+          <div className="flex items-center gap-1.5">
+            {Array.from({ length: Math.min(data.options.length, 6) }, (_, i) => i + 1).map((n) => (
+              <button
+                key={n}
+                onClick={() => applyBest(n)}
+                className="rounded-md px-3 py-1.5 text-xs font-medium text-indigo-700 dark:text-indigo-300 bg-indigo-100 dark:bg-indigo-900/40 hover:bg-indigo-200 dark:hover:bg-indigo-900/60 transition-colors tabular-nums"
+              >
+                Best {n}
+              </button>
+            ))}
+            <button
+              onClick={() => setSelectedSlots(new Set(data.options.map((o) => o.id)))}
+              className="rounded-md px-3 py-1.5 text-xs text-indigo-500 hover:bg-indigo-100 dark:hover:bg-indigo-900/40 transition-colors"
+            >
+              All
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Coverage summary — always visible */}
+      <div className="rounded-lg border border-stone-200 dark:border-stone-800 bg-white dark:bg-stone-900 p-4">
+        <div className="flex items-center gap-6 flex-wrap">
+          <div className="flex items-center gap-3 flex-1 min-w-[200px]">
+            <div className="flex-1 h-2.5 rounded-full bg-stone-100 dark:bg-stone-800 overflow-hidden">
+              <div
+                className={`h-full rounded-full transition-all duration-300 ${coveragePct === 100 ? "bg-emerald-500" : coveragePct >= 80 ? "bg-indigo-500" : "bg-amber-500"}`}
+                style={{ width: `${coveragePct}%` }}
+              />
+            </div>
+          </div>
+          <div className="flex items-center gap-5 text-center shrink-0">
+            <div>
+              <div className="text-lg font-bold tabular-nums text-stone-900 dark:text-stone-100">{coveredMembers.length}<span className="text-stone-400 font-normal">/{votedMembers.length}</span></div>
+              <div className="text-[10px] text-stone-400">people covered</div>
+            </div>
+            {strandedCount > 0 && (
+              <div>
+                <div className="text-lg font-bold tabular-nums text-amber-600 dark:text-amber-400">{strandedCount}</div>
+                <div className="text-[10px] text-amber-600 dark:text-amber-400">left out</div>
+              </div>
+            )}
+            <div>
+              <div className="text-lg font-bold tabular-nums text-stone-900 dark:text-stone-100">{totalSeats}</div>
+              <div className="text-[10px] text-stone-400">total seats</div>
+            </div>
+            <div>
+              <div className="text-lg font-bold tabular-nums text-indigo-600 dark:text-indigo-400">{selectedSlots.size}</div>
+              <div className="text-[10px] text-stone-400">events</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* Slot cards */}
       <div className="space-y-2">
         {data.options.map((opt) => {
@@ -185,7 +290,7 @@ export function LiveResults({ pollId }: { pollId: string }) {
               className={`relative rounded-lg border p-4 cursor-pointer transition-all ${
                 selected
                   ? "border-stone-300 dark:border-stone-600 bg-white dark:bg-stone-900"
-                  : "border-stone-200/60 dark:border-stone-800/60 bg-stone-50 dark:bg-stone-900/50 opacity-50"
+                  : "border-stone-200/60 dark:border-stone-800/60 bg-stone-50 dark:bg-stone-900/50 opacity-40"
               }`}>
               <div className="absolute inset-y-0 left-0 bg-indigo-500/[0.04] dark:bg-indigo-400/[0.06] rounded-l-lg transition-all" style={{ width: `${availPct}%` }} />
               <div className="relative flex items-center gap-6">
@@ -206,13 +311,7 @@ export function LiveResults({ pollId }: { pollId: string }) {
                     <div className="text-sm font-semibold tabular-nums text-stone-500">{opt.unable}</div>
                     <div className="text-[10px] text-stone-400">can&apos;t</div>
                   </div>
-                  {opt.onlyOption > 0 && (
-                    <div title="People who can ONLY make this date — they're out if you drop it">
-                      <div className="text-sm font-semibold tabular-nums text-amber-600 dark:text-amber-400">{opt.onlyOption}</div>
-                      <div className="text-[10px] text-amber-600 dark:text-amber-400">only option</div>
-                    </div>
-                  )}
-                  <div title="Preference score — higher means more people ranked this as a top choice">
+                  <div title="Preference score — higher = more popular pick">
                     <div className="text-sm font-semibold tabular-nums text-stone-500">{opt.bordaScore}</div>
                     <div className="text-[10px] text-stone-400">preference</div>
                   </div>
@@ -229,29 +328,7 @@ export function LiveResults({ pollId }: { pollId: string }) {
         })}
       </div>
 
-      {/* Legend */}
-      <div className="flex flex-wrap gap-x-5 gap-y-1 text-[10px] text-stone-400">
-        <span><strong className="text-stone-600 dark:text-stone-300">Available</strong> — can attend</span>
-        <span><strong className="text-stone-600 dark:text-stone-300">Can&apos;t</strong> — unavailable</span>
-        <span><strong className="text-amber-600 dark:text-amber-400">Only option</strong> — lose them if you drop this date</span>
-        <span><strong className="text-stone-600 dark:text-stone-300">Preference</strong> — weighted rank score (higher = more popular pick)</span>
-        <span><strong className="text-rose-600 dark:text-rose-400">Rigid</strong> — hard schedule constraints</span>
-      </div>
-
-      {/* Coverage */}
-      <div className="flex items-center gap-4">
-        <div className="flex items-center gap-2.5 flex-1">
-          <span className="text-xs font-medium text-stone-500 shrink-0">Coverage</span>
-          <div className="flex-1 max-w-xs h-2 rounded-full bg-stone-100 dark:bg-stone-800 overflow-hidden">
-            <div className={`h-full rounded-full transition-all duration-300 ${coveragePct === 100 ? "bg-emerald-500" : coveragePct >= 80 ? "bg-indigo-500" : "bg-amber-500"}`}
-              style={{ width: `${coveragePct}%` }} />
-          </div>
-          <span className="text-sm font-semibold tabular-nums text-stone-900 dark:text-stone-100">{coveredMembers.length}/{votedMembers.length}</span>
-          <span className="text-xs text-stone-400">{coveragePct}%</span>
-        </div>
-        {strandedCount > 0 && <span className="text-xs text-amber-600 dark:text-amber-400 font-medium">{strandedCount} stranded</span>}
-      </div>
-      <p className="text-[11px] text-stone-400 -mt-5">Click slots to toggle selection and preview coverage.</p>
+      <p className="text-[11px] text-stone-400">Click dates to select/deselect. Coverage updates live above.</p>
 
       {/* Member grid */}
       {votedMembers.length > 0 && (
@@ -262,16 +339,19 @@ export function LiveResults({ pollId }: { pollId: string }) {
                 <th className="text-left px-3 py-2 text-stone-400 font-medium text-[11px]">Member</th>
                 <th className="text-left px-2 py-2 text-stone-400 font-medium text-[11px] w-16">Flex</th>
                 {data.options.map((opt) => (
-                  <th key={opt.id} className="text-center px-1.5 py-2 text-stone-400 font-medium text-[10px] max-w-[72px] truncate">{opt.label}</th>
+                  <th key={opt.id} className={`text-center px-1.5 py-2 font-medium text-[10px] max-w-[72px] truncate ${
+                    selectedSlots.has(opt.id) ? "text-stone-600 dark:text-stone-300" : "text-stone-300 dark:text-stone-600"
+                  }`}>{opt.label}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {votedMembers.map((m) => {
                 const memberVotes = data.memberSlots.filter((ms) => ms.response_id === m.response_id);
+                const isCovered = memberVotes.some((mv) => mv.status === "available" && selectedSlots.has(mv.option_id));
                 return (
-                  <tr key={m.id} className="border-b border-stone-50 dark:border-stone-800/30 hover:bg-stone-50 dark:hover:bg-stone-800/30">
-                    <td className="px-3 py-1.5 text-stone-700 dark:text-stone-300 font-medium">{m.name}</td>
+                  <tr key={m.id} className={`border-b border-stone-50 dark:border-stone-800/30 ${!isCovered ? "bg-amber-50/50 dark:bg-amber-950/10" : "hover:bg-stone-50 dark:hover:bg-stone-800/30"}`}>
+                    <td className={`px-3 py-1.5 font-medium ${!isCovered ? "text-amber-700 dark:text-amber-400" : "text-stone-700 dark:text-stone-300"}`}>{m.name}</td>
                     <td className="px-2 py-1.5">
                       {m.flexibility === "inflexible" ? (
                         <span className="text-[10px] font-semibold text-rose-500">rigid</span>
