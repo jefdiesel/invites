@@ -14,6 +14,7 @@ export default async function SlotPage({
   if (!data) return notFound();
 
   const { poll, option, assigned, waitlist, allAvailable } = data;
+  if (!poll) return notFound();
   const hasAssignments = assigned.length > 0;
   const guestList = hasAssignments ? assigned : allAvailable;
   const spotsLeft = option.capacity ? option.capacity - assigned.length : null;
