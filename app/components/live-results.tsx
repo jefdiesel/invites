@@ -202,22 +202,24 @@ export function LiveResults({ pollId }: { pollId: string }) {
                   <div className="text-xs text-stone-400 mt-0.5">{new Date(opt.starts_at).toLocaleString()}</div>
                 </div>
                 <div className="flex items-center gap-5 text-center shrink-0">
-                  <div>
+                  <div title="Can't make this date">
                     <div className="text-sm font-semibold tabular-nums text-stone-500">{opt.unable}</div>
-                    <div className="text-[10px] text-stone-400">unable</div>
+                    <div className="text-[10px] text-stone-400">can&apos;t</div>
                   </div>
-                  <div>
-                    <div className={`text-sm font-semibold tabular-nums ${opt.onlyOption > 0 ? "text-amber-600 dark:text-amber-400" : "text-stone-400"}`}>{opt.onlyOption}</div>
-                    <div className="text-[10px] text-stone-400">stranded</div>
-                  </div>
-                  <div>
+                  {opt.onlyOption > 0 && (
+                    <div title="People who can ONLY make this date — they're out if you drop it">
+                      <div className="text-sm font-semibold tabular-nums text-amber-600 dark:text-amber-400">{opt.onlyOption}</div>
+                      <div className="text-[10px] text-amber-600 dark:text-amber-400">only option</div>
+                    </div>
+                  )}
+                  <div title="Preference score — higher means more people ranked this as a top choice">
                     <div className="text-sm font-semibold tabular-nums text-stone-500">{opt.bordaScore}</div>
-                    <div className="text-[10px] text-stone-400">borda</div>
+                    <div className="text-[10px] text-stone-400">preference</div>
                   </div>
                   {opt.inflexAvailable > 0 && (
-                    <div>
+                    <div title="People with hard schedule constraints who can make this date">
                       <div className="text-sm font-semibold tabular-nums text-rose-600 dark:text-rose-400">{opt.inflexAvailable}</div>
-                      <div className="text-[10px] text-stone-400">inflexible</div>
+                      <div className="text-[10px] text-stone-400">rigid</div>
                     </div>
                   )}
                 </div>
@@ -225,6 +227,15 @@ export function LiveResults({ pollId }: { pollId: string }) {
             </div>
           );
         })}
+      </div>
+
+      {/* Legend */}
+      <div className="flex flex-wrap gap-x-5 gap-y-1 text-[10px] text-stone-400">
+        <span><strong className="text-stone-600 dark:text-stone-300">Available</strong> — can attend</span>
+        <span><strong className="text-stone-600 dark:text-stone-300">Can&apos;t</strong> — unavailable</span>
+        <span><strong className="text-amber-600 dark:text-amber-400">Only option</strong> — lose them if you drop this date</span>
+        <span><strong className="text-stone-600 dark:text-stone-300">Preference</strong> — weighted rank score (higher = more popular pick)</span>
+        <span><strong className="text-rose-600 dark:text-rose-400">Rigid</strong> — hard schedule constraints</span>
       </div>
 
       {/* Coverage */}
