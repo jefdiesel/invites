@@ -11,7 +11,7 @@ export default async function PollPage({ params }: { params: Promise<{ id: strin
   if (!poll) return notFound();
 
   const p = poll as unknown as {
-    id: string; title: string; description: string; location: string; phase: string;
+    id: string; title: string; description: string; location: string; deadline: string | null; phase: string;
     tokens: { token: string; member_id: string; used_at: string | null }[];
     members: { id: string; name: string; email: string }[];
   };
@@ -61,6 +61,30 @@ export default async function PollPage({ params }: { params: Promise<{ id: strin
       </header>
 
       <main className="max-w-6xl mx-auto px-6 py-8 space-y-6">
+        {/* Event info */}
+        <div className="flex items-start justify-between gap-6">
+          <div className="space-y-1">
+            <h2 className="text-xl font-semibold text-stone-900 dark:text-stone-100">{p.title}</h2>
+            <div className="flex items-center gap-3 text-sm text-stone-500">
+              {p.location && (
+                <span className="flex items-center gap-1">
+                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path strokeLinecap="round" strokeLinejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                  {p.location}
+                </span>
+              )}
+              {p.deadline && (
+                <span className="flex items-center gap-1">
+                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                  Votes by {new Date(p.deadline).toLocaleDateString()}
+                </span>
+              )}
+            </div>
+            {p.description && (
+              <p className="text-[13px] text-stone-400 max-w-xl">{p.description}</p>
+            )}
+          </div>
+        </div>
+
         {/* Voting links */}
         {totalCount > 0 && (
           <details className="group">
