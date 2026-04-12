@@ -94,6 +94,12 @@ export default async function Dashboard() {
 
                     <div className="flex items-center gap-1 shrink-0">
                       <Link
+                        href={`/poll/${poll.id}/invite`}
+                        className="rounded-md px-2.5 py-1 text-xs font-medium text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/50 transition-colors"
+                      >
+                        Invites
+                      </Link>
+                      <Link
                         href={`/poll/${poll.id}`}
                         className="rounded-md px-2.5 py-1 text-xs font-medium text-stone-500 hover:text-stone-900 dark:hover:text-stone-100 hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors"
                       >
