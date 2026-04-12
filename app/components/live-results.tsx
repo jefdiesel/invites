@@ -101,6 +101,7 @@ export function LiveResults({ pollId }: { pollId: string }) {
   const [initialized, setInitialized] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [activeBest, setActiveBest] = useState<number | null>(null);
 
   const fetchResults = useCallback(async () => {
     setRefreshing(true);
@@ -145,6 +146,7 @@ export function LiveResults({ pollId }: { pollId: string }) {
   const bookedSeats = selectedOptions.reduce((s, o) => s + Math.min(o.available, o.capacity ?? o.available), 0);
 
   function toggleSlot(id: string) {
+    setActiveBest(null);
     setSelectedSlots((prev) => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
@@ -156,6 +158,12 @@ export function LiveResults({ pollId }: { pollId: string }) {
   function applyBest(n: number) {
     const result = findBestCombo(data!.options, votedMembers, data!.memberSlots, n);
     setSelectedSlots(result.ids);
+    setActiveBest(n);
+  }
+
+  function selectAll() {
+    setSelectedSlots(new Set(data!.options.map((o) => o.id)));
+    setActiveBest(null);
   }
 
   function generateClaudeExport(): string {
@@ -231,14 +239,22 @@ export function LiveResults({ pollId }: { pollId: string }) {
               <button
                 key={n}
                 onClick={() => applyBest(n)}
-                className="rounded-md px-3 py-1.5 text-xs font-medium text-indigo-700 dark:text-indigo-300 bg-indigo-100 dark:bg-indigo-900/40 hover:bg-indigo-200 dark:hover:bg-indigo-900/60 transition-colors tabular-nums"
+                className={`rounded-md px-3 py-1.5 text-xs font-medium tabular-nums transition-colors ${
+                  activeBest === n
+                    ? "bg-indigo-600 text-white"
+                    : "text-indigo-700 dark:text-indigo-300 bg-indigo-100 dark:bg-indigo-900/40 hover:bg-indigo-200 dark:hover:bg-indigo-900/60"
+                }`}
               >
                 Best {n}
               </button>
             ))}
             <button
-              onClick={() => setSelectedSlots(new Set(data.options.map((o) => o.id)))}
-              className="rounded-md px-3 py-1.5 text-xs text-indigo-500 hover:bg-indigo-100 dark:hover:bg-indigo-900/40 transition-colors"
+              onClick={selectAll}
+              className={`rounded-md px-3 py-1.5 text-xs transition-colors ${
+                activeBest === null && selectedSlots.size === data.options.length
+                  ? "bg-indigo-600 text-white font-medium"
+                  : "text-indigo-500 hover:bg-indigo-100 dark:hover:bg-indigo-900/40"
+              }`}
             >
               All
             </button>
