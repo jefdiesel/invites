@@ -73,7 +73,7 @@ export default async function Dashboard() {
                             ? "text-amber-600 bg-amber-500/10 dark:text-amber-400"
                             : "text-emerald-600 bg-emerald-500/10 dark:text-emerald-400"
                         }`}>
-                          {poll.phase}
+                          {poll.phase === "polling" ? "Voting Open" : poll.phase === "confirming" ? "Reviewing" : "Done"}
                         </span>
                       </div>
 

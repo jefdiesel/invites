@@ -24,13 +24,10 @@ export default async function PollPage({ params }: { params: Promise<{ id: strin
       <header className="sticky top-0 z-10 backdrop-blur-sm bg-stone-50/80 dark:bg-stone-950/80 border-b border-stone-200/60 dark:border-stone-800/60">
         <div className="max-w-6xl mx-auto px-6 h-12 flex items-center justify-between">
           <div className="flex items-center gap-3 min-w-0">
-            <Link href="/" className="text-xs text-stone-400 hover:text-stone-600 dark:hover:text-stone-300 transition-colors shrink-0">
+            <Link href="/" className="text-sm text-stone-400 hover:text-stone-600 dark:hover:text-stone-300 transition-colors shrink-0 px-1">
               &larr;
             </Link>
             <h1 className="text-sm font-semibold text-stone-900 dark:text-stone-100 truncate">{p.title}</h1>
-            {p.location && (
-              <span className="text-xs text-stone-400 truncate hidden sm:inline">{p.location}</span>
-            )}
             <span className={`shrink-0 px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wider ${
               p.phase === "polling"
                 ? "text-indigo-600 bg-indigo-500/10 dark:text-indigo-400"
@@ -38,7 +35,7 @@ export default async function PollPage({ params }: { params: Promise<{ id: strin
                 ? "text-amber-600 bg-amber-500/10 dark:text-amber-400"
                 : "text-emerald-600 bg-emerald-500/10 dark:text-emerald-400"
             }`}>
-              {p.phase}
+              {p.phase === "polling" ? "Voting Open" : p.phase === "confirming" ? "Reviewing" : "Done"}
             </span>
           </div>
           <div className="flex items-center gap-2 shrink-0">
