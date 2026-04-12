@@ -42,6 +42,12 @@ export default async function PollPage({ params }: { params: Promise<{ id: strin
             </span>
           </div>
           <div className="flex items-center gap-2 shrink-0">
+            <Link
+              href={`/poll/${id}/edit`}
+              className="rounded-md px-2.5 py-1 text-xs font-medium text-stone-500 hover:text-stone-900 dark:hover:text-stone-100 hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors"
+            >
+              Edit
+            </Link>
             {(p.phase === "polling" || p.phase === "confirming") && (
               <Link
                 href={`/poll/${id}/confirm`}

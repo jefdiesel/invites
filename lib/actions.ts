@@ -74,6 +74,28 @@ export async function submitVote(
   revalidatePath(`/poll/${tokenRow.poll_id}`);
 }
 
+export async function updatePoll(
+  pollId: string,
+  fields: { title: string; description: string; location: string; deadline: string | null }
+) {
+  await supabase.from("polls").update(fields).eq("id", pollId);
+  revalidatePath(`/poll/${pollId}`);
+  revalidatePath(`/poll/${pollId}/edit`);
+  revalidatePath("/");
+}
+
+export async function updateSlot(
+  optionId: string,
+  fields: { label: string; starts_at: string; capacity: number | null }
+) {
+  await supabase.from("options").update(fields).eq("id", optionId);
+}
+
+export async function deleteSlot(optionId: string, pollId: string) {
+  await supabase.from("options").delete().eq("id", optionId);
+  revalidatePath(`/poll/${pollId}/edit`);
+}
+
 export async function updatePhase(pollId: string, phase: "polling" | "confirming" | "notified") {
   await supabase.from("polls").update({ phase }).eq("id", pollId);
   revalidatePath(`/poll/${pollId}`);
