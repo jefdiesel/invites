@@ -39,21 +39,39 @@ export default async function VotePage({ params }: { params: Promise<{ token: st
 
   return (
     <div className="min-h-screen">
-      <header className="border-b border-stone-200/60 dark:border-stone-800/60 px-6 py-5">
-        <div className="max-w-lg mx-auto">
-          <h1 className="text-lg font-semibold text-stone-900 dark:text-stone-100">{poll.title}</h1>
-          <div className="flex items-center gap-2 mt-1">
-            {poll.location && <span className="text-xs text-stone-500">{poll.location}</span>}
-            {poll.location && poll.description && <span className="text-stone-300">&#183;</span>}
-            {poll.description && <span className="text-xs text-stone-400">{poll.description}</span>}
+      <main className="max-w-lg mx-auto px-6 py-10">
+        {/* Event info — big and clear */}
+        <div className="text-center mb-8">
+          <h1 className="text-2xl font-bold text-stone-900 dark:text-stone-100">{poll.title}</h1>
+          {poll.location && (
+            <p className="mt-1.5 text-sm text-stone-500">{poll.location}</p>
+          )}
+          {poll.description && (
+            <p className="mt-1 text-sm text-stone-400">{poll.description}</p>
+          )}
+        </div>
+
+        {/* Dates — shown upfront before any interaction */}
+        <div className="text-center mb-8">
+          <div className="inline-flex flex-col gap-2">
+            {data.options.map((opt) => {
+              const d = new Date(opt.starts_at);
+              const day = d.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
+              const time = d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+              return (
+                <div key={opt.id} className="text-lg font-semibold text-stone-800 dark:text-stone-200">
+                  {opt.label || `${day} at ${time}`}
+                  {opt.capacity && <span className="text-sm font-normal text-stone-400 ml-2">{opt.capacity} seats</span>}
+                </div>
+              );
+            })}
           </div>
         </div>
-      </header>
 
-      <main className="max-w-lg mx-auto px-6 py-8">
-        <p className="text-[13px] text-stone-500 mb-6">
-          Hi <span className="font-medium text-stone-700 dark:text-stone-300">{data.member.name}</span> &#8212; mark your availability for each slot, then rank your preferences.
+        <p className="text-center text-[13px] text-stone-500 mb-6">
+          Hi <span className="font-medium text-stone-700 dark:text-stone-300">{data.member.name}</span> &#8212; which of these work for you?
         </p>
+
         <VoteForm token={token} options={data.options} />
       </main>
     </div>
