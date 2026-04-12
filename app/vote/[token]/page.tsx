@@ -44,8 +44,11 @@ export default async function VotePage({ params }: { params: Promise<{ token: st
           <h1 className="text-2xl font-bold text-stone-900 dark:text-stone-100">{poll.title}</h1>
           {poll.location && <p className="mt-1.5 text-sm text-stone-500">{poll.location}</p>}
           {poll.description && <p className="mt-1 text-sm text-stone-400">{poll.description}</p>}
-          <p className="mt-4 text-[13px] text-stone-500">
-            Hi <span className="font-medium text-stone-700 dark:text-stone-300">{data.member.name}</span> &#8212; tap the dates you can make, in order of preference. First tap = top choice.
+          <p className="mt-5 text-base font-medium text-stone-700 dark:text-stone-200">
+            Hi {data.member.name} &#8212; tap the dates you can make.
+          </p>
+          <p className="mt-1 text-base text-stone-600 dark:text-stone-300">
+            First tap = top choice. Tap more to rank them.
           </p>
         </div>
         <VoteForm token={token} options={data.options} />
