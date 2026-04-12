@@ -112,14 +112,14 @@ export function VoteForm({ token, options }: { token: string; options: Option[] 
       {/* Flexibility — only show when dates selected */}
       {availableCount > 0 && (
         <div>
-          <label className="block text-xs font-medium text-stone-500 mb-2 text-center">How flexible are you?</label>
+          <label className="block text-sm font-medium text-stone-500 mb-2 text-center">How flexible are you?</label>
           <div className="flex gap-3">
             {(["flexible", "inflexible"] as const).map((val) => (
               <button
                 key={val}
                 type="button"
                 onClick={() => setFlexibility(val)}
-                className={`flex-1 rounded-lg border px-3 py-2.5 text-xs font-medium transition-all ${
+                className={`flex-1 rounded-lg border px-3 py-3 text-sm font-medium transition-all ${
                   flexibility === val
                     ? "border-emerald-300 dark:border-emerald-700 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-300"
                     : "border-stone-200 dark:border-stone-700 text-stone-500 hover:border-stone-300"
@@ -144,20 +144,20 @@ export function VoteForm({ token, options }: { token: string; options: Option[] 
         {submitting ? "Submitting..." : availableCount === 0 ? "Tap a date above" : `Submit \u2014 ${availableCount} date${availableCount === 1 ? "" : "s"} selected`}
       </button>
 
-      {/* Alt options — small links at bottom */}
+      {/* Alt options */}
       <div className="flex justify-center gap-4 pt-2">
         <button
           onClick={() => handleSubmit("none_work")}
           disabled={submitting}
-          className="text-xs text-amber-600 dark:text-amber-400 hover:underline disabled:opacity-50"
+          className="text-sm font-medium text-amber-500 hover:text-amber-400 hover:underline disabled:opacity-50"
         >
           None of these work for me
         </button>
-        <span className="text-stone-300">|</span>
+        <span className="text-stone-500">|</span>
         <button
           onClick={() => handleSubmit("not_interested")}
           disabled={submitting}
-          className="text-xs text-stone-400 hover:underline disabled:opacity-50"
+          className="text-sm font-medium text-stone-400 hover:text-stone-300 hover:underline disabled:opacity-50"
         >
           Not interested
         </button>
