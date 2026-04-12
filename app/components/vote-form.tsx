@@ -87,20 +87,20 @@ export function VoteForm({ token, options }: { token: string; options: Option[] 
               onClick={() => toggleSlot(i)}
               className={`w-full rounded-xl border-2 p-5 text-center transition-all ${
                 isAvailable
-                  ? "border-indigo-500 bg-indigo-50 dark:bg-indigo-950/30"
-                  : "border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-900 hover:border-stone-300 dark:hover:border-stone-600"
+                  ? "border-emerald-500 bg-emerald-50 dark:bg-emerald-950/20"
+                  : "border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-900 hover:border-stone-400 dark:hover:border-stone-500"
               }`}
             >
-              <div className={`text-lg font-bold ${isAvailable ? "text-indigo-600 dark:text-indigo-400" : "text-stone-900 dark:text-stone-100"}`}>
+              <div className="text-xl font-bold text-stone-900 dark:text-stone-100">
                 {opt.label || `${day}, ${date}`}
               </div>
-              <div className={`text-sm mt-1 ${isAvailable ? "text-indigo-500 dark:text-indigo-400" : "text-stone-400"}`}>
+              <div className="text-base text-stone-600 dark:text-stone-300 mt-1 font-medium">
                 {time}
-                {opt.capacity && <span className="ml-2 text-xs">({opt.capacity} seats)</span>}
+                {opt.capacity && <span className="ml-2 text-sm font-normal text-stone-400">({opt.capacity} seats)</span>}
               </div>
               {isAvailable && slot.rank !== null && (
-                <div className="mt-2 inline-flex items-center gap-1.5 text-xs text-indigo-600 dark:text-indigo-400 font-medium">
-                  <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-indigo-600 text-white text-[10px] font-bold">{slot.rank}</span>
+                <div className="mt-3 inline-flex items-center gap-1.5 text-sm text-emerald-700 dark:text-emerald-300 font-semibold">
+                  <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-emerald-600 text-white text-xs font-bold">{slot.rank}</span>
                   {slot.rank === 1 ? "1st choice" : slot.rank === 2 ? "2nd choice" : slot.rank === 3 ? "3rd choice" : `${slot.rank}th choice`}
                 </div>
               )}
@@ -121,7 +121,7 @@ export function VoteForm({ token, options }: { token: string; options: Option[] 
                 onClick={() => setFlexibility(val)}
                 className={`flex-1 rounded-lg border px-3 py-2.5 text-xs font-medium transition-all ${
                   flexibility === val
-                    ? "border-indigo-300 dark:border-indigo-700 bg-indigo-50 dark:bg-indigo-950/30 text-indigo-700 dark:text-indigo-300"
+                    ? "border-emerald-300 dark:border-emerald-700 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-300"
                     : "border-stone-200 dark:border-stone-700 text-stone-500 hover:border-stone-300"
                 }`}
               >
@@ -139,7 +139,7 @@ export function VoteForm({ token, options }: { token: string; options: Option[] 
         type="button"
         onClick={() => handleSubmit("voted")}
         disabled={submitting || availableCount === 0}
-        className="w-full rounded-xl bg-indigo-600 py-3.5 text-sm font-semibold text-white hover:bg-indigo-500 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+        className="w-full rounded-xl bg-emerald-600 py-3.5 text-sm font-semibold text-white hover:bg-emerald-500 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
       >
         {submitting ? "Submitting..." : availableCount === 0 ? "Tap a date above" : `Submit \u2014 ${availableCount} date${availableCount === 1 ? "" : "s"} selected`}
       </button>
