@@ -96,6 +96,22 @@ export async function deleteSlot(optionId: string, pollId: string) {
   revalidatePath(`/poll/${pollId}/edit`);
 }
 
+export async function deletePoll(pollId: string) {
+  // Delete in order due to foreign keys
+  const { data: respIds } = await supabase.from("responses").select("id").eq("poll_id", pollId);
+  if (respIds && respIds.length > 0) {
+    const ids = respIds.map((r) => r.id);
+    await supabase.from("offers").delete().in("response_id", ids);
+    await supabase.from("response_slots").delete().in("response_id", ids);
+  }
+  await supabase.from("responses").delete().eq("poll_id", pollId);
+  await supabase.from("poll_tokens").delete().eq("poll_id", pollId);
+  await supabase.from("roster_members").delete().eq("poll_id", pollId);
+  await supabase.from("options").delete().eq("poll_id", pollId);
+  await supabase.from("polls").delete().eq("id", pollId);
+  revalidatePath("/");
+}
+
 export async function updatePhase(pollId: string, phase: "polling" | "confirming" | "notified") {
   await supabase.from("polls").update({ phase }).eq("id", pollId);
   revalidatePath(`/poll/${pollId}`);

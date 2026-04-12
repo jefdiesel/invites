@@ -3,6 +3,7 @@ import { createPoll, addMembers } from "@/lib/actions";
 import Link from "next/link";
 import { NewPollForm } from "@/app/components/new-poll-form";
 import { AddMembersForm } from "@/app/components/add-members-form";
+import { DeletePollButton } from "@/app/components/delete-poll-button";
 
 export const dynamic = "force-dynamic";
 
@@ -104,6 +105,7 @@ export default async function Dashboard() {
                       >
                         Confirm
                       </Link>
+                      <DeletePollButton pollId={poll.id} />
                     </div>
                   </div>
 
