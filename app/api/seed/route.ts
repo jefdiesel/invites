@@ -16,12 +16,12 @@ export async function POST() {
     location: "Chez Laurent, 412 Oak St", deadline: "2026-06-01T23:59", phase: "confirming",
   });
 
-  // 2 days × 2 seatings, 60 seats total (15 per seating)
+  // 2 days × 2 seatings, 60 seats each
   const slots = [
-    { label: "Friday 6pm",    starts_at: "2026-06-19T18:00", capacity: 15 },
-    { label: "Friday 8:30pm", starts_at: "2026-06-19T20:30", capacity: 15 },
-    { label: "Saturday 6pm",    starts_at: "2026-06-20T18:00", capacity: 15 },
-    { label: "Saturday 8:30pm", starts_at: "2026-06-20T20:30", capacity: 15 },
+    { label: "Friday 6pm",    starts_at: "2026-06-19T18:00", capacity: 60 },
+    { label: "Friday 8:30pm", starts_at: "2026-06-19T20:30", capacity: 60 },
+    { label: "Saturday 6pm",    starts_at: "2026-06-20T18:00", capacity: 60 },
+    { label: "Saturday 8:30pm", starts_at: "2026-06-20T20:30", capacity: 60 },
   ];
 
   const optionIds: string[] = [];
