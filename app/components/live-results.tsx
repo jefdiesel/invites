@@ -140,9 +140,9 @@ export function LiveResults({ pollId }: { pollId: string }) {
   const coveragePct = votedMembers.length > 0
     ? Math.round((coveredMembers.length / votedMembers.length) * 100)
     : 0;
-  const totalSeats = data.options
-    .filter((o) => selectedSlots.has(o.id))
-    .reduce((s, o) => s + (o.capacity ?? 0), 0);
+  const selectedOptions = data.options.filter((o) => selectedSlots.has(o.id));
+  const totalSeats = selectedOptions.reduce((s, o) => s + (o.capacity ?? 0), 0);
+  const bookedSeats = selectedOptions.reduce((s, o) => s + Math.min(o.available, o.capacity ?? o.available), 0);
 
   function toggleSlot(id: string) {
     setSelectedSlots((prev) => {
@@ -269,12 +269,12 @@ export function LiveResults({ pollId }: { pollId: string }) {
               </div>
             )}
             <div>
-              <div className="text-lg font-bold tabular-nums text-stone-900 dark:text-stone-100">{totalSeats}</div>
-              <div className="text-[10px] text-stone-400">total seats</div>
+              <div className="text-lg font-bold tabular-nums text-stone-900 dark:text-stone-100">{bookedSeats}<span className="text-stone-400 font-normal">/{totalSeats}</span></div>
+              <div className="text-[10px] text-stone-400">seats filled</div>
             </div>
             <div>
               <div className="text-lg font-bold tabular-nums text-indigo-600 dark:text-indigo-400">{selectedSlots.size}</div>
-              <div className="text-[10px] text-stone-400">events</div>
+              <div className="text-[10px] text-stone-400">{selectedSlots.size === 1 ? "event" : "events"}</div>
             </div>
           </div>
         </div>
@@ -301,10 +301,18 @@ export function LiveResults({ pollId }: { pollId: string }) {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
                     <span className="font-medium text-sm text-stone-900 dark:text-stone-100">{opt.label}</span>
-                    {opt.capacity && <span className="text-[10px] text-stone-400">{opt.capacity} seats</span>}
                     {opt.confirmed === 1 && <span className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">confirmed</span>}
                   </div>
-                  <div className="text-xs text-stone-400 mt-0.5">{new Date(opt.starts_at).toLocaleString()}</div>
+                  <div className="flex items-center gap-2 mt-0.5">
+                    <span className="text-xs text-stone-400">{new Date(opt.starts_at).toLocaleString()}</span>
+                    {opt.capacity != null && (
+                      <span className={`text-[10px] font-medium tabular-nums ${
+                        opt.available > opt.capacity ? "text-rose-500" : opt.available >= opt.capacity * 0.8 ? "text-amber-500" : "text-stone-400"
+                      }`}>
+                        {Math.min(opt.available, opt.capacity)}/{opt.capacity} seats
+                      </span>
+                    )}
+                  </div>
                 </div>
                 <div className="flex items-center gap-5 text-center shrink-0">
                   <div title="Can't make this date">
