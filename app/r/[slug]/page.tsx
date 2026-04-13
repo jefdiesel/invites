@@ -184,7 +184,7 @@ export default async function RestaurantPage({ params }: { params: Promise<{ slu
                             </span>
                           </div>
                           {item.description && (
-                            <p className="text-sm mt-1 leading-relaxed" style={{ color: t.textLight }}>{item.description}</p>
+                            <p className="text-sm mt-1 leading-relaxed" style={{ color: t.textMuted }}>{item.description}</p>
                           )}
                           {item.dietary_flags && item.dietary_flags.length > 0 && (
                             <div className="flex gap-1.5 mt-2">
