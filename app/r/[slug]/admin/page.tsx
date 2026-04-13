@@ -1,4 +1,4 @@
-import { getBusiness, getUpcomingBookings, getBusinessClients } from "@/lib/restaurant-queries";
+import { getBusiness, getUpcomingBookings, getBusinessClients, getTables } from "@/lib/restaurant-queries";
 import { notFound } from "next/navigation";
 import { AdminDashboard } from "@/app/components/admin-dashboard";
 
@@ -11,6 +11,7 @@ export default async function AdminPage({ params }: { params: Promise<{ slug: st
 
   const bookings = await getUpcomingBookings(biz.id, 14);
   const clients = await getBusinessClients(biz.id);
+  const tables = await getTables(biz.id);
 
   return (
     <div className="min-h-screen bg-white">
@@ -34,6 +35,7 @@ export default async function AdminPage({ params }: { params: Promise<{ slug: st
           slug={slug}
           bookings={bookings}
           clients={clients}
+          tables={tables}
         />
       </main>
     </div>

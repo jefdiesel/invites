@@ -38,6 +38,15 @@ export async function getServices(businessId: string) {
   return data ?? [];
 }
 
+export async function getTables(businessId: string) {
+  const { data } = await supabase
+    .from("restaurant_tables")
+    .select("*")
+    .eq("business_id", businessId)
+    .order("sort_order");
+  return data ?? [];
+}
+
 export async function getBookingsForDate(businessId: string, date: string) {
   const { data } = await supabase
     .from("bookings")

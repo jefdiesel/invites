@@ -10,7 +10,18 @@ type Booking = {
   status: string;
   notes: string;
   source: string;
+  table_id: string | null;
+  duration_minutes: number | null;
   clients?: { name: string; email: string; phone: string };
+};
+
+type RestaurantTable = {
+  id: string;
+  name: string;
+  zone: string;
+  capacity: number;
+  is_active: boolean;
+  sort_order: number;
 };
 
 type BizClient = {
@@ -27,13 +38,13 @@ type BizClient = {
   clients?: { name: string; email: string; phone: string; city: string };
 };
 
-type Tab = "bookings" | "guests";
+type Tab = "bookings" | "guests" | "tables";
 
 export function AdminDashboard({
-  businessId, businessName, slug, bookings, clients,
+  businessId, businessName, slug, bookings, clients, tables,
 }: {
   businessId: string; businessName: string; slug: string;
-  bookings: Booking[]; clients: BizClient[];
+  bookings: Booking[]; clients: BizClient[]; tables: RestaurantTable[];
 }) {
   const [tab, setTab] = useState<Tab>("bookings");
   const [search, setSearch] = useState("");
@@ -60,9 +71,10 @@ export function AdminDashboard({
   return (
     <div>
       {/* Stats */}
-      <div className="grid grid-cols-4 gap-4 mb-8">
+      <div className="grid grid-cols-5 gap-4 mb-8">
         <StatCard label="Today" value={todaysBookings.length} sub={`${todayCovers} covers`} />
         <StatCard label="Upcoming" value={upcomingBookings.length} sub="next 14 days" />
+        <StatCard label="Tables" value={tables.filter(t => t.is_active).length} sub={`${tables.reduce((s, t) => s + (t.is_active ? t.capacity : 0), 0)} total seats`} />
         <StatCard label="Total Guests" value={clients.length} />
         <StatCard label="Repeat Guests" value={clients.filter((c) => c.visit_count > 1).length} />
       </div>
@@ -70,6 +82,7 @@ export function AdminDashboard({
       {/* Tabs */}
       <div className="flex items-center gap-1 border-b border-warm-200 mb-6">
         <TabBtn active={tab === "bookings"} onClick={() => setTab("bookings")}>Bookings</TabBtn>
+        <TabBtn active={tab === "tables"} onClick={() => setTab("tables")}>Tables</TabBtn>
         <TabBtn active={tab === "guests"} onClick={() => setTab("guests")}>Guests</TabBtn>
       </div>
 
@@ -91,6 +104,10 @@ export function AdminDashboard({
             <p className="text-sm text-warm-400 py-8 text-center">No bookings yet.</p>
           )}
         </div>
+      )}
+
+      {tab === "tables" && (
+        <TableGrid tables={tables} bookings={todaysBookings} allBookings={bookings} />
       )}
 
       {tab === "guests" && (
@@ -213,6 +230,134 @@ function BookingTable({ bookings }: { bookings: Booking[] }) {
       </table>
     </div>
   );
+}
+
+function TableGrid({ tables, bookings, allBookings }: { tables: RestaurantTable[]; bookings: Booking[]; allBookings: Booking[] }) {
+  const activeTables = tables.filter((t) => t.is_active).sort((a, b) => a.sort_order - b.sort_order);
+  const zones = [...new Set(activeTables.map((t) => t.zone || "Main"))];
+
+  // Generate time slots for today (5 PM - 10 PM in 30-min increments)
+  const timeSlots: string[] = [];
+  for (let h = 17; h <= 22; h++) {
+    timeSlots.push(`${h.toString().padStart(2, "0")}:00`);
+    if (h < 22) timeSlots.push(`${h.toString().padStart(2, "0")}:30`);
+  }
+
+  // Find which table a booking is on, or which table it could go on
+  function getBookingForSlot(table: RestaurantTable, time: string): Booking | null {
+    const timeMins = timeToMins(time);
+    return bookings.find((b) => {
+      if (b.table_id && b.table_id !== table.id) return false;
+      if (!b.table_id && b.party_size > table.capacity) return false;
+      const bMins = timeToMins(b.booking_time);
+      const bEnd = bMins + (b.duration_minutes || 90);
+      return timeMins >= bMins && timeMins < bEnd;
+    }) ?? null;
+  }
+
+  // Summary
+  const totalSeats = activeTables.reduce((s, t) => s + t.capacity, 0);
+  const todayCovers = bookings.reduce((s, b) => s + b.party_size, 0);
+
+  return (
+    <div>
+      {/* Table inventory */}
+      <div className="mb-8">
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-sm font-bold text-warm-600 uppercase tracking-wider">Table Inventory</h3>
+          <span className="text-sm text-warm-500">{activeTables.length} tables · {totalSeats} seats · {todayCovers} covers today</span>
+        </div>
+        {zones.map((zone) => {
+          const zoneTables = activeTables.filter((t) => (t.zone || "Main") === zone);
+          return (
+            <div key={zone} className="mb-4">
+              <div className="text-xs font-bold text-warm-400 uppercase tracking-wider mb-2">{zone}</div>
+              <div className="flex gap-2 flex-wrap">
+                {zoneTables.map((t) => {
+                  const hasBookingNow = bookings.some((b) => {
+                    if (b.table_id && b.table_id !== t.id) return false;
+                    if (!b.table_id) return false;
+                    const now = new Date();
+                    const bMins = timeToMins(b.booking_time);
+                    const bEnd = bMins + 90;
+                    const nowMins = now.getHours() * 60 + now.getMinutes();
+                    return nowMins >= bMins && nowMins < bEnd;
+                  });
+                  return (
+                    <div key={t.id}
+                      className={`border rounded-lg px-4 py-3 text-center min-w-[80px] ${
+                        hasBookingNow
+                          ? "border-rose-300 bg-rose-50 text-rose-700"
+                          : "border-emerald-300 bg-emerald-50 text-emerald-700"
+                      }`}>
+                      <div className="text-sm font-bold">{t.name}</div>
+                      <div className="text-xs mt-0.5">{t.capacity} seats</div>
+                      <div className="text-[10px] mt-1 font-medium">{hasBookingNow ? "OCCUPIED" : "OPEN"}</div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Time grid */}
+      <h3 className="text-sm font-bold text-warm-600 uppercase tracking-wider mb-3">Today&apos;s Floor</h3>
+      <div className="border border-warm-200 rounded-lg overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="bg-warm-50 border-b border-warm-200">
+              <th className="px-3 py-2.5 text-left font-semibold text-warm-600 sticky left-0 bg-warm-50 z-10 min-w-[80px]">Table</th>
+              {timeSlots.map((t) => (
+                <th key={t} className="px-2 py-2.5 text-center font-medium text-warm-500 text-xs whitespace-nowrap min-w-[70px]">
+                  {formatTime(t)}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {activeTables.map((table) => (
+              <tr key={table.id} className="border-b border-warm-100">
+                <td className="px-3 py-2 sticky left-0 bg-white z-10">
+                  <div className="font-semibold text-warm-900">{table.name}</div>
+                  <div className="text-xs text-warm-400">{table.capacity} seats</div>
+                </td>
+                {timeSlots.map((time) => {
+                  const booking = getBookingForSlot(table, time);
+                  if (!booking) {
+                    return <td key={time} className="px-2 py-2 text-center text-warm-200">—</td>;
+                  }
+                  // Only render the booking cell at the start time
+                  const isStart = booking.booking_time.slice(0, 5) === time;
+                  if (!isStart) {
+                    return (
+                      <td key={time} className="px-1 py-2">
+                        <div className="h-8 bg-accent/10 border-y border-accent/20" />
+                      </td>
+                    );
+                  }
+                  return (
+                    <td key={time} className="px-1 py-2">
+                      <div className="bg-accent/10 border border-accent/30 rounded px-1.5 py-1 text-xs">
+                        <div className="font-semibold text-accent truncate">{booking.clients?.name}</div>
+                        <div className="text-warm-500">{booking.party_size}p</div>
+                      </div>
+                    </td>
+                  );
+                })}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+function timeToMins(time: string): number {
+  const [h, m] = time.split(":").map(Number);
+  return h * 60 + m;
 }
 
 function formatTime(time: string): string {

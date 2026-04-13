@@ -4,6 +4,11 @@ import { supabase } from "./db";
 import { randomUUID } from "crypto";
 import { revalidatePath } from "next/cache";
 
+function timeToMinutes(time: string): number {
+  const [h, m] = time.split(":").map(Number);
+  return h * 60 + m;
+}
+
 export async function createBooking(
   businessId: string,
   data: {
@@ -65,17 +70,47 @@ export async function createBooking(
     }).eq("id", bizClient.id);
   }
 
-  // Find best available table
-  const { data: tables } = await supabase
-    .from("services")
-    .select("id, capacity, quantity")
+  // Find best available physical table
+  const { data: allTables } = await supabase
+    .from("restaurant_tables")
+    .select("*")
     .eq("business_id", businessId)
-    .eq("active", true)
+    .eq("is_active", true)
     .gte("capacity", data.partySize)
-    .order("capacity")
-    .limit(1);
+    .order("capacity"); // smallest table that fits
 
-  const serviceId = tables?.[0]?.id ?? null;
+  // Get existing bookings that overlap this time
+  const { data: existingBookings } = await supabase
+    .from("bookings")
+    .select("table_id, booking_time, duration_minutes")
+    .eq("business_id", businessId)
+    .eq("booking_date", data.date)
+    .neq("status", "cancelled");
+
+  const { data: bizConfig } = await supabase
+    .from("businesses")
+    .select("slot_duration_minutes")
+    .eq("id", businessId)
+    .single();
+  const slotDuration = bizConfig?.slot_duration_minutes ?? 90;
+
+  // Find first table not booked at this time
+  let assignedTableId: string | null = null;
+  const requestMins = timeToMinutes(data.time);
+  const requestEnd = requestMins + slotDuration;
+
+  for (const table of (allTables ?? [])) {
+    const conflict = (existingBookings ?? []).some((b) => {
+      if (b.table_id !== table.id) return false;
+      const bMins = timeToMinutes(b.booking_time);
+      const bEnd = bMins + (b.duration_minutes || slotDuration);
+      return requestMins < bEnd && requestEnd > bMins;
+    });
+    if (!conflict) {
+      assignedTableId = table.id;
+      break;
+    }
+  }
 
   // Create booking
   const bookingId = randomUUID();
@@ -83,7 +118,8 @@ export async function createBooking(
     id: bookingId,
     business_id: businessId,
     client_id: clientId,
-    service_id: serviceId,
+    service_id: null,
+    table_id: assignedTableId,
     booking_date: data.date,
     booking_time: data.time,
     party_size: data.partySize,
@@ -182,15 +218,15 @@ export async function seedRestaurant(slug: string) {
     });
   }
 
-  // Tables
-  const tables = [
+  // Table types (services)
+  const tableTypes = [
     { name: "2-Top", capacity: 2, quantity: 4 },
     { name: "4-Top", capacity: 4, quantity: 6 },
     { name: "6-Top", capacity: 6, quantity: 2 },
     { name: "8-Top Private", capacity: 8, quantity: 1 },
   ];
 
-  for (const [i, t] of tables.entries()) {
+  for (const [i, t] of tableTypes.entries()) {
     await supabase.from("services").insert({
       id: randomUUID(),
       business_id: id,
@@ -199,6 +235,34 @@ export async function seedRestaurant(slug: string) {
       quantity: t.quantity,
       duration_minutes: 90,
       price_cents: 0,
+      sort_order: i,
+    });
+  }
+
+  // Individual tables (physical inventory)
+  const individualTables = [
+    { name: "T1", zone: "Main", capacity: 2 },
+    { name: "T2", zone: "Main", capacity: 2 },
+    { name: "T3", zone: "Main", capacity: 4 },
+    { name: "T4", zone: "Main", capacity: 4 },
+    { name: "T5", zone: "Main", capacity: 4 },
+    { name: "T6", zone: "Main", capacity: 6 },
+    { name: "W1", zone: "Window", capacity: 2 },
+    { name: "W2", zone: "Window", capacity: 4 },
+    { name: "P1", zone: "Patio", capacity: 2 },
+    { name: "P2", zone: "Patio", capacity: 4 },
+    { name: "P3", zone: "Patio", capacity: 4 },
+    { name: "P4", zone: "Patio", capacity: 6 },
+    { name: "PDR", zone: "Private", capacity: 8 },
+  ];
+
+  for (const [i, t] of individualTables.entries()) {
+    await supabase.from("restaurant_tables").insert({
+      id: randomUUID(),
+      business_id: id,
+      name: t.name,
+      zone: t.zone,
+      capacity: t.capacity,
       sort_order: i,
     });
   }

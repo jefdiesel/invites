@@ -137,7 +137,7 @@ export default async function RestaurantPage({ params }: { params: Promise<{ slu
       </main>
 
       <footer className="border-t border-warm-200 py-8 text-center text-sm text-warm-400">
-        {biz.name} · Powered by Tasting Collective
+        {biz.name} · Powered by {biz.name}
       </footer>
     </div>
   );
