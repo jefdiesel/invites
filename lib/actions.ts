@@ -200,5 +200,92 @@ export async function assignMembers(pollId: string) {
 
 export async function sendNotifications(pollId: string) {
   await supabase.from("polls").update({ phase: "notified" }).eq("id", pollId);
+
+  // Auto-create event from confirmed poll
+  try {
+    const { data: poll } = await supabase.from("polls").select("title, location, description").eq("id", pollId).single();
+    const { data: confirmedSlots } = await supabase
+      .from("options")
+      .select("label, starts_at, capacity")
+      .eq("poll_id", pollId)
+      .eq("confirmed", 1)
+      .order("sort_order")
+      .limit(1);
+
+    if (poll && confirmedSlots && confirmedSlots.length > 0) {
+      const eventId = randomUUID();
+      await supabase.from("events").insert({
+        id: eventId,
+        poll_id: pollId,
+        title: poll.title,
+        location: poll.location || "",
+        description: poll.description || "",
+        menu: "",
+        event_date: confirmedSlots[0].starts_at,
+        capacity: confirmedSlots[0].capacity,
+      });
+    }
+  } catch {
+    // events table may not exist yet — skip silently
+  }
+
   revalidatePath(`/poll/${pollId}`);
+}
+
+export async function submitReview(eventId: string, email: string, stars: number, body: string) {
+  // Look up member by email
+  const { data: member } = await supabase
+    .from("members")
+    .select("id")
+    .eq("email", email)
+    .single();
+
+  if (!member) {
+    // Auto-create member from email
+    const memberId = randomUUID();
+    // Try to get name from roster_members
+    const { data: rosterEntry } = await supabase
+      .from("roster_members")
+      .select("name")
+      .eq("email", email)
+      .limit(1)
+      .single();
+
+    await supabase.from("members").insert({
+      id: memberId,
+      name: rosterEntry?.name ?? email.split("@")[0],
+      email,
+      city: "",
+    });
+
+    await supabase.from("reviews").insert({
+      id: randomUUID(),
+      member_id: memberId,
+      event_id: eventId,
+      stars,
+      body: body || "",
+    });
+  } else {
+    // Check for existing review
+    const { data: existing } = await supabase
+      .from("reviews")
+      .select("id")
+      .eq("member_id", member.id)
+      .eq("event_id", eventId)
+      .single();
+
+    if (existing) {
+      await supabase.from("reviews").update({ stars, body: body || "" }).eq("id", existing.id);
+    } else {
+      await supabase.from("reviews").insert({
+        id: randomUUID(),
+        member_id: member.id,
+        event_id: eventId,
+        stars,
+        body: body || "",
+      });
+    }
+  }
+
+  revalidatePath(`/events/${eventId}`);
 }

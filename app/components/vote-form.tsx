@@ -19,10 +19,8 @@ export function VoteForm({ token, options }: { token: string; options: Option[] 
     setSlots((prev) => {
       const next = [...prev];
       if (next[i].status === "available") {
-        // Deselect — remove rank
         next[i] = { ...next[i], status: "unable", rank: null };
       } else {
-        // Select — auto-rank as next preference
         const maxRank = Math.max(0, ...next.filter((s) => s.rank !== null).map((s) => s.rank!));
         next[i] = { ...next[i], status: "available", rank: maxRank + 1 };
       }
@@ -57,11 +55,11 @@ export function VoteForm({ token, options }: { token: string; options: Option[] 
   if (done) {
     return (
       <div className="text-center py-12">
-        <div className="w-10 h-10 rounded-full bg-emerald-500/10 flex items-center justify-center mx-auto mb-4">
-          <span className="text-emerald-600 text-lg">&#10003;</span>
+        <div className="w-12 h-12 rounded-full bg-emerald-500/10 flex items-center justify-center mx-auto mb-4">
+          <span className="text-emerald-600 text-xl">&#10003;</span>
         </div>
-        <h2 className="text-lg font-semibold text-stone-900 dark:text-stone-100">Vote submitted</h2>
-        <p className="text-sm text-stone-500 mt-1">Your response is locked. You can close this page.</p>
+        <h2 className="text-xl font-bold text-warm-900 dark:text-warm-100">Vote submitted</h2>
+        <p className="text-base text-warm-500 mt-2">Your response is locked. You can close this page.</p>
       </div>
     );
   }
@@ -70,7 +68,6 @@ export function VoteForm({ token, options }: { token: string; options: Option[] 
 
   return (
     <div className="space-y-6">
-      {/* Date cards — tap to toggle */}
       <div className="space-y-3">
         {options.map((opt, i) => {
           const slot = slots[i];
@@ -88,15 +85,15 @@ export function VoteForm({ token, options }: { token: string; options: Option[] 
               className={`w-full rounded-xl border-2 p-5 text-center transition-all ${
                 isAvailable
                   ? "border-emerald-500 bg-emerald-50 dark:bg-emerald-950/20"
-                  : "border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-900 hover:border-stone-400 dark:hover:border-stone-500"
+                  : "border-warm-200 dark:border-warm-700 bg-white dark:bg-warm-900 hover:border-warm-400 dark:hover:border-warm-500"
               }`}
             >
-              <div className="text-xl font-bold text-stone-900 dark:text-stone-100">
+              <div className="text-xl font-bold text-warm-900 dark:text-warm-100">
                 {opt.label || `${day}, ${date}`}
               </div>
-              <div className="text-base text-stone-600 dark:text-stone-300 mt-1 font-medium">
+              <div className="text-base text-warm-600 dark:text-warm-300 mt-1 font-medium">
                 {time}
-                {opt.capacity && <span className="ml-2 text-sm font-normal text-stone-400">({opt.capacity} seats)</span>}
+                {opt.capacity && <span className="ml-2 text-sm font-normal text-warm-400">({opt.capacity} seats)</span>}
               </div>
               {isAvailable && slot.rank !== null && (
                 <div className="mt-3 inline-flex items-center gap-1.5 text-sm text-emerald-700 dark:text-emerald-300 font-semibold">
@@ -109,20 +106,19 @@ export function VoteForm({ token, options }: { token: string; options: Option[] 
         })}
       </div>
 
-      {/* Flexibility — only show when dates selected */}
       {availableCount > 0 && (
         <div>
-          <label className="block text-sm font-medium text-stone-500 mb-2 text-center">How flexible are you?</label>
+          <label className="block text-sm font-medium text-warm-500 mb-2 text-center">How flexible are you?</label>
           <div className="flex gap-3">
             {(["flexible", "inflexible"] as const).map((val) => (
               <button
                 key={val}
                 type="button"
                 onClick={() => setFlexibility(val)}
-                className={`flex-1 rounded-lg border px-3 py-3 text-sm font-medium transition-all ${
+                className={`flex-1 rounded-xl border px-3 py-3 text-sm font-medium transition-all ${
                   flexibility === val
                     ? "border-emerald-300 dark:border-emerald-700 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-300"
-                    : "border-stone-200 dark:border-stone-700 text-stone-500 hover:border-stone-300"
+                    : "border-warm-200 dark:border-warm-700 text-warm-500 hover:border-warm-300"
                 }`}
               >
                 {val === "flexible" ? "Flexible \u2014 I can adjust" : "Inflexible \u2014 hard constraints"}
@@ -132,32 +128,30 @@ export function VoteForm({ token, options }: { token: string; options: Option[] 
         </div>
       )}
 
-      {error && <p className="text-sm text-rose-600 dark:text-rose-400 text-center">{error}</p>}
+      {error && <p className="text-sm text-rose-600 dark:text-rose-400 text-center font-medium">{error}</p>}
 
-      {/* Submit */}
       <button
         type="button"
         onClick={() => handleSubmit("voted")}
         disabled={submitting || availableCount === 0}
-        className="w-full rounded-xl bg-emerald-600 py-3.5 text-sm font-semibold text-white hover:bg-emerald-500 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+        className="w-full rounded-xl bg-emerald-600 py-4 text-base font-bold text-white hover:bg-emerald-500 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
       >
         {submitting ? "Submitting..." : availableCount === 0 ? "Tap a date above" : `Submit \u2014 ${availableCount} date${availableCount === 1 ? "" : "s"} selected`}
       </button>
 
-      {/* Alt options */}
       <div className="flex justify-center gap-4 pt-2">
         <button
           onClick={() => handleSubmit("none_work")}
           disabled={submitting}
-          className="text-sm font-medium text-amber-500 hover:text-amber-400 hover:underline disabled:opacity-50"
+          className="text-sm font-medium text-amber-600 hover:text-amber-500 hover:underline disabled:opacity-50"
         >
           None of these work for me
         </button>
-        <span className="text-stone-500">|</span>
+        <span className="text-warm-300">|</span>
         <button
           onClick={() => handleSubmit("not_interested")}
           disabled={submitting}
-          className="text-sm font-medium text-stone-400 hover:text-stone-300 hover:underline disabled:opacity-50"
+          className="text-sm font-medium text-warm-400 hover:text-warm-600 hover:underline disabled:opacity-50"
         >
           Not interested
         </button>
