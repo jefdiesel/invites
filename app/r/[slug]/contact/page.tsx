@@ -27,7 +27,7 @@ export default async function ContactPage({ params }: { params: Promise<{ slug: 
   const mapsUrl = fullAddress ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(fullAddress)}` : null;
 
   return (
-    <div style={{ background: t.bg, color: t.text, fontFamily: bodyFont }} className="min-h-screen">
+    <div style={{ background: t.bg, color: t.text, fontFamily: bodyFont }} className="min-h-screen flex flex-col">
       <ThemeFonts theme={theme} />
 
       {/* Nav */}
@@ -46,7 +46,7 @@ export default async function ContactPage({ params }: { params: Promise<{ slug: 
         </div>
       </nav>
 
-      <main className="max-w-4xl mx-auto px-6">
+      <main className="flex-1 w-full max-w-4xl mx-auto px-6">
         <header className="pt-16 md:pt-24 pb-12">
           <h1 style={{ fontFamily: displayFont, color: t.text }} className="text-4xl md:text-5xl">
             Contact
@@ -137,11 +137,20 @@ export default async function ContactPage({ params }: { params: Promise<{ slug: 
         </div>
       </main>
 
-      <footer style={{ background: t.footerBg, borderTop: "1px solid rgba(255,255,255,0.1)" }} className="py-10">
-        <div className="max-w-4xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-4">
-          <span style={{ fontFamily: displayFont, color: t.footerText }} className="text-lg">{biz.name}</span>
-          <div className="flex items-center gap-4 text-sm" style={{ color: t.footerTextMuted }}>
-            <Link href={`/r/${slug}/accessibility`} className="transition-colors hover:opacity-80">Accessibility</Link>
+      <footer style={{ background: t.footerBg, borderTop: "1px solid rgba(255,255,255,0.1)" }} className="py-10 mt-auto">
+        <div className="max-w-4xl mx-auto px-6">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-4 mb-4">
+            <span style={{ fontFamily: displayFont, color: t.footerText }} className="text-lg">{biz.name}</span>
+            <div className="flex items-center gap-4 text-sm" style={{ color: t.footerText }}>
+              {biz.phone && <a href={`tel:${biz.phone}`} className="opacity-70 hover:opacity-100 transition-opacity">{biz.phone}</a>}
+              {biz.email && <a href={`mailto:${biz.email}`} className="opacity-70 hover:opacity-100 transition-opacity">{biz.email}</a>}
+            </div>
+          </div>
+          <div className="flex flex-wrap items-center justify-center md:justify-start gap-4 text-xs" style={{ color: t.footerText }}>
+            <Link href={`/r/${slug}/about`} className="opacity-60 hover:opacity-100 transition-opacity">About</Link>
+            <Link href={`/r/${slug}/gallery`} className="opacity-60 hover:opacity-100 transition-opacity">Gallery</Link>
+            <Link href={`/r/${slug}/contact`} className="opacity-60 hover:opacity-100 transition-opacity">Contact</Link>
+            <Link href={`/r/${slug}/accessibility`} className="opacity-60 hover:opacity-100 transition-opacity">Accessibility</Link>
           </div>
         </div>
       </footer>

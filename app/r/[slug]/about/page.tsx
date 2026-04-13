@@ -16,6 +16,7 @@ export default async function AboutPage({ params }: { params: Promise<{ slug: st
   const displayFont = theme.fonts.display === "system" ? "var(--font-geist-sans)" : `'${theme.fonts.display}', serif`;
   const bodyFont = theme.fonts.body === "system" ? "var(--font-geist-sans)" : `'${theme.fonts.body}', sans-serif`;
   const rBtn = theme.radius === "full" ? "9999px" : theme.radius === "none" ? "0" : theme.radius === "sm" ? "0.375rem" : "0.75rem";
+  const rCard = theme.radius === "full" ? "1rem" : theme.radius === "none" ? "0" : theme.radius === "sm" ? "0.375rem" : "0.75rem";
 
   const aboutPhotos = await getBusinessPhotos(biz.id, "about");
   const teamPhotos = await getBusinessPhotos(biz.id, "team");
@@ -25,7 +26,7 @@ export default async function AboutPage({ params }: { params: Promise<{ slug: st
   const headline = biz.about_headline || "Our Story";
 
   return (
-    <div style={{ background: t.bg, color: t.text, fontFamily: bodyFont }} className="min-h-screen">
+    <div style={{ background: t.bg, color: t.text, fontFamily: bodyFont }} className="min-h-screen flex flex-col">
       <ThemeFonts theme={theme} />
 
       {/* Nav */}
@@ -46,7 +47,7 @@ export default async function AboutPage({ params }: { params: Promise<{ slug: st
         </div>
       </nav>
 
-      <main className="max-w-4xl mx-auto px-6">
+      <main className="flex-1 w-full max-w-4xl mx-auto px-6">
         {/* Header */}
         <header className="pt-16 md:pt-24 pb-12">
           <h1 style={{ fontFamily: displayFont, color: t.text }} className="text-4xl md:text-5xl mb-4">
@@ -59,59 +60,47 @@ export default async function AboutPage({ params }: { params: Promise<{ slug: st
           )}
         </header>
 
-        {/* Editorial content with inline photos */}
+        {/* Editorial content with inline photos — alternating left/center/right */}
         <div className="pb-16 md:pb-24">
           {story.length > 0 ? (
-            <div className="space-y-8">
+            <div className="space-y-10">
               {story.map((paragraph: string, i: number) => {
-                // Insert an about photo after every 2 paragraphs
-                const photoIndex = Math.floor(i / 2);
-                const photo = i > 0 && i % 2 === 0 && aboutPhotos[photoIndex - 1] ? aboutPhotos[photoIndex - 1] : null;
+                // Place a photo after paragraphs 1, 3, 5 (indices 1, 3, 5)
+                const photoSlotIndex = Math.floor((i - 1) / 2);
+                const showPhoto = i > 0 && i % 2 === 1 && aboutPhotos[photoSlotIndex];
+                const photo = showPhoto ? aboutPhotos[photoSlotIndex] : null;
+                // Alternate: 0=left-aligned, 1=full-width center, 2=right-aligned
+                const photoLayout = photoSlotIndex % 3;
 
                 return (
                   <div key={i}>
+                    <p className="text-lg leading-relaxed max-w-2xl" style={{ color: t.textMuted }}>
+                      {paragraph}
+                    </p>
+
                     {photo && (
-                      <figure className="mb-8">
+                      <figure className={`mt-10 mb-2 ${
+                        photoLayout === 0 ? "md:w-3/5 md:mr-auto" :
+                        photoLayout === 1 ? "w-full" :
+                        "md:w-3/5 md:ml-auto"
+                      }`}>
                         <img
                           src={photo.url}
                           alt={photo.alt}
                           className="w-full object-cover"
-                          style={{ borderRadius: theme.radius === "none" ? "0" : "0.5rem", maxHeight: "400px" }}
+                          loading="lazy"
+                          style={{ borderRadius: rCard, maxHeight: photoLayout === 1 ? "480px" : "360px" }}
                         />
                         {photo.caption && (
-                          <figcaption className="mt-3 text-sm italic" style={{ color: t.textLight }}>
+                          <figcaption className="mt-3 text-sm" style={{ color: t.textMuted }}>
                             {photo.caption}
                           </figcaption>
                         )}
                       </figure>
                     )}
-                    <p className="text-lg leading-relaxed max-w-2xl" style={{ color: t.textMuted }}>
-                      {paragraph}
-                    </p>
                   </div>
                 );
               })}
-
-              {/* Remaining photos after text */}
-              {aboutPhotos.length > Math.floor(story.length / 2) && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-12">
-                  {aboutPhotos.slice(Math.floor(story.length / 2)).map((photo) => (
-                    <figure key={photo.id}>
-                      <img
-                        src={photo.url}
-                        alt={photo.alt}
-                        className="w-full object-cover"
-                        style={{ borderRadius: theme.radius === "none" ? "0" : "0.5rem", maxHeight: "300px" }}
-                      />
-                      {photo.caption && (
-                        <figcaption className="mt-2 text-sm italic" style={{ color: t.textLight }}>
-                          {photo.caption}
-                        </figcaption>
-                      )}
-                    </figure>
-                  ))}
-                </div>
-              )}
             </div>
           ) : (
             /* No editorial — show the short about + any photos */
@@ -178,12 +167,20 @@ export default async function AboutPage({ params }: { params: Promise<{ slug: st
         </section>
       </main>
 
-      <footer style={{ background: t.footerBg, borderTop: "1px solid rgba(255,255,255,0.1)" }} className="py-10">
-        <div className="max-w-4xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-4">
-          <span style={{ fontFamily: displayFont, color: t.footerText }} className="text-lg">{biz.name}</span>
-          <div className="flex items-center gap-4 text-sm" style={{ color: t.footerTextMuted }}>
-            {biz.phone && <a href={`tel:${biz.phone}`}>{biz.phone}</a>}
-            {biz.email && <a href={`mailto:${biz.email}`}>{biz.email}</a>}
+      <footer style={{ background: t.footerBg, borderTop: "1px solid rgba(255,255,255,0.1)" }} className="py-10 mt-auto">
+        <div className="max-w-4xl mx-auto px-6">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-4 mb-4">
+            <span style={{ fontFamily: displayFont, color: t.footerText }} className="text-lg">{biz.name}</span>
+            <div className="flex items-center gap-4 text-sm" style={{ color: t.footerText }}>
+              {biz.phone && <a href={`tel:${biz.phone}`} className="opacity-70 hover:opacity-100 transition-opacity">{biz.phone}</a>}
+              {biz.email && <a href={`mailto:${biz.email}`} className="opacity-70 hover:opacity-100 transition-opacity">{biz.email}</a>}
+            </div>
+          </div>
+          <div className="flex flex-wrap items-center justify-center md:justify-start gap-4 text-xs" style={{ color: t.footerText }}>
+            <Link href={`/r/${slug}/about`} className="opacity-60 hover:opacity-100 transition-opacity">About</Link>
+            <Link href={`/r/${slug}/gallery`} className="opacity-60 hover:opacity-100 transition-opacity">Gallery</Link>
+            <Link href={`/r/${slug}/contact`} className="opacity-60 hover:opacity-100 transition-opacity">Contact</Link>
+            <Link href={`/r/${slug}/accessibility`} className="opacity-60 hover:opacity-100 transition-opacity">Accessibility</Link>
           </div>
         </div>
       </footer>
