@@ -150,6 +150,19 @@ CREATE TABLE IF NOT EXISTS business_magic_links (
   created_at TIMESTAMPTZ DEFAULT now()
 );
 
+-- Content snapshots for rollback (taken before every publish)
+CREATE TABLE IF NOT EXISTS business_snapshots (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  business_id UUID NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
+  snapshot_type TEXT NOT NULL DEFAULT 'full', -- full, menu, settings, photos, hours
+  data JSONB NOT NULL,                        -- full state at time of snapshot
+  label TEXT DEFAULT '',                       -- "Before menu edit", "Before theme change"
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+ALTER TABLE business_snapshots ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Allow all business_snapshots" ON business_snapshots FOR ALL USING (true) WITH CHECK (true);
+
 -- Admin email whitelist per business
 CREATE TABLE IF NOT EXISTS business_admins (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

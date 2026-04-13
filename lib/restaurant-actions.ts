@@ -3,6 +3,7 @@
 import { supabase } from "./db";
 import { randomUUID } from "crypto";
 import { revalidatePath } from "next/cache";
+import { takeSnapshot } from "./snapshots";
 
 function timeToMinutes(time: string): number {
   const [h, m] = time.split(":").map(Number);
@@ -260,6 +261,9 @@ export async function updateMenuItem(itemId: string, data: {
 }
 
 export async function deleteMenuItem(itemId: string) {
+  // Get business ID for snapshot
+  const { data: item } = await supabase.from("menu_items").select("business_id").eq("id", itemId).single();
+  if (item) await takeSnapshot(item.business_id, "menu", "Before menu item delete");
   await supabase.from("menu_items").delete().eq("id", itemId);
   revalidatePath(`/r/[slug]`, "layout");
 }
@@ -272,6 +276,7 @@ export async function updateBusinessSettings(businessId: string, data: {
   state?: string; zip?: string; phone?: string; email?: string;
   cover_image_url?: string; logo_url?: string; theme?: string;
 }) {
+  await takeSnapshot(businessId, "settings", "Before settings update");
   await supabase.from("businesses").update(data).eq("id", businessId);
   revalidatePath(`/r/[slug]`, "layout");
 }
@@ -282,7 +287,7 @@ export async function updateBusinessHours(businessId: string, hours: {
   day_of_week: number; open_time: string; close_time: string;
   last_seating: string | null; is_closed: boolean;
 }[]) {
-  // Delete existing hours and re-insert
+  await takeSnapshot(businessId, "hours", "Before hours update");
   await supabase.from("business_hours").delete().eq("business_id", businessId);
   for (const h of hours) {
     await supabase.from("business_hours").insert({
@@ -318,6 +323,8 @@ export async function addPhoto(businessId: string, data: {
 }
 
 export async function deletePhoto(photoId: string) {
+  const { data: photo } = await supabase.from("business_photos").select("business_id").eq("id", photoId).single();
+  if (photo) await takeSnapshot(photo.business_id, "photos", "Before photo delete");
   await supabase.from("business_photos").delete().eq("id", photoId);
   revalidatePath(`/r/[slug]`, "layout");
 }
