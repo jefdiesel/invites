@@ -37,6 +37,17 @@ export async function getMenuItems(businessId: string) {
   return data ?? [];
 }
 
+export async function getBusinessPhotos(businessId: string, category?: string) {
+  let query = supabase
+    .from("business_photos")
+    .select("*")
+    .eq("business_id", businessId)
+    .order("sort_order");
+  if (category) query = query.eq("category", category);
+  const { data } = await query;
+  return data ?? [];
+}
+
 export async function getServices(businessId: string) {
   const { data } = await supabase
     .from("services")

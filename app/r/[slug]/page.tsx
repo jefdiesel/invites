@@ -86,11 +86,11 @@ export default async function RestaurantPage({ params }: { params: Promise<{ slu
           {/* Desktop */}
           <div className="hidden md:flex items-center gap-6 text-sm">
             {menuByCategory.length > 0 && (
-              <a href="#menu" className="font-medium transition-colors" style={{ color: t.navText }}
-                 onMouseEnter={undefined}>{/* hover handled by CSS below */}Menu</a>
+              <a href="#menu" className="font-medium transition-colors" style={{ color: t.navText }}>Menu</a>
             )}
-            <a href="#hours" className="font-medium transition-colors" style={{ color: t.navText }}>Hours</a>
-            <a href="#contact" className="font-medium transition-colors" style={{ color: t.navText }}>Find Us</a>
+            <Link href={`/r/${slug}/about`} className="font-medium transition-colors" style={{ color: t.navText }}>About</Link>
+            <Link href={`/r/${slug}/gallery`} className="font-medium transition-colors" style={{ color: t.navText }}>Gallery</Link>
+            <Link href={`/r/${slug}/contact`} className="font-medium transition-colors" style={{ color: t.navText }}>Contact</Link>
             <Link href={`/r/${slug}/book`}
               className="px-5 py-1.5 text-sm font-bold text-white transition-colors"
               style={{ background: t.accent, borderRadius: rBtn }}>
@@ -112,8 +112,9 @@ export default async function RestaurantPage({ params }: { params: Promise<{ slu
             {menuByCategory.length > 0 && (
               <a href="#menu" className="px-3 py-1 transition-colors" style={{ color: t.navText, borderRadius: rBtn }}>Menu</a>
             )}
-            <a href="#hours" className="px-3 py-1 transition-colors" style={{ color: t.navText, borderRadius: rBtn }}>Hours</a>
-            <a href="#contact" className="px-3 py-1 transition-colors" style={{ color: t.navText, borderRadius: rBtn }}>Find Us</a>
+            <Link href={`/r/${slug}/about`} className="px-3 py-1 transition-colors" style={{ color: t.navText, borderRadius: rBtn }}>About</Link>
+            <Link href={`/r/${slug}/gallery`} className="px-3 py-1 transition-colors" style={{ color: t.navText, borderRadius: rBtn }}>Gallery</Link>
+            <Link href={`/r/${slug}/contact`} className="px-3 py-1 transition-colors" style={{ color: t.navText, borderRadius: rBtn }}>Contact</Link>
           </div>
         </div>
       </nav>
@@ -299,18 +300,26 @@ export default async function RestaurantPage({ params }: { params: Promise<{ slu
       </main>
 
       <footer style={{ background: t.footerBg, borderTop: "1px solid rgba(255,255,255,0.1)" }} className="py-10">
-        <div className="max-w-4xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-4">
-          <div>
-            <span style={{ fontFamily: displayFont, color: t.footerText }} className="text-lg">{biz.name}</span>
-            {biz.address && (
-              <span className="text-sm ml-3" style={{ color: t.footerTextMuted }}>
-                {biz.address}{biz.city ? `, ${biz.city}` : ""}
-              </span>
-            )}
+        <div className="max-w-4xl mx-auto px-6">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-4 mb-6">
+            <div>
+              <span style={{ fontFamily: displayFont, color: t.footerText }} className="text-lg">{biz.name}</span>
+              {biz.address && (
+                <span className="text-sm ml-3" style={{ color: t.footerTextMuted }}>
+                  {biz.address}{biz.city ? `, ${biz.city}` : ""}
+                </span>
+              )}
+            </div>
+            <div className="flex items-center gap-4 text-sm" style={{ color: t.footerTextMuted }}>
+              {biz.phone && <a href={`tel:${biz.phone}`} className="transition-colors hover:opacity-80">{biz.phone}</a>}
+              {biz.email && <a href={`mailto:${biz.email}`} className="transition-colors hover:opacity-80">{biz.email}</a>}
+            </div>
           </div>
-          <div className="flex items-center gap-4 text-sm" style={{ color: t.footerTextMuted }}>
-            {biz.phone && <a href={`tel:${biz.phone}`} className="transition-colors hover:opacity-80">{biz.phone}</a>}
-            {biz.email && <a href={`mailto:${biz.email}`} className="transition-colors hover:opacity-80">{biz.email}</a>}
+          <div className="flex flex-wrap items-center justify-center md:justify-start gap-4 text-xs" style={{ color: t.footerTextMuted }}>
+            <Link href={`/r/${slug}/about`} className="transition-colors hover:opacity-80">About</Link>
+            <Link href={`/r/${slug}/gallery`} className="transition-colors hover:opacity-80">Gallery</Link>
+            <Link href={`/r/${slug}/contact`} className="transition-colors hover:opacity-80">Contact</Link>
+            <Link href={`/r/${slug}/accessibility`} className="transition-colors hover:opacity-80">Accessibility</Link>
           </div>
         </div>
       </footer>

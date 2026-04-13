@@ -33,7 +33,9 @@ CREATE TABLE IF NOT EXISTS businesses (
   cuisine TEXT DEFAULT '',
   price_range TEXT DEFAULT '', -- $, $$, $$$, $$$$
   -- Site content
-  about TEXT DEFAULT '',
+  about TEXT DEFAULT '',           -- short tagline (shown in hero if <80 chars)
+  about_story TEXT DEFAULT '',     -- long-form editorial (about page, supports paragraphs split by \n\n)
+  about_headline TEXT DEFAULT '',  -- about page headline (e.g., "Our Story")
   logo_url TEXT DEFAULT '',
   cover_image_url TEXT DEFAULT '',
   -- Custom domain (e.g., "chezlaurent.com") — middleware maps hostname → slug
@@ -130,6 +132,21 @@ CREATE TABLE IF NOT EXISTS menu_items (
   available BOOLEAN DEFAULT true,
   sort_order INT DEFAULT 0
 );
+
+-- Photos with REQUIRED alt text (a11y enforced at schema level)
+CREATE TABLE IF NOT EXISTS business_photos (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  business_id UUID NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
+  url TEXT NOT NULL,
+  alt TEXT NOT NULL CHECK (length(trim(alt)) > 0), -- WCAG: no empty alts
+  caption TEXT DEFAULT '',
+  category TEXT NOT NULL DEFAULT 'gallery', -- gallery, about, food, interior, team, hero
+  sort_order INT DEFAULT 0,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+ALTER TABLE business_photos ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Allow all business_photos" ON business_photos FOR ALL USING (true) WITH CHECK (true);
 
 -- Client-sensitive data (isolated for HIPAA/SOC2 readiness)
 -- This table can be encrypted at rest, moved to isolated storage,
