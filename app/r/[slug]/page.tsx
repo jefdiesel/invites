@@ -161,11 +161,16 @@ export default async function RestaurantPage({ params }: { params: Promise<{ slu
               <h2 style={{ fontFamily: displayFont, color: t.text }} className="text-3xl md:text-4xl mb-12">
                 Menu
               </h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-16 gap-y-14">
+              <div className={`grid grid-cols-1 ${theme.menuColumns === 2 ? "md:grid-cols-2" : ""} gap-x-16 gap-y-14`}>
                 {menuByCategory.map((cat) => (
                   <div key={cat.category}>
                     <h3 className="text-sm font-bold uppercase tracking-widest mb-6 pb-2"
-                        style={{ color: t.accent, borderBottom: `1px solid ${t.border}` }}>
+                        style={{
+                          color: t.accent,
+                          borderBottom: theme.sectionDivider === "accent-line"
+                            ? `2px solid ${t.accent}`
+                            : `1px solid ${t.border}`,
+                        }}>
                       {cat.category}
                     </h3>
                     <div className="space-y-5">

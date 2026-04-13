@@ -5,60 +5,65 @@ export type Theme = {
   label: string;
   description: string;
   fonts: {
-    display: string;   // Google Fonts family name for headings
-    body: string;       // Google Fonts family name for body (or "system")
+    display: string;
+    body: string;
   };
   colors: {
-    bg: string;         // page background
-    surface: string;    // card/section background
-    surfaceAlt: string; // alternating section bg
-    text: string;       // primary text
-    textMuted: string;  // secondary text
-    textLight: string;  // tertiary/placeholder text
-    accent: string;     // primary action color
+    bg: string;
+    surface: string;
+    surfaceAlt: string;
+    text: string;
+    textMuted: string;
+    textLight: string;
+    accent: string;
     accentHover: string;
-    accentMuted: string; // accent at 10% opacity for badges
-    border: string;     // borders/dividers
-    navBg: string;      // nav background
-    navText: string;    // nav link text
+    accentMuted: string;
+    accent2: string;         // secondary accent for variety
+    border: string;
+    navBg: string;
+    navText: string;
     navTextHover: string;
-    heroBg: string;     // hero background (no-image fallback)
+    heroBg: string;
     heroText: string;
     heroTextMuted: string;
     footerBg: string;
     footerText: string;
     footerTextMuted: string;
   };
-  radius: string;       // border-radius token: "none" | "sm" | "lg" | "full"
-  texture: boolean;     // show subtle background texture
-  menuStyle: "dots" | "line" | "clean"; // price leader style
+  radius: string;
+  texture: boolean;
+  menuStyle: "dots" | "line" | "clean";
   navStyle: "dark" | "light" | "transparent";
+  heroStyle: "overlay" | "split" | "fullbleed" | "minimal"; // controls hero layout
+  menuColumns: 1 | 2;       // menu layout
+  sectionDivider: "border" | "none" | "accent-line"; // how sections separate
 };
 
 export const themes: Record<ThemeId, Theme> = {
   modern: {
     id: "modern",
     label: "Modern",
-    description: "Minimal, monochrome, sharp. For contemporary restaurants.",
+    description: "Stripped back, high contrast, nothing extra. Brutalist meets fine dining.",
     fonts: { display: "Inter", body: "Inter" },
     colors: {
       bg: "#ffffff",
       surface: "#ffffff",
-      surfaceAlt: "#f8f8f8",
-      text: "#111111",
-      textMuted: "#666666",
+      surfaceAlt: "#fafafa",
+      text: "#0a0a0a",
+      textMuted: "#525252",
       textLight: "#737373",
-      accent: "#111111",
-      accentHover: "#333333",
-      accentMuted: "rgba(17,17,17,0.08)",
+      accent: "#0a0a0a",
+      accentHover: "#262626",
+      accentMuted: "rgba(10,10,10,0.06)",
+      accent2: "#0a0a0a",
       border: "#e5e5e5",
       navBg: "#ffffff",
-      navText: "#666666",
-      navTextHover: "#111111",
-      heroBg: "#111111",
+      navText: "#737373",
+      navTextHover: "#0a0a0a",
+      heroBg: "#0a0a0a",
       heroText: "#ffffff",
       heroTextMuted: "rgba(255,255,255,0.6)",
-      footerBg: "#111111",
+      footerBg: "#0a0a0a",
       footerText: "#ffffff",
       footerTextMuted: "rgba(255,255,255,0.4)",
     },
@@ -66,12 +71,15 @@ export const themes: Record<ThemeId, Theme> = {
     texture: false,
     menuStyle: "clean",
     navStyle: "light",
+    heroStyle: "minimal",
+    menuColumns: 1,
+    sectionDivider: "border",
   },
 
   classic: {
     id: "classic",
     label: "Classic",
-    description: "Warm, elegant, serif. For fine dining and bistros.",
+    description: "Warm, elegant, timeless. The candlelit dinner of web design.",
     fonts: { display: "DM Serif Display", body: "system" },
     colors: {
       bg: "#f7f3ed",
@@ -83,6 +91,7 @@ export const themes: Record<ThemeId, Theme> = {
       accent: "#c4703c",
       accentHover: "#d4884f",
       accentMuted: "rgba(196,112,60,0.1)",
+      accent2: "#8b5e3c",
       border: "#e8e0d4",
       navBg: "rgba(31,26,20,0.95)",
       navText: "#d4c8b8",
@@ -98,95 +107,107 @@ export const themes: Record<ThemeId, Theme> = {
     texture: true,
     menuStyle: "dots",
     navStyle: "dark",
+    heroStyle: "overlay",
+    menuColumns: 2,
+    sectionDivider: "border",
   },
 
   rustic: {
     id: "rustic",
     label: "Rustic",
-    description: "Earthy, textured, warm. For farm-to-table and country kitchens.",
+    description: "Rough edges, deep greens, woodsmoke. Built from the land.",
     fonts: { display: "Libre Baskerville", body: "system" },
     colors: {
-      bg: "#f4f1eb",
-      surface: "#faf8f4",
-      surfaceAlt: "#ebe6db",
+      bg: "#f0ebe0",
+      surface: "#f7f4ed",
+      surfaceAlt: "#e8e1d3",
       text: "#2d2a23",
-      textMuted: "#6b6456",
+      textMuted: "#5c5647",
       textLight: "#7d7568",
-      accent: "#5a7a62",
-      accentHover: "#4a6a52",
-      accentMuted: "rgba(90,122,98,0.12)",
-      border: "#d4cdc0",
+      accent: "#3d6b47",
+      accentHover: "#2d5435",
+      accentMuted: "rgba(61,107,71,0.10)",
+      accent2: "#8b6834",
+      border: "#d0c7b6",
       navBg: "#2d2a23",
       navText: "#b8b0a0",
-      navTextHover: "#ffffff",
+      navTextHover: "#f0ebe0",
       heroBg: "#2d2a23",
-      heroText: "#f4f1eb",
-      heroTextMuted: "rgba(244,241,235,0.6)",
+      heroText: "#f0ebe0",
+      heroTextMuted: "rgba(240,235,224,0.65)",
       footerBg: "#2d2a23",
-      footerText: "#f4f1eb",
-      footerTextMuted: "rgba(244,241,235,0.4)",
+      footerText: "#f0ebe0",
+      footerTextMuted: "rgba(240,235,224,0.4)",
     },
     radius: "sm",
     texture: true,
     menuStyle: "line",
     navStyle: "dark",
+    heroStyle: "fullbleed",
+    menuColumns: 1,
+    sectionDivider: "accent-line",
   },
 
   playful: {
     id: "playful",
     label: "Playful",
-    description: "Rounded, colorful, friendly. For casual spots and cafes.",
+    description: "Loud, round, unapologetic. Your favorite neighborhood spot.",
     fonts: { display: "Fredoka", body: "system" },
     colors: {
-      bg: "#fef9f2",
+      bg: "#fef7ed",
       surface: "#ffffff",
-      surfaceAlt: "#fff5eb",
-      text: "#2d1b06",
-      textMuted: "#7a5c3a",
+      surfaceAlt: "#fff0de",
+      text: "#1a1207",
+      textMuted: "#6b5434",
       textLight: "#8a7355",
-      accent: "#e85d3a",
-      accentHover: "#d14e2d",
-      accentMuted: "rgba(232,93,58,0.1)",
-      border: "#f0e4d4",
-      navBg: "#e85d3a",
-      navText: "rgba(255,255,255,0.85)",
+      accent: "#e04420",
+      accentHover: "#c43a1a",
+      accentMuted: "rgba(224,68,32,0.08)",
+      accent2: "#f59e0b",
+      border: "#f0dfc8",
+      navBg: "#e04420",
+      navText: "rgba(255,255,255,0.9)",
       navTextHover: "#ffffff",
-      heroBg: "#e85d3a",
+      heroBg: "#e04420",
       heroText: "#ffffff",
-      heroTextMuted: "rgba(255,255,255,0.75)",
-      footerBg: "#2d1b06",
-      footerText: "#fef9f2",
-      footerTextMuted: "rgba(254,249,242,0.5)",
+      heroTextMuted: "rgba(255,255,255,0.8)",
+      footerBg: "#1a1207",
+      footerText: "#fef7ed",
+      footerTextMuted: "rgba(254,247,237,0.5)",
     },
     radius: "full",
     texture: false,
     menuStyle: "clean",
     navStyle: "dark",
+    heroStyle: "fullbleed",
+    menuColumns: 2,
+    sectionDivider: "none",
   },
 
   bright: {
     id: "bright",
     label: "Bright",
-    description: "Bold, saturated, high-energy. For modern bistros and bars.",
+    description: "Electric. Saturated. The restaurant is a brand and the brand hits hard.",
     fonts: { display: "Space Grotesk", body: "Space Grotesk" },
     colors: {
-      bg: "#f0f0f0",
+      bg: "#f5f0ff",
       surface: "#ffffff",
-      surfaceAlt: "#f0f0f0",
-      text: "#0a0a0a",
-      textMuted: "#525252",
-      textLight: "#737373",
-      accent: "#2563eb",
-      accentHover: "#1d4ed8",
-      accentMuted: "rgba(37,99,235,0.08)",
-      border: "#e0e0e0",
-      navBg: "#0a0a0a",
+      surfaceAlt: "#ede5ff",
+      text: "#0f0720",
+      textMuted: "#4a3d6b",
+      textLight: "#6b5f8a",
+      accent: "#7c3aed",
+      accentHover: "#6d28d9",
+      accentMuted: "rgba(124,58,237,0.08)",
+      accent2: "#ec4899",
+      border: "#ddd5f0",
+      navBg: "#0f0720",
       navText: "rgba(255,255,255,0.7)",
       navTextHover: "#ffffff",
-      heroBg: "#0a0a0a",
+      heroBg: "#0f0720",
       heroText: "#ffffff",
-      heroTextMuted: "rgba(255,255,255,0.5)",
-      footerBg: "#0a0a0a",
+      heroTextMuted: "rgba(255,255,255,0.6)",
+      footerBg: "#0f0720",
       footerText: "#ffffff",
       footerTextMuted: "rgba(255,255,255,0.4)",
     },
@@ -194,6 +215,9 @@ export const themes: Record<ThemeId, Theme> = {
     texture: false,
     menuStyle: "clean",
     navStyle: "dark",
+    heroStyle: "fullbleed",
+    menuColumns: 2,
+    sectionDivider: "accent-line",
   },
 };
 

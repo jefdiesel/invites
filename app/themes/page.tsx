@@ -40,11 +40,11 @@ const DEMO_CUISINES: Record<ThemeId, string> = {
 
 const PHILOSOPHY: Record<ThemeId, { vibe: string; bestFor: string; fontNote: string; colorNote: string; details: string }> = {
   modern: {
-    vibe: "Less is more. Sharp edges, monochrome palette, every element earns its place.",
+    vibe: "Stripped back, high contrast, nothing extra. Brutalist meets fine dining.",
     bestFor: "Omakase counters, wine bars, tasting rooms, minimalist cafes",
     fontNote: "Inter for both headings and body. Clean, geometric, no decoration.",
-    colorNote: "Black and white with zero accent color. The food is the color.",
-    details: "Square corners, clean price alignment without leaders, light nav bar. The design disappears so the content speaks.",
+    colorNote: "Black and white. No accent color. The food is the only color in the room.",
+    details: "Square corners, no price leaders, light nav bar, single-column menu. The design disappears so the content speaks.",
   },
   classic: {
     vibe: "Warm, elegant, timeless. The candlelit dinner of web design.",
@@ -54,25 +54,25 @@ const PHILOSOPHY: Record<ThemeId, { vibe: string; bestFor: string; fontNote: str
     details: "Dotted leader lines on menu prices (like a printed menu). Subtle cross-hatch texture on dark sections. Small border radius.",
   },
   rustic: {
-    vibe: "Honest, grounded, handmade. Mud on your boots, herbs in your hand.",
+    vibe: "Rough edges, deep greens, woodsmoke. Built from the land.",
     bestFor: "Farm-to-table, country kitchens, brewpubs, farmhouse restaurants",
     fontNote: "Libre Baskerville for headings. Traditional serif with a literary feel, like a cookbook.",
-    colorNote: "Sage green accent on parchment backgrounds. Earthy, never flashy.",
-    details: "Solid line leaders on menu prices. Textured dark sections. The palette says 'we grew this ourselves.'",
+    colorNote: "Deep forest green accent with amber secondary. Parchment backgrounds. Earthy, never flashy.",
+    details: "Solid line leaders on menu prices, accent-colored dividers, textured dark sections. Single-column menu reads like a handwritten board.",
   },
   playful: {
-    vibe: "Fun, friendly, come as you are. Design that makes you smile.",
+    vibe: "Loud, round, unapologetic. Your favorite neighborhood spot.",
     bestFor: "Burger joints, taco shops, ice cream parlors, family restaurants, cafes",
     fontNote: "Fredoka for headings. Rounded, bubbly, approachable. It doesn't take itself too seriously.",
-    colorNote: "Warm cream base with coral red accent. The nav IS the accent color. Bold and unapologetic.",
-    details: "Full border radius on everything (pills, buttons, badges). Clean menu without price leaders. The shape language is round and soft.",
+    colorNote: "Hot red accent with amber secondary. The nav IS the accent color. Warm cream body. Bold and unapologetic.",
+    details: "Full border radius on everything. Clean menu, two columns. The shape language is round and soft — every edge is a pill.",
   },
   bright: {
-    vibe: "Bold, contemporary, high-energy. For restaurants that think of themselves as brands.",
-    bestFor: "New American, cocktail bars, modern bistros, fast-casual concepts",
-    fontNote: "Space Grotesk for everything. Geometric, technical, with just enough personality.",
-    colorNote: "Cool gray base with electric blue accent. High contrast, zero warmth. It hits different.",
-    details: "Large border radius on cards, medium on buttons. Clean menu. The color is the statement.",
+    vibe: "Electric. The restaurant is a brand and the brand hits hard. Purple-to-pink gradient energy.",
+    bestFor: "Natural wine bars, cocktail bars, modern bistros, fast-casual concepts, pop-ups",
+    fontNote: "Space Grotesk for everything. Geometric, technical, reads like a poster not a menu.",
+    colorNote: "Deep violet accent on lavender backgrounds, hot pink as second color. No earth tones. No warmth. Pure energy.",
+    details: "Large border radius, accent-colored dividers, two-column menu. The palette says 'we opened last month and we're already booked out.'",
   },
 };
 
