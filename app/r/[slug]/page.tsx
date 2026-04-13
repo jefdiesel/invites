@@ -123,7 +123,7 @@ export default async function RestaurantPage({ params }: { params: Promise<{ slu
         {biz.cover_image_url ? (
           <div className="h-[480px] md:h-[520px] relative">
             <img src={biz.cover_image_url} alt={`${biz.name} interior`} className="absolute inset-0 w-full h-full object-cover" />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-black/20" />
             <div className="relative z-10 h-full flex flex-col justify-end max-w-4xl mx-auto px-6 pb-14">
               <HeroText biz={biz} slug={slug} isOpenToday={isOpenToday} todayHours={todayHours}
                         displayFont={displayFont} accent={t.accent} rBtn={rBtn} overlay />
@@ -336,12 +336,14 @@ function HeroText({
   heroText?: string; heroTextMuted?: string;
 }) {
   const textColor = overlay ? "#ffffff" : (heroText ?? "#ffffff");
-  const mutedColor = overlay ? "rgba(255,255,255,0.6)" : (heroTextMuted ?? "rgba(255,255,255,0.6)");
+  const mutedColor = overlay ? "rgba(255,255,255,0.85)" : (heroTextMuted ?? "rgba(255,255,255,0.6)");
+  // Text shadow guarantees readability over any image (WCAG SC 1.4.3)
+  const shadow = overlay ? "0 2px 12px rgba(0,0,0,0.8), 0 1px 3px rgba(0,0,0,0.9)" : "none";
 
   return (
-    <>
+    <div style={{ textShadow: shadow }}>
       {(biz.cuisine || biz.price_range) && (
-        <div className="text-sm tracking-[0.2em] uppercase mb-4" style={{ color: mutedColor }}>
+        <div className="text-sm font-medium tracking-[0.2em] uppercase mb-4" style={{ color: mutedColor }}>
           {[biz.cuisine, biz.price_range].filter(Boolean).join(" · ")}
         </div>
       )}
@@ -356,7 +358,7 @@ function HeroText({
       <div className="mt-8 flex flex-wrap items-center gap-4">
         <Link href={`/r/${slug}/book`}
           className="px-8 py-3.5 text-base font-bold text-white transition-colors"
-          style={{ background: accent, borderRadius: rBtn }}>
+          style={{ background: accent, borderRadius: rBtn, textShadow: "none" }}>
           Reserve a Table
         </Link>
         {isOpenToday && todayHours && (
@@ -365,7 +367,7 @@ function HeroText({
           </span>
         )}
       </div>
-    </>
+    </div>
   );
 }
 
