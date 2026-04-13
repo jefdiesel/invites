@@ -8,6 +8,7 @@ import {
   addPhoto, deletePhoto,
 } from "@/lib/restaurant-actions";
 import type { Theme } from "@/lib/themes";
+import { FloorEditor } from "./floor-editor";
 
 // ── Types ──
 
@@ -54,7 +55,7 @@ type Business = {
   min_party_size: number; max_party_size: number;
 };
 
-type Tab = "reservations" | "menu" | "site" | "photos" | "guests";
+type Tab = "reservations" | "floor" | "menu" | "site" | "photos" | "guests";
 
 // ── Main Component ──
 
@@ -85,15 +86,18 @@ export function AdminDashboard({
 
       {/* Tabs */}
       <div className="flex items-center gap-1 border-b border-neutral-200 mb-6 overflow-x-auto">
-        {(["reservations", "menu", "site", "photos", "guests"] as Tab[]).map((t) => (
+        {(["reservations", "floor", "menu", "site", "photos", "guests"] as Tab[]).map((t) => (
           <TabBtn key={t} active={tab === t} onClick={() => setTab(t)}>
-            {t === "reservations" ? "Reservations" : t === "menu" ? "Menu" : t === "site" ? "Site Settings" : t === "photos" ? "Photos" : "Guests"}
+            {t === "reservations" ? "Reservations" : t === "floor" ? "Floor Plan" : t === "menu" ? "Menu" : t === "site" ? "Site Settings" : t === "photos" ? "Photos" : "Guests"}
           </TabBtn>
         ))}
       </div>
 
       {tab === "reservations" && (
         <ReservationsTab bookings={bookings} tables={tables} today={today} slotDuration={business.slot_duration_minutes} />
+      )}
+      {tab === "floor" && (
+        <FloorPlanTab businessId={business.id} tables={tables} />
       )}
       {tab === "menu" && (
         <MenuTab menu={menu} businessId={business.id} />
@@ -706,6 +710,20 @@ function ActionBtn({ label, onClick, color }: { label: string; onClick: () => vo
       {label}
     </button>
   );
+}
+
+function FloorPlanTab({ businessId, tables }: { businessId: string; tables: RestaurantTable[] }) {
+  // Map RestaurantTable to FloorEditor's expected type (add missing positional fields)
+  const editorTables = tables.map((t) => ({
+    ...t,
+    shape: (t as Record<string, unknown>).shape as string ?? "circle",
+    pos_x: (t as Record<string, unknown>).pos_x as number ?? 50,
+    pos_y: (t as Record<string, unknown>).pos_y as number ?? 50,
+    width: (t as Record<string, unknown>).width as number ?? 8,
+    height: (t as Record<string, unknown>).height as number ?? 8,
+  }));
+
+  return <FloorEditor businessId={businessId} tables={editorTables} />;
 }
 
 function timeToMins(time: string): number {

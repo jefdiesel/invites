@@ -383,6 +383,56 @@ export async function assignTable(bookingId: string, tableId: string) {
   }).eq("id", bookingId);
 }
 
+// ── Table Management ──
+
+export async function updateTablePosition(tableId: string, pos: { pos_x: number; pos_y: number }) {
+  await supabase.from("restaurant_tables").update(pos).eq("id", tableId);
+}
+
+export async function updateTable(tableId: string, data: {
+  name?: string; zone?: string; capacity?: number; shape?: string;
+  width?: number; height?: number; is_active?: boolean;
+}) {
+  await supabase.from("restaurant_tables").update(data).eq("id", tableId);
+  revalidatePath(`/r/[slug]`, "layout");
+}
+
+export async function addTable(businessId: string, data: {
+  name: string; zone: string; capacity: number; shape: string;
+}) {
+  const { data: maxOrder } = await supabase
+    .from("restaurant_tables")
+    .select("sort_order")
+    .eq("business_id", businessId)
+    .order("sort_order", { ascending: false })
+    .limit(1)
+    .single();
+
+  // Size based on capacity, but shape is user's choice
+  const w = data.capacity <= 2 ? 6 : data.capacity <= 4 ? 8 : data.capacity <= 6 ? 11 : 14;
+  const h = data.shape === "circle" ? w : (data.capacity <= 4 ? 8 : 8);
+
+  await supabase.from("restaurant_tables").insert({
+    id: randomUUID(),
+    business_id: businessId,
+    name: data.name,
+    zone: data.zone,
+    capacity: data.capacity,
+    shape: data.shape,
+    pos_x: 50,
+    pos_y: 50,
+    width: w,
+    height: h,
+    sort_order: (maxOrder?.sort_order ?? 0) + 1,
+  });
+  revalidatePath(`/r/[slug]`, "layout");
+}
+
+export async function deleteTable(tableId: string) {
+  await supabase.from("restaurant_tables").delete().eq("id", tableId);
+  revalidatePath(`/r/[slug]`, "layout");
+}
+
 // ── Existing ──
 
 export async function createBusiness(data: {
