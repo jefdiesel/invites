@@ -38,9 +38,10 @@ export default async function AboutPage({ params }: { params: Promise<{ slug: st
             <span style={{ fontFamily: displayFont }} className="text-xl">{biz.name}</span>
           </Link>
           <div className="flex items-center gap-6 text-sm">
-            <Link href={`/r/${slug}`} className="font-medium transition-colors hidden md:inline" style={{ color: t.navText }}>Home</Link>
+            <Link href={`/r/${slug}#menu`} className="font-medium transition-colors hidden md:inline" style={{ color: t.navText }}>Menu</Link>
             <Link href={`/r/${slug}/about`} className="font-medium transition-colors hidden md:inline" style={{ color: t.navTextHover }}>About</Link>
             <Link href={`/r/${slug}/gallery`} className="font-medium transition-colors hidden md:inline" style={{ color: t.navText }}>Gallery</Link>
+            <Link href={`/r/${slug}/contact`} className="font-medium transition-colors hidden md:inline" style={{ color: t.navText }}>Contact</Link>
             <Link href={`/r/${slug}/book`} className="px-5 py-1.5 text-sm font-bold text-white transition-colors"
               style={{ background: t.accent, borderRadius: rBtn }}>Reserve</Link>
           </div>

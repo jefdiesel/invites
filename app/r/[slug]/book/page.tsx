@@ -31,8 +31,9 @@ export default async function BookPage({ params }: { params: Promise<{ slug: str
             <span style={{ fontFamily: displayFont }} className="text-xl">{biz.name}</span>
           </Link>
           <div className="flex items-center gap-6 text-sm">
-            <Link href={`/r/${slug}`} className="font-medium transition-colors hidden md:inline" style={{ color: t.navText }}>Home</Link>
             <Link href={`/r/${slug}#menu`} className="font-medium transition-colors hidden md:inline" style={{ color: t.navText }}>Menu</Link>
+            <Link href={`/r/${slug}/about`} className="font-medium transition-colors hidden md:inline" style={{ color: t.navText }}>About</Link>
+            <Link href={`/r/${slug}/gallery`} className="font-medium transition-colors hidden md:inline" style={{ color: t.navText }}>Gallery</Link>
             <Link href={`/r/${slug}/contact`} className="font-medium transition-colors hidden md:inline" style={{ color: t.navText }}>Contact</Link>
           </div>
         </div>
