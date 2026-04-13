@@ -21,7 +21,7 @@ export default async function EventPage({ params }: { params: Promise<{ id: stri
     <main className="max-w-3xl mx-auto px-6 py-10">
       {/* Event header */}
       <div className="mb-8">
-        <h1 className="text-2xl font-bold text-warm-900 dark:text-warm-100">{event.title}</h1>
+        <h1 className="text-2xl font-bold text-warm-900">{event.title}</h1>
         <div className="flex items-center gap-3 mt-2 text-sm text-warm-400">
           {event.location && (
             <span className="flex items-center gap-1">
@@ -42,11 +42,11 @@ export default async function EventPage({ params }: { params: Promise<{ id: stri
 
       {/* Stats */}
       <div className="grid grid-cols-3 gap-4 mb-8">
-        <div className="rounded-xl border border-warm-200 dark:border-warm-800 bg-white dark:bg-warm-900 p-4 text-center">
-          <div className="text-2xl font-bold tabular-nums text-warm-900 dark:text-warm-100">{attendees.length}</div>
+        <div className="rounded-xl border border-warm-200 bg-white p-4 text-center">
+          <div className="text-2xl font-bold tabular-nums text-warm-900">{attendees.length}</div>
           <div className="text-sm text-warm-400 mt-0.5">attended</div>
         </div>
-        <div className="rounded-xl border border-warm-200 dark:border-warm-800 bg-white dark:bg-warm-900 p-4 text-center">
+        <div className="rounded-xl border border-warm-200 bg-white p-4 text-center">
           {avgStars !== null ? (
             <>
               <div className="text-2xl font-bold tabular-nums text-amber-500">{avgStars.toFixed(1)}</div>
@@ -54,13 +54,13 @@ export default async function EventPage({ params }: { params: Promise<{ id: stri
             </>
           ) : (
             <>
-              <div className="text-2xl font-bold text-warm-300 dark:text-warm-600">--</div>
+              <div className="text-2xl font-bold text-warm-300">--</div>
               <div className="text-sm text-warm-400 mt-0.5">no reviews</div>
             </>
           )}
         </div>
-        <div className="rounded-xl border border-warm-200 dark:border-warm-800 bg-white dark:bg-warm-900 p-4 text-center">
-          <div className="text-2xl font-bold tabular-nums text-warm-900 dark:text-warm-100">{event.capacity ?? "--"}</div>
+        <div className="rounded-xl border border-warm-200 bg-white p-4 text-center">
+          <div className="text-2xl font-bold tabular-nums text-warm-900">{event.capacity ?? "--"}</div>
           <div className="text-sm text-warm-400 mt-0.5">capacity</div>
         </div>
       </div>
@@ -68,9 +68,9 @@ export default async function EventPage({ params }: { params: Promise<{ id: stri
       {/* Menu */}
       {event.menu && (
         <div className="mb-8">
-          <h2 className="text-sm font-bold text-warm-600 dark:text-warm-400 uppercase tracking-wider mb-3">Menu</h2>
-          <div className="rounded-xl border border-warm-200 dark:border-warm-800 bg-white dark:bg-warm-900 p-5">
-            <p className="text-sm text-warm-700 dark:text-warm-300 whitespace-pre-wrap leading-relaxed">{event.menu}</p>
+          <h2 className="text-sm font-bold text-warm-600 uppercase tracking-wider mb-3">Menu</h2>
+          <div className="rounded-xl border border-warm-200 bg-white p-5">
+            <p className="text-sm text-warm-700 whitespace-pre-wrap leading-relaxed">{event.menu}</p>
           </div>
         </div>
       )}
@@ -78,18 +78,18 @@ export default async function EventPage({ params }: { params: Promise<{ id: stri
       {/* Attendees */}
       {attendees.length > 0 && (
         <div className="mb-8">
-          <h2 className="text-sm font-bold text-warm-600 dark:text-warm-400 uppercase tracking-wider mb-3">Attendees ({attendees.length})</h2>
-          <div className="rounded-xl border border-warm-200 dark:border-warm-800 bg-white dark:bg-warm-900 divide-y divide-warm-100 dark:divide-warm-800/50">
+          <h2 className="text-sm font-bold text-warm-600 uppercase tracking-wider mb-3">Attendees ({attendees.length})</h2>
+          <div className="rounded-xl border border-warm-200 bg-white divide-y divide-warm-100">
             {attendees.map((a, i) => (
               <Link key={i} href={`/members/${encodeURIComponent(a.email)}`}
-                className="flex items-center gap-3 px-4 py-3 hover:bg-warm-50 dark:hover:bg-warm-800/30 transition-colors">
+                className="flex items-center gap-3 px-4 py-3 hover:bg-warm-50 transition-colors">
                 <div className="w-8 h-8 rounded-full bg-accent-muted flex items-center justify-center shrink-0">
                   <span className="text-accent font-bold text-xs">
                     {a.name.split(" ").map((n: string) => n[0]).join("").slice(0, 2).toUpperCase()}
                   </span>
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="text-sm font-medium text-warm-900 dark:text-warm-100">{a.name}</div>
+                  <div className="text-sm font-medium text-warm-900">{a.name}</div>
                   <div className="text-sm text-warm-400">{a.email}</div>
                 </div>
               </Link>
@@ -100,7 +100,7 @@ export default async function EventPage({ params }: { params: Promise<{ id: stri
 
       {/* Reviews */}
       <div className="mb-8">
-        <h2 className="text-sm font-bold text-warm-600 dark:text-warm-400 uppercase tracking-wider mb-3">
+        <h2 className="text-sm font-bold text-warm-600 uppercase tracking-wider mb-3">
           Reviews {reviews.length > 0 && `(${reviews.length})`}
         </h2>
         {reviews.length === 0 ? (
@@ -108,19 +108,19 @@ export default async function EventPage({ params }: { params: Promise<{ id: stri
         ) : (
           <div className="space-y-3">
             {reviews.map((review) => (
-              <div key={review.id} className="rounded-xl border border-warm-200 dark:border-warm-800 bg-white dark:bg-warm-900 p-4">
+              <div key={review.id} className="rounded-xl border border-warm-200 bg-white p-4">
                 <div className="flex items-center gap-3 mb-2">
                   {review.members && (
-                    <span className="text-sm font-semibold text-warm-900 dark:text-warm-100">{review.members.name}</span>
+                    <span className="text-sm font-semibold text-warm-900">{review.members.name}</span>
                   )}
                   <div className="flex items-center gap-0.5">
                     {Array.from({ length: 5 }, (_, i) => (
-                      <span key={i} className={`text-sm ${i < review.stars ? "text-amber-400" : "text-warm-200 dark:text-warm-700"}`}>&#9733;</span>
+                      <span key={i} className={`text-sm ${i < review.stars ? "text-amber-400" : "text-warm-200"}`}>&#9733;</span>
                     ))}
                   </div>
                   <span className="text-sm text-warm-400">{new Date(review.created_at).toLocaleDateString()}</span>
                 </div>
-                {review.body && <p className="text-sm text-warm-600 dark:text-warm-300 leading-relaxed">{review.body}</p>}
+                {review.body && <p className="text-sm text-warm-600 leading-relaxed">{review.body}</p>}
               </div>
             ))}
           </div>
@@ -132,7 +132,7 @@ export default async function EventPage({ params }: { params: Promise<{ id: stri
 
       {/* Link to poll */}
       {event.poll_id && (
-        <div className="mt-8 pt-6 border-t border-warm-200 dark:border-warm-800">
+        <div className="mt-8 pt-6 border-t border-warm-200">
           <Link href={`/poll/${event.poll_id}`} className="text-sm font-medium text-accent hover:text-accent-light transition-colors">
             View original poll &rarr;
           </Link>

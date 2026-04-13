@@ -42,42 +42,42 @@ export default async function MemberPage({ params }: { params: Promise<{ email: 
           <span className="text-accent font-bold text-xl">{initials}</span>
         </div>
         <div>
-          <h1 className="text-2xl font-bold text-warm-900 dark:text-warm-100">{displayName}</h1>
+          <h1 className="text-2xl font-bold text-warm-900">{displayName}</h1>
           <p className="text-base text-warm-400 mt-0.5">{decodedEmail}</p>
         </div>
       </div>
 
       {/* Stats row */}
       <div className="grid grid-cols-4 gap-4 mb-8">
-        <div className="rounded-xl border border-warm-200 dark:border-warm-800 bg-white dark:bg-warm-900 p-4 text-center">
-          <div className="text-2xl font-bold tabular-nums text-warm-900 dark:text-warm-100">{totalPolls}</div>
+        <div className="rounded-xl border border-warm-200 bg-white p-4 text-center">
+          <div className="text-2xl font-bold tabular-nums text-warm-900">{totalPolls}</div>
           <div className="text-sm text-warm-400 mt-0.5">polls</div>
         </div>
-        <div className="rounded-xl border border-warm-200 dark:border-warm-800 bg-white dark:bg-warm-900 p-4 text-center">
+        <div className="rounded-xl border border-warm-200 bg-white p-4 text-center">
           <div className="text-2xl font-bold tabular-nums text-accent">{voted}</div>
           <div className="text-sm text-warm-400 mt-0.5">voted</div>
         </div>
-        <div className="rounded-xl border border-warm-200 dark:border-warm-800 bg-white dark:bg-warm-900 p-4 text-center">
+        <div className="rounded-xl border border-warm-200 bg-white p-4 text-center">
           <div className="text-2xl font-bold tabular-nums text-emerald-600">{assigned}</div>
           <div className="text-sm text-warm-400 mt-0.5">assigned</div>
         </div>
-        <div className="rounded-xl border border-warm-200 dark:border-warm-800 bg-white dark:bg-warm-900 p-4 text-center">
-          <div className="text-2xl font-bold tabular-nums text-warm-900 dark:text-warm-100">{responseRate}%</div>
+        <div className="rounded-xl border border-warm-200 bg-white p-4 text-center">
+          <div className="text-2xl font-bold tabular-nums text-warm-900">{responseRate}%</div>
           <div className="text-sm text-warm-400 mt-0.5">response rate</div>
         </div>
       </div>
 
       {/* Poll history */}
-      <h2 className="text-sm font-bold text-warm-600 dark:text-warm-400 uppercase tracking-wider mb-3">Poll History</h2>
+      <h2 className="text-sm font-bold text-warm-600 uppercase tracking-wider mb-3">Poll History</h2>
       <div className="space-y-2 mb-8">
         {history.polls.map((entry) => (
           <Link
             key={entry.poll.id}
             href={`/poll/${entry.poll.id}`}
-            className="flex items-center gap-4 rounded-xl border border-warm-200 dark:border-warm-800 bg-white dark:bg-warm-900 p-4 hover:border-warm-300 dark:hover:border-warm-700 transition-colors group"
+            className="flex items-center gap-4 rounded-xl border border-warm-200 bg-white p-4 hover:border-warm-300 transition-colors group"
           >
             <div className="flex-1 min-w-0">
-              <div className="text-sm font-semibold text-warm-900 dark:text-warm-100 group-hover:text-accent transition-colors">
+              <div className="text-sm font-semibold text-warm-900 group-hover:text-accent transition-colors">
                 {entry.poll.title}
               </div>
               <div className="text-sm text-warm-400 mt-0.5">
@@ -87,7 +87,7 @@ export default async function MemberPage({ params }: { params: Promise<{ email: 
             </div>
             <div className="flex items-center gap-3 shrink-0">
               {entry.response_type === "voted" && (
-                <span className="text-sm font-medium text-emerald-600 dark:text-emerald-400">
+                <span className="text-sm font-medium text-emerald-600">
                   Voted ({entry.dates_available}/{entry.dates_total} dates)
                 </span>
               )}
@@ -95,13 +95,13 @@ export default async function MemberPage({ params }: { params: Promise<{ email: 
                 <span className="text-sm font-medium text-warm-400">Not interested</span>
               )}
               {entry.response_type === "none_work" && (
-                <span className="text-sm font-medium text-amber-600 dark:text-amber-400">No dates work</span>
+                <span className="text-sm font-medium text-amber-600">No dates work</span>
               )}
               {entry.response_type === "no_response" && (
-                <span className="text-sm text-warm-300 dark:text-warm-600">No response</span>
+                <span className="text-sm text-warm-300">No response</span>
               )}
               {entry.assigned_to.length > 0 && (
-                <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+                <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-600">
                   Seated: {entry.assigned_to.join(", ")}
                 </span>
               )}
@@ -113,7 +113,7 @@ export default async function MemberPage({ params }: { params: Promise<{ email: 
       {/* Events attended */}
       {history.events.length > 0 && (
         <>
-          <h2 className="text-sm font-bold text-warm-600 dark:text-warm-400 uppercase tracking-wider mb-3">Events Attended</h2>
+          <h2 className="text-sm font-bold text-warm-600 uppercase tracking-wider mb-3">Events Attended</h2>
           <div className="space-y-2 mb-8">
             {history.events.map((event) => {
               const review = history.reviews.find((r) => r.event_id === event.id);
@@ -122,10 +122,10 @@ export default async function MemberPage({ params }: { params: Promise<{ email: 
                 <Link
                   key={event.id}
                   href={`/events/${event.id}`}
-                  className="flex items-center gap-4 rounded-xl border border-warm-200 dark:border-warm-800 bg-white dark:bg-warm-900 p-4 hover:border-warm-300 transition-colors"
+                  className="flex items-center gap-4 rounded-xl border border-warm-200 bg-white p-4 hover:border-warm-300 transition-colors"
                 >
                   <div className="flex-1 min-w-0">
-                    <div className="text-sm font-semibold text-warm-900 dark:text-warm-100">{event.title}</div>
+                    <div className="text-sm font-semibold text-warm-900">{event.title}</div>
                     <div className="text-sm text-warm-400 mt-0.5">
                       {event.location && `${event.location} · `}
                       {new Date(event.event_date).toLocaleDateString()}
@@ -135,7 +135,7 @@ export default async function MemberPage({ params }: { params: Promise<{ email: 
                     {review && (
                       <div className="flex items-center gap-0.5">
                         {Array.from({ length: 5 }, (_, i) => (
-                          <span key={i} className={`text-sm ${i < review.stars ? "text-amber-400" : "text-warm-200 dark:text-warm-700"}`}>&#9733;</span>
+                          <span key={i} className={`text-sm ${i < review.stars ? "text-amber-400" : "text-warm-200"}`}>&#9733;</span>
                         ))}
                       </div>
                     )}
@@ -155,17 +155,17 @@ export default async function MemberPage({ params }: { params: Promise<{ email: 
       {/* Ticket purchases */}
       {history.tickets.length > 0 && (
         <>
-          <h2 className="text-sm font-bold text-warm-600 dark:text-warm-400 uppercase tracking-wider mb-3">Ticket Purchases</h2>
-          <div className="rounded-xl border border-warm-200 dark:border-warm-800 bg-white dark:bg-warm-900 divide-y divide-warm-100 dark:divide-warm-800/50 mb-8">
+          <h2 className="text-sm font-bold text-warm-600 uppercase tracking-wider mb-3">Ticket Purchases</h2>
+          <div className="rounded-xl border border-warm-200 bg-white divide-y divide-warm-100 mb-8">
             {history.tickets.map((ticket) => {
               const event = history.events.find((e) => e.id === ticket.event_id);
               return (
                 <div key={ticket.id} className="flex items-center gap-4 px-4 py-3">
                   <div className="flex-1">
-                    <div className="text-sm font-medium text-warm-900 dark:text-warm-100">{event?.title ?? "Unknown Event"}</div>
+                    <div className="text-sm font-medium text-warm-900">{event?.title ?? "Unknown Event"}</div>
                     <div className="text-sm text-warm-400">{new Date(ticket.purchased_at).toLocaleDateString()}</div>
                   </div>
-                  <div className="text-sm font-medium text-warm-900 dark:text-warm-100 tabular-nums">
+                  <div className="text-sm font-medium text-warm-900 tabular-nums">
                     {ticket.quantity} x ${(ticket.amount_cents / 100).toFixed(2)}
                   </div>
                 </div>
@@ -178,22 +178,22 @@ export default async function MemberPage({ params }: { params: Promise<{ email: 
       {/* Reviews */}
       {history.reviews.length > 0 && (
         <>
-          <h2 className="text-sm font-bold text-warm-600 dark:text-warm-400 uppercase tracking-wider mb-3">Reviews</h2>
+          <h2 className="text-sm font-bold text-warm-600 uppercase tracking-wider mb-3">Reviews</h2>
           <div className="space-y-3">
             {history.reviews.map((review) => {
               const event = history.events.find((e) => e.id === review.event_id);
               return (
-                <div key={review.id} className="rounded-xl border border-warm-200 dark:border-warm-800 bg-white dark:bg-warm-900 p-4">
+                <div key={review.id} className="rounded-xl border border-warm-200 bg-white p-4">
                   <div className="flex items-center gap-3 mb-2">
-                    <div className="text-sm font-semibold text-warm-900 dark:text-warm-100">{event?.title ?? "Unknown Event"}</div>
+                    <div className="text-sm font-semibold text-warm-900">{event?.title ?? "Unknown Event"}</div>
                     <div className="flex items-center gap-0.5">
                       {Array.from({ length: 5 }, (_, i) => (
-                        <span key={i} className={`text-sm ${i < review.stars ? "text-amber-400" : "text-warm-200 dark:text-warm-700"}`}>&#9733;</span>
+                        <span key={i} className={`text-sm ${i < review.stars ? "text-amber-400" : "text-warm-200"}`}>&#9733;</span>
                       ))}
                     </div>
                     <span className="text-sm text-warm-400">{new Date(review.created_at).toLocaleDateString()}</span>
                   </div>
-                  {review.body && <p className="text-sm text-warm-600 dark:text-warm-300 leading-relaxed">{review.body}</p>}
+                  {review.body && <p className="text-sm text-warm-600 leading-relaxed">{review.body}</p>}
                 </div>
               );
             })}

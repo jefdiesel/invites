@@ -53,13 +53,13 @@ export function ConfirmUI({
   }
 
   const confirmed = options.filter((o) => o.confirmed);
-  const inputClass = "rounded-lg border border-warm-200 dark:border-warm-700 bg-white dark:bg-warm-800 px-3 py-2.5 text-sm text-warm-900 dark:text-warm-100 placeholder:text-warm-400 focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent transition-colors";
+  const inputClass = "rounded-lg border border-warm-200 bg-white px-3 py-2.5 text-sm text-warm-900 placeholder:text-warm-400 focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent transition-colors";
 
   return (
     <div className="space-y-6">
       {phase === "polling" && (
         <div className="rounded-xl border border-accent/30 bg-accent-muted p-4 flex items-center justify-between">
-          <p className="text-sm text-warm-700 dark:text-warm-300">This poll is still accepting votes.</p>
+          <p className="text-sm text-warm-700">This poll is still accepting votes.</p>
           <button onClick={handleMoveToConfirm}
             className="rounded-lg bg-accent px-3 py-1.5 text-sm font-medium text-white hover:bg-accent-light transition-colors">
             Close Voting
@@ -71,13 +71,13 @@ export function ConfirmUI({
         {options.map((opt) => (
           <div key={opt.id} className={`rounded-xl border p-4 transition-colors ${
             opt.confirmed
-              ? "border-emerald-300 dark:border-emerald-800 bg-emerald-50/30 dark:bg-emerald-950/10"
-              : "border-warm-200 dark:border-warm-800 bg-white dark:bg-warm-900"
+              ? "border-emerald-300 bg-emerald-50/30"
+              : "border-warm-200 bg-white"
           }`}>
             <div className="flex items-center gap-4">
               <button onClick={() => handleToggle(opt.id)}
                 className={`w-5 h-5 rounded border-2 flex items-center justify-center text-[10px] font-bold shrink-0 transition-all ${
-                  opt.confirmed ? "border-emerald-500 bg-emerald-500 text-white" : "border-warm-300 dark:border-warm-600 text-transparent hover:border-emerald-400"
+                  opt.confirmed ? "border-emerald-500 bg-emerald-500 text-white" : "border-warm-300 text-transparent hover:border-emerald-400"
                 }`}>&#10003;</button>
 
               <div className="flex-1 min-w-0">
@@ -87,7 +87,7 @@ export function ConfirmUI({
                       {opt.label} &rarr;
                     </Link>
                   ) : (
-                    <span className="font-semibold text-sm text-warm-900 dark:text-warm-100">{opt.label}</span>
+                    <span className="font-semibold text-sm text-warm-900">{opt.label}</span>
                   )}
                 </div>
                 <div className="text-sm text-warm-400">{new Date(opt.starts_at).toLocaleString()}</div>
@@ -95,18 +95,18 @@ export function ConfirmUI({
 
               <div className="flex items-center gap-4 text-center shrink-0">
                 <div>
-                  <div className="text-sm font-bold tabular-nums text-warm-900 dark:text-warm-100">{opt.available}</div>
+                  <div className="text-sm font-bold tabular-nums text-warm-900">{opt.available}</div>
                   <div className="text-xs text-warm-400">avail</div>
                 </div>
                 {assigned && opt.confirmed && (
                   <div>
-                    <div className="text-sm font-bold tabular-nums text-emerald-600 dark:text-emerald-400">{opt.assignedCount}</div>
+                    <div className="text-sm font-bold tabular-nums text-emerald-600">{opt.assignedCount}</div>
                     <div className="text-xs text-warm-400">assigned</div>
                   </div>
                 )}
                 {opt.onlyOption > 0 && (
                   <div>
-                    <div className="text-sm font-bold tabular-nums text-amber-600 dark:text-amber-400">{opt.onlyOption}</div>
+                    <div className="text-sm font-bold tabular-nums text-amber-600">{opt.onlyOption}</div>
                     <div className="text-xs text-warm-400">only option</div>
                   </div>
                 )}
@@ -120,7 +120,7 @@ export function ConfirmUI({
                 <label className="text-xs text-warm-400">cap</label>
                 <input type="number" min="1" value={opt.capacity ?? ""} onChange={(e) => handleCapacity(opt.id, e.target.value)}
                   placeholder={"\u221E"}
-                  className="w-14 rounded-lg border border-warm-200 dark:border-warm-700 bg-warm-50 dark:bg-warm-800 px-2 py-1 text-sm text-center tabular-nums text-warm-700 dark:text-warm-300 focus:outline-none focus:ring-2 focus:ring-accent/20" />
+                  className="w-14 rounded-lg border border-warm-200 bg-warm-50 px-2 py-1 text-sm text-center tabular-nums text-warm-700 focus:outline-none focus:ring-2 focus:ring-accent/20" />
               </div>
             </div>
           </div>
@@ -128,21 +128,21 @@ export function ConfirmUI({
       </div>
 
       {/* Add slot */}
-      <div className="rounded-xl border border-dashed border-warm-300 dark:border-warm-700 p-4">
+      <div className="rounded-xl border border-dashed border-warm-300 p-4">
         <p className="text-xs text-warm-400 mb-2">Add overflow slot</p>
         <div className="flex gap-2">
           <input value={newLabel} onChange={(e) => setNewLabel(e.target.value)} placeholder="Label" className={inputClass + " flex-1"} />
           <input type="datetime-local" value={newDate} onChange={(e) => setNewDate(e.target.value)} className={inputClass} />
-          <button onClick={handleAddSlot} className="shrink-0 rounded-lg bg-warm-100 dark:bg-warm-800 px-3 py-2.5 text-sm font-medium text-warm-600 dark:text-warm-300 hover:bg-warm-200 dark:hover:bg-warm-700 transition-colors">Add</button>
+          <button onClick={handleAddSlot} className="shrink-0 rounded-lg bg-warm-100 px-3 py-2.5 text-sm font-medium text-warm-600 hover:bg-warm-200 transition-colors">Add</button>
         </div>
       </div>
 
       {/* Actions */}
       {(phase === "confirming" || confirmed.length > 0) && (
-        <div className="pt-4 border-t border-warm-200 dark:border-warm-800 space-y-4">
+        <div className="pt-4 border-t border-warm-200 space-y-4">
           <div className="flex items-center justify-between">
             <div>
-              <span className="text-sm font-semibold text-warm-700 dark:text-warm-300">
+              <span className="text-sm font-semibold text-warm-700">
                 {confirmed.length} slot{confirmed.length === 1 ? "" : "s"} confirmed
               </span>
               <span className="text-sm text-warm-400 ml-2">{totalResponses} responded</span>
@@ -160,7 +160,7 @@ export function ConfirmUI({
               )}
             </div>
           </div>
-          {assigned && <p className="text-xs text-emerald-600 dark:text-emerald-400">Members assigned. Click a slot name above to view the guest list.</p>}
+          {assigned && <p className="text-xs text-emerald-600">Members assigned. Click a slot name above to view the guest list.</p>}
           {!assigned && <p className="text-xs text-warm-400">Assigns members to confirmed slots by preference (most constrained first). No emails are sent.</p>}
         </div>
       )}

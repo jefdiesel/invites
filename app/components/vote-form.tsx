@@ -58,7 +58,7 @@ export function VoteForm({ token, options }: { token: string; options: Option[] 
         <div className="w-12 h-12 rounded-full bg-emerald-500/10 flex items-center justify-center mx-auto mb-4">
           <span className="text-emerald-600 text-xl">&#10003;</span>
         </div>
-        <h2 className="text-xl font-bold text-warm-900 dark:text-warm-100">Vote submitted</h2>
+        <h2 className="text-xl font-bold text-warm-900">Vote submitted</h2>
         <p className="text-base text-warm-500 mt-2">Your response is locked. You can close this page.</p>
       </div>
     );
@@ -84,19 +84,19 @@ export function VoteForm({ token, options }: { token: string; options: Option[] 
               onClick={() => toggleSlot(i)}
               className={`w-full rounded-xl border-2 p-5 text-center transition-all ${
                 isAvailable
-                  ? "border-emerald-500 bg-emerald-50 dark:bg-emerald-950/20"
-                  : "border-warm-200 dark:border-warm-700 bg-white dark:bg-warm-900 hover:border-warm-400 dark:hover:border-warm-500"
+                  ? "border-emerald-500 bg-emerald-50"
+                  : "border-warm-200 bg-white hover:border-warm-400"
               }`}
             >
-              <div className="text-xl font-bold text-warm-900 dark:text-warm-100">
+              <div className="text-xl font-bold text-warm-900">
                 {opt.label || `${day}, ${date}`}
               </div>
-              <div className="text-base text-warm-600 dark:text-warm-300 mt-1 font-medium">
+              <div className="text-base text-warm-600 mt-1 font-medium">
                 {time}
                 {opt.capacity && <span className="ml-2 text-sm font-normal text-warm-400">({opt.capacity} seats)</span>}
               </div>
               {isAvailable && slot.rank !== null && (
-                <div className="mt-3 inline-flex items-center gap-1.5 text-sm text-emerald-700 dark:text-emerald-300 font-semibold">
+                <div className="mt-3 inline-flex items-center gap-1.5 text-sm text-emerald-700 font-semibold">
                   <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-emerald-600 text-white text-xs font-bold">{slot.rank}</span>
                   {slot.rank === 1 ? "1st choice" : slot.rank === 2 ? "2nd choice" : slot.rank === 3 ? "3rd choice" : `${slot.rank}th choice`}
                 </div>
@@ -117,8 +117,8 @@ export function VoteForm({ token, options }: { token: string; options: Option[] 
                 onClick={() => setFlexibility(val)}
                 className={`flex-1 rounded-xl border px-3 py-3 text-sm font-medium transition-all ${
                   flexibility === val
-                    ? "border-emerald-300 dark:border-emerald-700 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-300"
-                    : "border-warm-200 dark:border-warm-700 text-warm-500 hover:border-warm-300"
+                    ? "border-emerald-300 bg-emerald-50 text-emerald-700"
+                    : "border-warm-200 text-warm-500 hover:border-warm-300"
                 }`}
               >
                 {val === "flexible" ? "Flexible \u2014 I can adjust" : "Inflexible \u2014 hard constraints"}
@@ -128,7 +128,7 @@ export function VoteForm({ token, options }: { token: string; options: Option[] 
         </div>
       )}
 
-      {error && <p className="text-sm text-rose-600 dark:text-rose-400 text-center font-medium">{error}</p>}
+      {error && <p className="text-sm text-rose-600 text-center font-medium">{error}</p>}
 
       <button
         type="button"

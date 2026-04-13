@@ -89,29 +89,29 @@ export function InviteUI({
     <div className="space-y-8">
       {/* Add members */}
       <div>
-        <h2 className="text-sm font-bold text-warm-600 dark:text-warm-400 uppercase tracking-wider mb-3">Add Members</h2>
-        <div className="rounded-xl border border-warm-200 dark:border-warm-800 bg-white dark:bg-warm-900 p-5 space-y-3">
+        <h2 className="text-sm font-bold text-warm-600 uppercase tracking-wider mb-3">Add Members</h2>
+        <div className="rounded-xl border border-warm-200 bg-white p-5 space-y-3">
           <div className="flex items-center gap-3">
             <input ref={fileRef} type="file" accept=".csv,.txt" onChange={handleFile} className="hidden" />
             <button type="button" onClick={() => fileRef.current?.click()}
-              className="rounded-lg border border-warm-200 dark:border-warm-700 bg-warm-50 dark:bg-warm-800 px-3 py-2 text-sm font-medium text-warm-600 dark:text-warm-300 hover:bg-warm-100 dark:hover:bg-warm-700 transition-colors">
+              className="rounded-lg border border-warm-200 bg-warm-50 px-3 py-2 text-sm font-medium text-warm-600 hover:bg-warm-100 transition-colors">
               Upload CSV
             </button>
             <span className="text-sm text-warm-400">or paste below — name, email per line</span>
           </div>
           <textarea value={csvText} onChange={(e) => handleCsvChange(e.target.value)} rows={3}
             placeholder={"Name, Email\nAlice Smith, alice@club.com\nBob Jones, bob@club.com"}
-            className="w-full rounded-lg border border-warm-200 dark:border-warm-700 bg-warm-50 dark:bg-warm-800 px-3 py-2.5 text-sm font-mono text-warm-900 dark:text-warm-100 placeholder:text-warm-400 focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent" />
+            className="w-full rounded-lg border border-warm-200 bg-warm-50 px-3 py-2.5 text-sm font-mono text-warm-900 placeholder:text-warm-400 focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent" />
           {csvPreview.length > 0 && (
             <div className="space-y-2">
-              <div className="rounded-lg border border-warm-200 dark:border-warm-800 overflow-hidden">
-                <div className="px-3 py-2 bg-warm-50 dark:bg-warm-800/50 text-sm text-warm-500 font-medium">
+              <div className="rounded-lg border border-warm-200 overflow-hidden">
+                <div className="px-3 py-2 bg-warm-50 text-sm text-warm-500 font-medium">
                   {csvPreview.length} member{csvPreview.length === 1 ? "" : "s"} found
                 </div>
-                <div className="max-h-32 overflow-y-auto divide-y divide-warm-100 dark:divide-warm-800/50">
+                <div className="max-h-32 overflow-y-auto divide-y divide-warm-100">
                   {csvPreview.slice(0, 10).map((m, i) => (
                     <div key={i} className="flex items-center gap-3 px-3 py-1.5 text-sm">
-                      <span className="text-warm-700 dark:text-warm-300 w-32 truncate">{m.name}</span>
+                      <span className="text-warm-700 w-32 truncate">{m.name}</span>
                       <span className="text-warm-400 truncate">{m.email}</span>
                     </div>
                   ))}
@@ -132,18 +132,18 @@ export function InviteUI({
 
       {/* Email preview */}
       <div>
-        <h2 className="text-sm font-bold text-warm-600 dark:text-warm-400 uppercase tracking-wider mb-3">Email Preview</h2>
-        <div className="rounded-xl border border-warm-200 dark:border-warm-800 bg-white dark:bg-warm-900 p-5 space-y-3">
+        <h2 className="text-sm font-bold text-warm-600 uppercase tracking-wider mb-3">Email Preview</h2>
+        <div className="rounded-xl border border-warm-200 bg-white p-5 space-y-3">
           <div className="flex items-center gap-2 text-sm text-warm-400">
-            <span className="font-semibold text-warm-600 dark:text-warm-300">Subject:</span>
+            <span className="font-semibold text-warm-600">Subject:</span>
             Vote on dates for {pollTitle}
           </div>
-          <div className="border-t border-warm-100 dark:border-warm-800 pt-3">
-            <pre className="text-sm text-warm-700 dark:text-warm-300 whitespace-pre-wrap font-sans leading-relaxed">
+          <div className="border-t border-warm-100 pt-3">
+            <pre className="text-sm text-warm-700 whitespace-pre-wrap font-sans leading-relaxed">
               {pending.length > 0 ? generateEmailPreview(pending[0]) : members.length > 0 ? generateEmailPreview(members[0]) : `Hi [Name],\n\nYou're invited to vote on dates for "${pollTitle}".`}
             </pre>
           </div>
-          <div className="border-t border-warm-100 dark:border-warm-800 pt-3">
+          <div className="border-t border-warm-100 pt-3">
             <p className="text-sm text-warm-400">Email sending via Resend is not wired yet. Copy the links below and send them manually.</p>
           </div>
         </div>
@@ -152,7 +152,7 @@ export function InviteUI({
       {/* Pending */}
       <div>
         <div className="flex items-center justify-between mb-3">
-          <h2 className="text-sm font-bold text-warm-600 dark:text-warm-400 uppercase tracking-wider">Pending ({pending.length})</h2>
+          <h2 className="text-sm font-bold text-warm-600 uppercase tracking-wider">Pending ({pending.length})</h2>
           {pending.length > 0 && (
             <button onClick={copyAllLinks} className="rounded-lg px-3 py-1.5 text-sm font-medium text-accent hover:bg-accent-muted transition-colors">
               {copiedAll ? "Copied all!" : "Copy all links"}
@@ -162,11 +162,11 @@ export function InviteUI({
         {pending.length === 0 ? (
           <p className="text-sm text-warm-400">No pending invites. {voted.length > 0 ? "Everyone has voted!" : "Add members first."}</p>
         ) : (
-          <div className="rounded-xl border border-warm-200 dark:border-warm-800 bg-white dark:bg-warm-900 divide-y divide-warm-100 dark:divide-warm-800/50">
+          <div className="rounded-xl border border-warm-200 bg-white divide-y divide-warm-100">
             {pending.map((m, i) => (
               <div key={m.id} className="flex items-center gap-3 px-4 py-3">
                 <div className="flex-1 min-w-0">
-                  <div className="text-sm font-semibold text-warm-900 dark:text-warm-100">{m.name}</div>
+                  <div className="text-sm font-semibold text-warm-900">{m.name}</div>
                   <div className="text-sm text-warm-400">{m.email}</div>
                 </div>
                 <button onClick={() => copyLink(m.token!, i)}
@@ -174,7 +174,7 @@ export function InviteUI({
                   {copiedIdx === i ? "Copied!" : "Copy link"}
                 </button>
                 <a href={`mailto:${m.email}?subject=${encodeURIComponent(`Vote on dates for ${pollTitle}`)}&body=${encodeURIComponent(generateEmailPreview(m))}`}
-                  className="shrink-0 rounded-lg px-3 py-1.5 text-sm font-medium text-warm-500 hover:text-warm-700 dark:hover:text-warm-300 hover:bg-warm-100 dark:hover:bg-warm-800 transition-colors">
+                  className="shrink-0 rounded-lg px-3 py-1.5 text-sm font-medium text-warm-500 hover:text-warm-700 hover:bg-warm-100 transition-colors">
                   Email
                 </a>
               </div>
@@ -186,12 +186,12 @@ export function InviteUI({
       {/* Voted */}
       {voted.length > 0 && (
         <div>
-          <h2 className="text-sm font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider mb-3">Voted ({voted.length})</h2>
-          <div className="rounded-xl border border-emerald-200 dark:border-emerald-900/50 bg-emerald-50/30 dark:bg-emerald-950/10 divide-y divide-emerald-100 dark:divide-emerald-900/30">
+          <h2 className="text-sm font-bold text-emerald-600 uppercase tracking-wider mb-3">Voted ({voted.length})</h2>
+          <div className="rounded-xl border border-emerald-200 bg-emerald-50/30 divide-y divide-emerald-100">
             {voted.map((m) => (
               <div key={m.id} className="flex items-center gap-3 px-4 py-2.5">
                 <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
-                <span className="text-sm font-medium text-warm-700 dark:text-warm-300">{m.name}</span>
+                <span className="text-sm font-medium text-warm-700">{m.name}</span>
                 <span className="text-sm text-warm-400">{m.email}</span>
               </div>
             ))}

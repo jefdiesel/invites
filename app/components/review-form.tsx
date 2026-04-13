@@ -31,15 +31,15 @@ export function ReviewForm({ eventId }: { eventId: string }) {
 
   if (done) {
     return (
-      <div className="rounded-xl border border-emerald-200 dark:border-emerald-900/50 bg-emerald-50/30 dark:bg-emerald-950/10 p-5 text-center">
-        <p className="text-sm font-semibold text-emerald-600 dark:text-emerald-400">Review submitted. Thanks!</p>
+      <div className="rounded-xl border border-emerald-200 bg-emerald-50/30 p-5 text-center">
+        <p className="text-sm font-semibold text-emerald-600">Review submitted. Thanks!</p>
       </div>
     );
   }
 
   return (
-    <form onSubmit={handleSubmit} className="rounded-xl border border-warm-200 dark:border-warm-800 bg-white dark:bg-warm-900 p-5 space-y-4">
-      <h3 className="text-sm font-bold text-warm-600 dark:text-warm-400 uppercase tracking-wider">Write a Review</h3>
+    <form onSubmit={handleSubmit} className="rounded-xl border border-warm-200 bg-white p-5 space-y-4">
+      <h3 className="text-sm font-bold text-warm-600 uppercase tracking-wider">Write a Review</h3>
 
       <div>
         <label className="block text-sm font-medium text-warm-500 mb-1.5">Your email</label>
@@ -49,7 +49,7 @@ export function ReviewForm({ eventId }: { eventId: string }) {
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           placeholder="your@email.com"
-          className="w-full max-w-xs rounded-lg border border-warm-200 dark:border-warm-700 bg-white dark:bg-warm-800 px-3 py-2.5 text-sm text-warm-900 dark:text-warm-100 placeholder:text-warm-400 focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent transition-colors"
+          className="w-full max-w-xs rounded-lg border border-warm-200 bg-white px-3 py-2.5 text-sm text-warm-900 placeholder:text-warm-400 focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent transition-colors"
         />
       </div>
 
@@ -68,7 +68,7 @@ export function ReviewForm({ eventId }: { eventId: string }) {
               <span className={`${
                 i < (hoverStars || stars)
                   ? "text-amber-400"
-                  : "text-warm-200 dark:text-warm-700"
+                  : "text-warm-200"
               }`}>&#9733;</span>
             </button>
           ))}
@@ -84,14 +84,14 @@ export function ReviewForm({ eventId }: { eventId: string }) {
           rows={3}
           maxLength={1000}
           placeholder="How was the event?"
-          className="w-full rounded-lg border border-warm-200 dark:border-warm-700 bg-white dark:bg-warm-800 px-3 py-2.5 text-sm text-warm-900 dark:text-warm-100 placeholder:text-warm-400 focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent transition-colors"
+          className="w-full rounded-lg border border-warm-200 bg-white px-3 py-2.5 text-sm text-warm-900 placeholder:text-warm-400 focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent transition-colors"
         />
         {body.length > 0 && (
           <p className="text-xs text-warm-400 mt-1 text-right">{body.length}/1000</p>
         )}
       </div>
 
-      {error && <p className="text-sm text-rose-600 dark:text-rose-400 font-medium">{error}</p>}
+      {error && <p className="text-sm text-rose-600 font-medium">{error}</p>}
 
       <button
         type="submit"

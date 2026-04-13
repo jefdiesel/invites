@@ -20,7 +20,7 @@ export default async function ConfirmPage({ params }: { params: Promise<{ id: st
   return (
     <main className="max-w-4xl mx-auto px-6 py-8">
       <div className="flex items-center gap-3 mb-6">
-        <h1 className="text-xl font-bold text-warm-900 dark:text-warm-100">Confirm Slots</h1>
+        <h1 className="text-xl font-bold text-warm-900">Confirm Slots</h1>
         <span className="text-sm text-warm-400">{poll.title}</span>
       </div>
       <ConfirmUI pollId={id} initialOptions={optionsWithStats} phase={poll.phase} totalResponses={results.votedCount} hasOffers={results.hasOffers} />

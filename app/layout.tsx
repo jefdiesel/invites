@@ -28,20 +28,20 @@ export default function RootLayout({
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} antialiased`}
     >
-      <body className="min-h-screen">
-        <nav className="sticky top-0 z-50 backdrop-blur-md bg-warm-50/90 dark:bg-warm-900/90 border-b border-warm-200/60 dark:border-warm-800/60">
-          <div className="max-w-5xl mx-auto px-6 h-14 flex items-center justify-between">
-            <Link href="/" className="text-base font-bold tracking-tight text-warm-900 dark:text-warm-100">
+      <body className="min-h-screen bg-white">
+        <nav className="sticky top-0 z-50 bg-white border-b border-warm-200">
+          <div className="max-w-6xl mx-auto px-6 h-14 flex items-center justify-between">
+            <Link href="/" className="text-base font-bold tracking-tight text-warm-900">
               Tasting Collective
             </Link>
             <div className="flex items-center gap-1">
-              <Link href="/" className="rounded-lg px-3 py-1.5 text-sm font-medium text-warm-600 dark:text-warm-400 hover:text-warm-900 dark:hover:text-warm-100 hover:bg-warm-100 dark:hover:bg-warm-800 transition-colors">
+              <Link href="/" className="rounded-lg px-3 py-1.5 text-sm font-medium text-warm-600 hover:text-warm-900 hover:bg-warm-50 transition-colors">
                 Polls
               </Link>
-              <Link href="/members" className="rounded-lg px-3 py-1.5 text-sm font-medium text-warm-600 dark:text-warm-400 hover:text-warm-900 dark:hover:text-warm-100 hover:bg-warm-100 dark:hover:bg-warm-800 transition-colors">
+              <Link href="/members" className="rounded-lg px-3 py-1.5 text-sm font-medium text-warm-600 hover:text-warm-900 hover:bg-warm-50 transition-colors">
                 Members
               </Link>
-              <Link href="/events" className="rounded-lg px-3 py-1.5 text-sm font-medium text-warm-600 dark:text-warm-400 hover:text-warm-900 dark:hover:text-warm-100 hover:bg-warm-100 dark:hover:bg-warm-800 transition-colors">
+              <Link href="/events" className="rounded-lg px-3 py-1.5 text-sm font-medium text-warm-600 hover:text-warm-900 hover:bg-warm-50 transition-colors">
                 Events
               </Link>
             </div>

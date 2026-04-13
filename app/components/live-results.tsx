@@ -126,7 +126,7 @@ export function LiveResults({ pollId }: { pollId: string }) {
     return (
       <div className="space-y-4 animate-pulse">
         {[1, 2, 3].map((i) => (
-          <div key={i} className="h-28 rounded-xl bg-warm-100 dark:bg-warm-800/50" />
+          <div key={i} className="h-28 rounded-xl bg-warm-100" />
         ))}
       </div>
     );
@@ -202,10 +202,10 @@ export function LiveResults({ pollId }: { pollId: string }) {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3 flex-wrap">
-          <h2 className="text-base font-bold text-warm-900 dark:text-warm-100">Results</h2>
+          <h2 className="text-base font-bold text-warm-900">Results</h2>
           <span className="text-sm text-warm-400 tabular-nums">{data.votedCount} voted</span>
           {data.noneWorkCount > 0 && (
-            <span className="text-xs px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 font-medium">
+            <span className="text-xs px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-600 font-medium">
               {data.noneWorkCount} no dates work
             </span>
           )}
@@ -216,7 +216,7 @@ export function LiveResults({ pollId }: { pollId: string }) {
         </div>
         <div className="flex items-center gap-1.5">
           <button onClick={fetchResults} disabled={refreshing}
-            className="rounded-lg px-3 py-1.5 text-sm text-warm-500 hover:text-warm-700 dark:hover:text-warm-300 hover:bg-warm-100 dark:hover:bg-warm-800 transition-colors disabled:opacity-50">
+            className="rounded-lg px-3 py-1.5 text-sm text-warm-500 hover:text-warm-700 hover:bg-warm-100 transition-colors disabled:opacity-50">
             Refresh
           </button>
           <button onClick={handleCopy}
@@ -227,10 +227,10 @@ export function LiveResults({ pollId }: { pollId: string }) {
       </div>
 
       {/* Best combo optimizer */}
-      <div className="rounded-xl border border-warm-200 dark:border-warm-800 bg-warm-50 dark:bg-warm-900 p-4">
+      <div className="rounded-xl border border-warm-200 bg-warm-50 p-4">
         <div className="flex items-center justify-between gap-4 flex-wrap">
           <div>
-            <div className="text-sm font-semibold text-warm-700 dark:text-warm-300">Find best combination</div>
+            <div className="text-sm font-semibold text-warm-700">Find best combination</div>
             <div className="text-xs text-warm-400 mt-0.5">Auto-picks the dates that seat the most people</div>
           </div>
           <div className="flex items-center gap-1.5">
@@ -241,7 +241,7 @@ export function LiveResults({ pollId }: { pollId: string }) {
                 className={`rounded-lg px-3 py-1.5 text-sm font-medium tabular-nums transition-colors ${
                   activeBest === n
                     ? "bg-accent text-white"
-                    : "text-warm-600 dark:text-warm-400 bg-warm-100 dark:bg-warm-800 hover:bg-warm-200 dark:hover:bg-warm-700"
+                    : "text-warm-600 bg-warm-100 hover:bg-warm-200"
                 }`}
               >
                 Best {n}
@@ -252,7 +252,7 @@ export function LiveResults({ pollId }: { pollId: string }) {
               className={`rounded-lg px-3 py-1.5 text-sm transition-colors ${
                 activeBest === null && selectedSlots.size === data.options.length
                   ? "bg-accent text-white font-medium"
-                  : "text-warm-500 hover:bg-warm-100 dark:hover:bg-warm-800"
+                  : "text-warm-500 hover:bg-warm-100"
               }`}
             >
               All
@@ -262,10 +262,10 @@ export function LiveResults({ pollId }: { pollId: string }) {
       </div>
 
       {/* Coverage summary */}
-      <div className="rounded-xl border border-warm-200 dark:border-warm-800 bg-white dark:bg-warm-900 p-5">
+      <div className="rounded-xl border border-warm-200 bg-white p-5">
         <div className="flex items-center gap-6 flex-wrap">
           <div className="flex items-center gap-3 flex-1 min-w-[200px]">
-            <div className="flex-1 h-2.5 rounded-full bg-warm-100 dark:bg-warm-800 overflow-hidden">
+            <div className="flex-1 h-2.5 rounded-full bg-warm-100 overflow-hidden">
               <div
                 className={`h-full rounded-full transition-all duration-300 ${coveragePct === 100 ? "bg-emerald-500" : coveragePct >= 80 ? "bg-accent" : "bg-amber-500"}`}
                 style={{ width: `${coveragePct}%` }}
@@ -274,17 +274,17 @@ export function LiveResults({ pollId }: { pollId: string }) {
           </div>
           <div className="flex items-center gap-5 text-center shrink-0">
             <div>
-              <div className="text-xl font-bold tabular-nums text-warm-900 dark:text-warm-100">{coveredMembers.length}<span className="text-warm-400 font-normal">/{votedMembers.length}</span></div>
+              <div className="text-xl font-bold tabular-nums text-warm-900">{coveredMembers.length}<span className="text-warm-400 font-normal">/{votedMembers.length}</span></div>
               <div className="text-xs text-warm-400">people covered</div>
             </div>
             {strandedCount > 0 && (
               <div>
-                <div className="text-xl font-bold tabular-nums text-amber-600 dark:text-amber-400">{strandedCount}</div>
-                <div className="text-xs text-amber-600 dark:text-amber-400">left out</div>
+                <div className="text-xl font-bold tabular-nums text-amber-600">{strandedCount}</div>
+                <div className="text-xs text-amber-600">left out</div>
               </div>
             )}
             <div>
-              <div className="text-xl font-bold tabular-nums text-warm-900 dark:text-warm-100">{bookedSeats}<span className="text-warm-400 font-normal">/{totalSeats}</span></div>
+              <div className="text-xl font-bold tabular-nums text-warm-900">{bookedSeats}<span className="text-warm-400 font-normal">/{totalSeats}</span></div>
               <div className="text-xs text-warm-400">seats filled</div>
             </div>
             <div>
@@ -304,19 +304,19 @@ export function LiveResults({ pollId }: { pollId: string }) {
             <div key={opt.id} onClick={() => toggleSlot(opt.id)}
               className={`relative rounded-xl border p-4 cursor-pointer transition-all ${
                 selected
-                  ? "border-warm-300 dark:border-warm-600 bg-white dark:bg-warm-900"
-                  : "border-warm-200/60 dark:border-warm-800/60 bg-warm-50 dark:bg-warm-900/50 opacity-40"
+                  ? "border-warm-300 bg-white"
+                  : "border-warm-200/60 bg-warm-50 opacity-40"
               }`}>
-              <div className="absolute inset-y-0 left-0 bg-accent/[0.04] dark:bg-accent/[0.06] rounded-l-xl transition-all" style={{ width: `${availPct}%` }} />
+              <div className="absolute inset-y-0 left-0 bg-accent/[0.04] rounded-l-xl transition-all" style={{ width: `${availPct}%` }} />
               <div className="relative flex items-center gap-6">
                 <div className="text-center w-16 shrink-0">
-                  <div className="text-2xl font-bold tabular-nums text-warm-900 dark:text-warm-100 leading-none">{opt.available}</div>
+                  <div className="text-2xl font-bold tabular-nums text-warm-900 leading-none">{opt.available}</div>
                   <div className="text-xs text-warm-400 mt-1">available</div>
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
-                    <span className="font-semibold text-sm text-warm-900 dark:text-warm-100">{opt.label}</span>
-                    {opt.confirmed === 1 && <span className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">confirmed</span>}
+                    <span className="font-semibold text-sm text-warm-900">{opt.label}</span>
+                    {opt.confirmed === 1 && <span className="text-[11px] font-semibold text-emerald-600 uppercase tracking-wider">confirmed</span>}
                   </div>
                   <div className="flex items-center gap-2 mt-0.5">
                     <span className="text-sm text-warm-400">{new Date(opt.starts_at).toLocaleString()}</span>
@@ -340,7 +340,7 @@ export function LiveResults({ pollId }: { pollId: string }) {
                   </div>
                   {opt.inflexAvailable > 0 && (
                     <div title="People with hard schedule constraints">
-                      <div className="text-sm font-semibold tabular-nums text-rose-600 dark:text-rose-400">{opt.inflexAvailable}</div>
+                      <div className="text-sm font-semibold tabular-nums text-rose-600">{opt.inflexAvailable}</div>
                       <div className="text-xs text-warm-400">rigid</div>
                     </div>
                   )}
@@ -355,15 +355,15 @@ export function LiveResults({ pollId }: { pollId: string }) {
 
       {/* Member grid */}
       {votedMembers.length > 0 && (
-        <div className="rounded-xl border border-warm-200 dark:border-warm-800 overflow-x-auto bg-white dark:bg-warm-900">
+        <div className="rounded-xl border border-warm-200 overflow-x-auto bg-white">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-warm-100 dark:border-warm-800">
+              <tr className="border-b border-warm-100">
                 <th className="text-left px-3 py-2.5 text-warm-400 font-medium text-xs">Member</th>
                 <th className="text-left px-2 py-2.5 text-warm-400 font-medium text-xs w-16">Flex</th>
                 {data.options.map((opt) => (
                   <th key={opt.id} className={`text-center px-1.5 py-2.5 font-medium text-xs max-w-[72px] truncate ${
-                    selectedSlots.has(opt.id) ? "text-warm-600 dark:text-warm-300" : "text-warm-300 dark:text-warm-600"
+                    selectedSlots.has(opt.id) ? "text-warm-600" : "text-warm-300"
                   }`}>{opt.label}</th>
                 ))}
               </tr>
@@ -373,8 +373,8 @@ export function LiveResults({ pollId }: { pollId: string }) {
                 const memberVotes = data.memberSlots.filter((ms) => ms.response_id === m.response_id);
                 const isCovered = memberVotes.some((mv) => mv.status === "available" && selectedSlots.has(mv.option_id));
                 return (
-                  <tr key={m.id} className={`border-b border-warm-50 dark:border-warm-800/30 ${!isCovered ? "bg-amber-50/50 dark:bg-amber-950/10" : "hover:bg-warm-50 dark:hover:bg-warm-800/30"}`}>
-                    <td className={`px-3 py-2 font-medium ${!isCovered ? "text-amber-700 dark:text-amber-400" : "text-warm-700 dark:text-warm-300"}`}>
+                  <tr key={m.id} className={`border-b border-warm-50 ${!isCovered ? "bg-amber-50/50" : "hover:bg-warm-50"}`}>
+                    <td className={`px-3 py-2 font-medium ${!isCovered ? "text-amber-700" : "text-warm-700"}`}>
                       {m.email ? (
                         <a href={`/members/${encodeURIComponent(m.email)}`} className="hover:text-accent transition-colors">{m.name}</a>
                       ) : m.name}
@@ -383,24 +383,24 @@ export function LiveResults({ pollId }: { pollId: string }) {
                       {m.flexibility === "inflexible" ? (
                         <span className="text-xs font-semibold text-rose-500">rigid</span>
                       ) : (
-                        <span className="text-xs text-warm-300 dark:text-warm-600">flex</span>
+                        <span className="text-xs text-warm-300">flex</span>
                       )}
                     </td>
                     {data.options.map((opt) => {
                       const vote = memberVotes.find((mv) => mv.option_id === opt.id);
-                      if (!vote) return <td key={opt.id} className="text-center px-1.5 py-2 text-warm-200 dark:text-warm-700">-</td>;
+                      if (!vote) return <td key={opt.id} className="text-center px-1.5 py-2 text-warm-200">-</td>;
                       return (
                         <td key={opt.id} className="text-center px-1.5 py-2">
                           {vote.status === "available" ? (
                             <span className={`inline-flex items-center justify-center w-6 h-6 rounded-md text-xs font-bold ${
                               vote.rank !== null && vote.rank <= 2
                                 ? "bg-accent-muted text-accent"
-                                : "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+                                : "bg-emerald-500/10 text-emerald-600"
                             }`}>
                               {vote.rank !== null ? vote.rank : "\u2713"}
                             </span>
                           ) : (
-                            <span className="text-warm-300 dark:text-warm-600">\u2715</span>
+                            <span className="text-warm-300">\u2715</span>
                           )}
                         </td>
                       );

@@ -24,7 +24,7 @@ export function EditPollForm({
   const [saved, setSaved] = useState(false);
   const router = useRouter();
 
-  const inputClass = "w-full rounded-lg border border-warm-200 dark:border-warm-700 bg-white dark:bg-warm-800 px-3 py-2.5 text-sm text-warm-900 dark:text-warm-100 placeholder:text-warm-400 focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent transition-colors";
+  const inputClass = "w-full rounded-lg border border-warm-200 bg-white px-3 py-2.5 text-sm text-warm-900 placeholder:text-warm-400 focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent transition-colors";
 
   async function handleSave() {
     setSaving(true);
@@ -50,8 +50,8 @@ export function EditPollForm({
   return (
     <div className="space-y-6">
       {locked && (
-        <div className="rounded-xl border border-amber-200 dark:border-amber-900/50 bg-amber-50/50 dark:bg-amber-950/20 p-4">
-          <p className="text-sm text-amber-700 dark:text-amber-300">
+        <div className="rounded-xl border border-amber-200 bg-amber-50/50 p-4">
+          <p className="text-sm text-amber-700">
             This poll is in <strong>{phase}</strong> phase. Editing details won&apos;t affect existing votes.
           </p>
         </div>
@@ -82,14 +82,14 @@ export function EditPollForm({
         <label className="block text-sm font-medium text-warm-500 mb-2">Date/time slots</label>
         <div className="space-y-2">
           {options.map((opt) => (
-            <div key={opt.id} className="flex items-center gap-2 rounded-xl border border-warm-200 dark:border-warm-800 bg-white dark:bg-warm-900 p-3">
+            <div key={opt.id} className="flex items-center gap-2 rounded-xl border border-warm-200 bg-white p-3">
               <input value={opt.label} onChange={(e) => updateOption(opt.id, "label", e.target.value)}
-                className="flex-1 rounded-lg border border-warm-200 dark:border-warm-700 bg-warm-50 dark:bg-warm-800 px-2.5 py-2 text-sm text-warm-900 dark:text-warm-100 focus:outline-none focus:ring-2 focus:ring-accent/20" />
+                className="flex-1 rounded-lg border border-warm-200 bg-warm-50 px-2.5 py-2 text-sm text-warm-900 focus:outline-none focus:ring-2 focus:ring-accent/20" />
               <input type="datetime-local" value={opt.starts_at} onChange={(e) => updateOption(opt.id, "starts_at", e.target.value)}
-                className="rounded-lg border border-warm-200 dark:border-warm-700 bg-warm-50 dark:bg-warm-800 px-2.5 py-2 text-sm text-warm-900 dark:text-warm-100 focus:outline-none focus:ring-2 focus:ring-accent/20 max-w-[200px]" />
+                className="rounded-lg border border-warm-200 bg-warm-50 px-2.5 py-2 text-sm text-warm-900 focus:outline-none focus:ring-2 focus:ring-accent/20 max-w-[200px]" />
               <input type="number" min="1" value={opt.capacity ?? ""} onChange={(e) => updateOption(opt.id, "capacity", e.target.value ? parseInt(e.target.value) : null)}
                 placeholder="Seats"
-                className="w-16 rounded-lg border border-warm-200 dark:border-warm-700 bg-warm-50 dark:bg-warm-800 px-2 py-2 text-sm text-center tabular-nums text-warm-700 dark:text-warm-300 focus:outline-none focus:ring-2 focus:ring-accent/20" />
+                className="w-16 rounded-lg border border-warm-200 bg-warm-50 px-2 py-2 text-sm text-center tabular-nums text-warm-700 focus:outline-none focus:ring-2 focus:ring-accent/20" />
               <button onClick={() => handleDeleteSlot(opt.id)} className="text-warm-400 hover:text-rose-500 transition-colors text-sm shrink-0">Remove</button>
             </div>
           ))}
@@ -99,7 +99,7 @@ export function EditPollForm({
             onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); handleAddSlot(); } }} />
           <input type="datetime-local" value={newDate} onChange={(e) => setNewDate(e.target.value)} className={inputClass + " max-w-[200px]"} />
           <input type="number" min="1" value={newCap} onChange={(e) => setNewCap(e.target.value)} placeholder="Seats" className={inputClass + " max-w-[70px]"} />
-          <button onClick={handleAddSlot} className="shrink-0 rounded-lg bg-warm-100 dark:bg-warm-800 px-3 py-2.5 text-sm font-medium text-warm-600 dark:text-warm-300 hover:bg-warm-200 dark:hover:bg-warm-700 transition-colors">Add</button>
+          <button onClick={handleAddSlot} className="shrink-0 rounded-lg bg-warm-100 px-3 py-2.5 text-sm font-medium text-warm-600 hover:bg-warm-200 transition-colors">Add</button>
         </div>
       </div>
 
@@ -109,7 +109,7 @@ export function EditPollForm({
           {saving ? "Saving..." : "Save Changes"}
         </button>
         {saved && <span className="text-sm text-emerald-600 font-medium">Saved</span>}
-        <button onClick={() => router.push(`/poll/${pollId}`)} className="text-sm text-warm-400 hover:text-warm-600 dark:hover:text-warm-300 transition-colors">
+        <button onClick={() => router.push(`/poll/${pollId}`)} className="text-sm text-warm-400 hover:text-warm-600 transition-colors">
           Back to poll
         </button>
       </div>

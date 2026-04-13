@@ -24,7 +24,7 @@ export default async function InvitePage({ params }: { params: Promise<{ id: str
   return (
     <main className="max-w-4xl mx-auto px-6 py-8">
       <div className="flex items-center gap-3 mb-6">
-        <h1 className="text-xl font-bold text-warm-900 dark:text-warm-100">Send Invites</h1>
+        <h1 className="text-xl font-bold text-warm-900">Send Invites</h1>
         <span className="text-sm text-warm-400">{p.title}</span>
       </div>
       <InviteUI
