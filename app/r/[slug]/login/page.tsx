@@ -1,7 +1,8 @@
 import { getBusiness, hasAdmins } from "@/lib/restaurant-queries";
 import { getTheme } from "@/lib/themes";
 import { ThemeFonts } from "@/app/components/theme-fonts";
-import { notFound, redirect } from "next/navigation";
+import { notFound } from "next/navigation";
+import Link from "next/link";
 import { LoginForm } from "./login-form";
 
 export const dynamic = "force-dynamic";
@@ -11,9 +12,8 @@ export default async function LoginPage({ params }: { params: Promise<{ slug: st
   const biz = await getBusiness(slug);
   if (!biz) return notFound();
 
-  // If no admins set up yet, redirect to onboarding
+  // Show setup banner if no admins, but don't block login
   const adminExists = await hasAdmins(biz.id);
-  if (!adminExists) redirect(`/r/${slug}/setup`);
 
   const theme = getTheme(biz.theme);
   const t = theme.colors;
@@ -32,7 +32,13 @@ export default async function LoginPage({ params }: { params: Promise<{ slug: st
 
         <LoginForm slug={slug} accent={t.accent} radius={rBtn} heroBg={t.heroBg} heroText={t.heroText} heroTextMuted={t.heroTextMuted} />
 
-        <a href={`/r/${slug}`} className="inline-block mt-8 text-sm transition-opacity opacity-50 hover:opacity-80">
+        {!adminExists && (
+          <Link href={`/r/${slug}/setup`} className="inline-block mt-6 text-sm font-medium transition-opacity opacity-70 hover:opacity-100" style={{ color: t.accent }}>
+            First time? Set up your account &rarr;
+          </Link>
+        )}
+
+        <a href={`/r/${slug}`} className="inline-block mt-4 text-sm transition-opacity opacity-50 hover:opacity-80">
           &larr; Back to site
         </a>
       </div>
