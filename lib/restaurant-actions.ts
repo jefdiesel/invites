@@ -189,6 +189,7 @@ export async function seedRestaurant(slug: string) {
     cuisine: "French-American",
     price_range: "$$$",
     about: "Seasonal French-American cooking in a warm, candlelit dining room. Chef Laurent sources from local farms and foragers to create menus that change with the seasons. Reservations recommended.",
+    cover_image_url: "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=1600&q=80",
     booking_window_days: 30,
     min_party_size: 1,
     max_party_size: 8,
