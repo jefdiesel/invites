@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { addTable, updateTablePosition, updateTable, deleteTable } from "@/lib/restaurant-actions";
 import { useRouter } from "next/navigation";
 
@@ -97,6 +97,41 @@ export function FloorEditor({ businessId, tables: initialTables }: { businessId:
 
   const zoneTables = tables.filter((t) => t.zone === activeZone && t.is_active);
   const selected = selectedId ? tables.find((t) => t.id === selectedId) : null;
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    function handleKey(e: KeyboardEvent) {
+      if (!selectedId) return;
+      // Don't capture when typing in inputs
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLSelectElement || e.target instanceof HTMLTextAreaElement) return;
+
+      const NUDGE = 1; // 1% of canvas
+      if (e.key === "Escape") { setSelectedId(null); return; }
+      if (e.key === "Delete" || e.key === "Backspace") {
+        e.preventDefault();
+        deleteTable(selectedId);
+        setTables((prev) => prev.filter((t) => t.id !== selectedId));
+        setSelectedId(null);
+        return;
+      }
+      if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(e.key)) {
+        e.preventDefault();
+        const dx = e.key === "ArrowLeft" ? -NUDGE : e.key === "ArrowRight" ? NUDGE : 0;
+        const dy = e.key === "ArrowUp" ? -NUDGE : e.key === "ArrowDown" ? NUDGE : 0;
+        setTables((prev) => prev.map((t) => {
+          if (t.id !== selectedId) return t;
+          const newX = Math.max(0, Math.min(100, t.pos_x + dx));
+          const newY = Math.max(0, Math.min(100, t.pos_y + dy));
+          updateTablePosition(t.id, { pos_x: newX, pos_y: newY });
+          return { ...t, pos_x: newX, pos_y: newY };
+        }));
+        setSaved(true);
+        setTimeout(() => setSaved(false), 1500);
+      }
+    }
+    window.addEventListener("keydown", handleKey);
+    return () => window.removeEventListener("keydown", handleKey);
+  }, [selectedId]);
 
   const handlePointerDown = useCallback((e: React.PointerEvent, table: Table) => {
     e.preventDefault();
@@ -302,7 +337,7 @@ export function FloorEditor({ businessId, tables: initialTables }: { businessId:
             {zoneTables.length} tables · {zoneTables.reduce((s, t) => s + t.capacity, 0)} seats in {activeZone}
           </span>
         </div>
-        <span className="text-xs text-neutral-400">Drag to reposition</span>
+        <span className="text-xs text-neutral-400">Drag to reposition · Arrow keys to nudge · Delete to remove</span>
       </div>
 
       {/* Add table form */}
