@@ -1,4 +1,5 @@
-import { getBusiness, getUpcomingBookings, getBusinessClients, getTables } from "@/lib/restaurant-queries";
+import { getBusiness, getBusinessHours, getMenuItems, getUpcomingBookings, getBusinessClients, getTables, getBusinessPhotos } from "@/lib/restaurant-queries";
+import { getTheme } from "@/lib/themes";
 import { notFound } from "next/navigation";
 import { AdminDashboard } from "@/app/components/admin-dashboard";
 
@@ -9,33 +10,42 @@ export default async function AdminPage({ params }: { params: Promise<{ slug: st
   const biz = await getBusiness(slug);
   if (!biz) return notFound();
 
-  const bookings = await getUpcomingBookings(biz.id, 14);
-  const clients = await getBusinessClients(biz.id);
-  const tables = await getTables(biz.id);
+  const theme = getTheme(biz.theme);
+  const [bookings, clients, tables, hours, menu, photos] = await Promise.all([
+    getUpcomingBookings(biz.id, 14),
+    getBusinessClients(biz.id),
+    getTables(biz.id),
+    getBusinessHours(biz.id),
+    getMenuItems(biz.id),
+    getBusinessPhotos(biz.id),
+  ]);
 
   return (
     <div className="min-h-screen bg-white">
-      <header className="border-b border-warm-200">
-        <div className="max-w-6xl mx-auto px-6 h-14 flex items-center justify-between">
+      <header className="border-b border-neutral-200">
+        <div className="max-w-7xl mx-auto px-6 h-14 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <span className="text-base font-bold text-warm-900">{biz.name}</span>
-            <span className="text-sm text-warm-400">Admin</span>
+            <span className="text-base font-bold text-neutral-900">{biz.name}</span>
+            <span className="text-sm text-neutral-400">Admin</span>
           </div>
           <div className="flex items-center gap-2">
-            <a href={`/r/${slug}`} className="rounded-lg px-3 py-1.5 text-sm text-warm-500 hover:text-warm-900 hover:bg-warm-50 transition-colors">
+            <a href={`/r/${slug}`} className="rounded-lg px-3 py-1.5 text-sm text-neutral-500 hover:text-neutral-900 hover:bg-neutral-50 transition-colors">
               View Site
             </a>
           </div>
         </div>
       </header>
-      <main className="max-w-6xl mx-auto px-6 py-8">
+      <main className="max-w-7xl mx-auto px-6 py-8">
         <AdminDashboard
-          businessId={biz.id}
-          businessName={biz.name}
+          business={biz}
           slug={slug}
+          theme={theme}
           bookings={bookings}
           clients={clients}
           tables={tables}
+          hours={hours}
+          menu={menu}
+          photos={photos}
         />
       </main>
     </div>

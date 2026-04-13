@@ -154,6 +154,131 @@ export async function updateBusinessClientNotes(
     .eq("client_id", clientId);
 }
 
+// ── Menu Management ──
+
+export async function addMenuItem(businessId: string, data: {
+  category: string; name: string; description: string; price_cents: number; dietary_flags: string[];
+}) {
+  const { data: maxOrder } = await supabase
+    .from("menu_items")
+    .select("sort_order")
+    .eq("business_id", businessId)
+    .order("sort_order", { ascending: false })
+    .limit(1)
+    .single();
+
+  await supabase.from("menu_items").insert({
+    id: randomUUID(),
+    business_id: businessId,
+    ...data,
+    sort_order: (maxOrder?.sort_order ?? 0) + 1,
+  });
+  revalidatePath(`/r/[slug]`, "layout");
+}
+
+export async function updateMenuItem(itemId: string, data: {
+  category?: string; name?: string; description?: string; price_cents?: number;
+  dietary_flags?: string[]; available?: boolean;
+}) {
+  await supabase.from("menu_items").update(data).eq("id", itemId);
+  revalidatePath(`/r/[slug]`, "layout");
+}
+
+export async function deleteMenuItem(itemId: string) {
+  await supabase.from("menu_items").delete().eq("id", itemId);
+  revalidatePath(`/r/[slug]`, "layout");
+}
+
+// ── Site Settings ──
+
+export async function updateBusinessSettings(businessId: string, data: {
+  name?: string; about?: string; about_story?: string; about_headline?: string;
+  cuisine?: string; price_range?: string; address?: string; city?: string;
+  state?: string; zip?: string; phone?: string; email?: string;
+  cover_image_url?: string; logo_url?: string; theme?: string;
+}) {
+  await supabase.from("businesses").update(data).eq("id", businessId);
+  revalidatePath(`/r/[slug]`, "layout");
+}
+
+// ── Hours Management ──
+
+export async function updateBusinessHours(businessId: string, hours: {
+  day_of_week: number; open_time: string; close_time: string;
+  last_seating: string | null; is_closed: boolean;
+}[]) {
+  // Delete existing hours and re-insert
+  await supabase.from("business_hours").delete().eq("business_id", businessId);
+  for (const h of hours) {
+    await supabase.from("business_hours").insert({
+      id: randomUUID(),
+      business_id: businessId,
+      ...h,
+    });
+  }
+  revalidatePath(`/r/[slug]`, "layout");
+}
+
+// ── Photo Management ──
+
+export async function addPhoto(businessId: string, data: {
+  url: string; alt: string; caption: string; category: string;
+}) {
+  if (!data.alt.trim()) throw new Error("Alt text is required for accessibility");
+  const { data: maxOrder } = await supabase
+    .from("business_photos")
+    .select("sort_order")
+    .eq("business_id", businessId)
+    .order("sort_order", { ascending: false })
+    .limit(1)
+    .single();
+
+  await supabase.from("business_photos").insert({
+    id: randomUUID(),
+    business_id: businessId,
+    ...data,
+    sort_order: (maxOrder?.sort_order ?? 0) + 1,
+  });
+  revalidatePath(`/r/[slug]`, "layout");
+}
+
+export async function deletePhoto(photoId: string) {
+  await supabase.from("business_photos").delete().eq("id", photoId);
+  revalidatePath(`/r/[slug]`, "layout");
+}
+
+// ── Booking Status Management ──
+
+export async function seatBooking(bookingId: string) {
+  await supabase.from("bookings").update({
+    status: "seated",
+    updated_at: new Date().toISOString(),
+  }).eq("id", bookingId);
+}
+
+export async function completeBooking(bookingId: string) {
+  await supabase.from("bookings").update({
+    status: "completed",
+    updated_at: new Date().toISOString(),
+  }).eq("id", bookingId);
+}
+
+export async function noShowBooking(bookingId: string) {
+  await supabase.from("bookings").update({
+    status: "no_show",
+    updated_at: new Date().toISOString(),
+  }).eq("id", bookingId);
+}
+
+export async function assignTable(bookingId: string, tableId: string) {
+  await supabase.from("bookings").update({
+    table_id: tableId,
+    updated_at: new Date().toISOString(),
+  }).eq("id", bookingId);
+}
+
+// ── Existing ──
+
 export async function createBusiness(data: {
   name: string;
   slug: string;
