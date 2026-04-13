@@ -175,6 +175,60 @@ export async function loginWithPassword(slug: string, password: string): Promise
   return { role: null };
 }
 
+// ── Magic Link Auth ──
+
+export async function requestMagicLink(slug: string, email: string): Promise<{ ok: boolean; devToken?: string; error?: string }> {
+  // Look up business
+  const { data: biz } = await supabase.from("businesses").select("id").eq("slug", slug).single();
+  if (!biz) return { ok: false, error: "Business not found" };
+
+  // Check if email is authorized
+  const { data: admin } = await supabase
+    .from("business_admins")
+    .select("role")
+    .eq("business_id", biz.id)
+    .eq("email", email.toLowerCase())
+    .single();
+
+  if (!admin) return { ok: false, error: "Email not authorized" };
+
+  // Generate token
+  const token = randomUUID() + "-" + randomUUID();
+  const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
+
+  await supabase.from("business_magic_links").insert({
+    id: randomUUID(),
+    business_id: biz.id,
+    email: email.toLowerCase(),
+    token,
+    role: admin.role,
+    expires_at: expiresAt.toISOString(),
+  });
+
+  // DEV MODE: return the token directly instead of emailing
+  // TODO: Replace with Resend email in production
+  return { ok: true, devToken: token };
+}
+
+export async function verifyMagicLink(token: string): Promise<{ role: string; slug: string } | null> {
+  const { data: link } = await supabase
+    .from("business_magic_links")
+    .select("*, businesses(slug)")
+    .eq("token", token)
+    .is("used_at", null)
+    .gt("expires_at", new Date().toISOString())
+    .single();
+
+  if (!link) return null;
+
+  // Mark as used
+  await supabase.from("business_magic_links").update({
+    used_at: new Date().toISOString(),
+  }).eq("id", link.id);
+
+  return { role: link.role, slug: (link.businesses as { slug: string }).slug };
+}
+
 // ── Menu Management ──
 
 export async function addMenuItem(businessId: string, data: {

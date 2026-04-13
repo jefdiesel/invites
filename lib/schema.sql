@@ -42,9 +42,11 @@ CREATE TABLE IF NOT EXISTS businesses (
   custom_domain TEXT UNIQUE,
   -- Theme: modern, classic, rustic, playful, bright
   theme TEXT DEFAULT 'classic',
-  -- Auth: simple passwords for staff/admin (magic link for production later)
-  staff_password TEXT DEFAULT '',  -- hostess/staff login
-  admin_password TEXT DEFAULT '',  -- owner/admin login
+  -- Auth
+  staff_password TEXT DEFAULT '',   -- PIN for host stand
+  admin_password TEXT DEFAULT '',   -- password for testing, magic link for production
+  -- Magic link tokens
+  -- (stored in business_magic_links table below)
   -- Operating config
   booking_window_days INT DEFAULT 30, -- how far ahead can you book
   min_party_size INT DEFAULT 1,
@@ -134,6 +136,48 @@ CREATE TABLE IF NOT EXISTS menu_items (
   dietary_flags TEXT[] DEFAULT '{}', -- V, VG, GF, DF, etc.
   available BOOLEAN DEFAULT true,
   sort_order INT DEFAULT 0
+);
+
+-- Magic link tokens for admin login
+CREATE TABLE IF NOT EXISTS business_magic_links (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  business_id UUID NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
+  email TEXT NOT NULL,
+  token TEXT UNIQUE NOT NULL,
+  role TEXT NOT NULL DEFAULT 'admin', -- admin or staff
+  expires_at TIMESTAMPTZ NOT NULL,
+  used_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- Admin email whitelist per business
+CREATE TABLE IF NOT EXISTS business_admins (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  business_id UUID NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
+  email TEXT NOT NULL,
+  role TEXT NOT NULL DEFAULT 'admin', -- admin or staff
+  created_at TIMESTAMPTZ DEFAULT now(),
+  UNIQUE(business_id, email)
+);
+
+-- Physical tables with floor plan position
+CREATE TABLE IF NOT EXISTS restaurant_tables (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  business_id UUID NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,               -- "T1", "W2", "PDR"
+  zone TEXT DEFAULT 'Main',         -- "Main", "Patio", "Bar", "Private"
+  capacity INT NOT NULL DEFAULT 4,
+  shape TEXT DEFAULT 'circle',      -- circle, square, rect
+  -- Floor plan position (percentage of canvas, 0-100)
+  pos_x FLOAT DEFAULT 50,
+  pos_y FLOAT DEFAULT 50,
+  width FLOAT DEFAULT 8,            -- percentage of canvas width
+  height FLOAT DEFAULT 8,
+  rotation FLOAT DEFAULT 0,         -- degrees
+  --
+  is_active BOOLEAN DEFAULT true,
+  sort_order INT DEFAULT 0,
+  created_at TIMESTAMPTZ DEFAULT now()
 );
 
 -- Photos with REQUIRED alt text (a11y enforced at schema level)
