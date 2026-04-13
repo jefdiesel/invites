@@ -27,8 +27,41 @@ export default async function RestaurantPage({ params }: { params: Promise<{ slu
   const isOpenToday = todayHours && !todayHours.is_closed;
 
   return (
-    <div className="min-h-screen bg-warm-50">
-      {/* Hero — full bleed, big presence */}
+    <div className="min-h-screen bg-warm-50 scroll-pt-14">
+      {/* Skip to content — visible on keyboard focus (WCAG 2.4.1) */}
+      <a
+        href="#main"
+        className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 focus:bg-warm-900 focus:text-white focus:px-4 focus:py-2 focus:rounded-lg focus:text-sm focus:font-bold"
+      >
+        Skip to content
+      </a>
+
+      {/* Primary navigation — first in DOM for focus order (WCAG 2.4.3) */}
+      <nav aria-label={`${biz.name} navigation`} className="sticky top-0 z-40 bg-warm-900/95 backdrop-blur border-b border-warm-800">
+        <div className="max-w-3xl mx-auto px-6 flex items-center justify-between h-14">
+          <a href={`/r/${slug}`} className="flex items-center gap-3 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white rounded">
+            {biz.logo_url ? (
+              <img src={biz.logo_url} alt="" className="h-8 w-auto" />
+            ) : null}
+            <span className="text-lg font-bold tracking-tight text-white">{biz.name}</span>
+          </a>
+          <div className="flex items-center gap-6 text-sm">
+            {menuByCategory.length > 0 && (
+              <a href="#menu" className="text-warm-300 hover:text-white transition-colors font-medium focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white rounded">Menu</a>
+            )}
+            <a href="#hours" className="text-warm-300 hover:text-white transition-colors font-medium focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white rounded">Hours</a>
+            <a href="#contact" className="text-warm-300 hover:text-white transition-colors font-medium focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white rounded">Find Us</a>
+            <Link
+              href={`/r/${slug}/book`}
+              className="rounded-full bg-accent px-5 py-1.5 text-sm font-bold text-white hover:bg-accent-light transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+            >
+              Reserve
+            </Link>
+          </div>
+        </div>
+      </nav>
+
+      {/* Hero — below nav in DOM, visually prominent */}
       <header className="relative">
         {biz.cover_image_url ? (
           <div className="h-[420px] relative">
@@ -51,32 +84,7 @@ export default async function RestaurantPage({ params }: { params: Promise<{ slu
         )}
       </header>
 
-      {/* Site header */}
-      <nav className="sticky top-0 z-40 bg-warm-900/95 backdrop-blur border-b border-warm-800">
-        <div className="max-w-3xl mx-auto px-6 flex items-center justify-between h-14">
-          <a href={`/r/${slug}`} className="flex items-center gap-3">
-            {biz.logo_url ? (
-              <img src={biz.logo_url} alt="" className="h-8 w-auto" />
-            ) : null}
-            <span className="text-lg font-bold tracking-tight text-white">{biz.name}</span>
-          </a>
-          <div className="flex items-center gap-6 text-sm">
-            {menuByCategory.length > 0 && (
-              <a href="#menu" className="text-warm-300 hover:text-white transition-colors font-medium">Menu</a>
-            )}
-            <a href="#hours" className="text-warm-300 hover:text-white transition-colors font-medium">Hours</a>
-            <a href="#contact" className="text-warm-300 hover:text-white transition-colors font-medium">Find Us</a>
-            <Link
-              href={`/r/${slug}/book`}
-              className="rounded-full bg-accent px-5 py-1.5 text-sm font-bold text-white hover:bg-accent-light transition-colors"
-            >
-              Reserve
-            </Link>
-          </div>
-        </div>
-      </nav>
-
-      <main className="max-w-3xl mx-auto px-6">
+      <main id="main" className="max-w-3xl mx-auto px-6">
         {/* About — if there's a longer description */}
         {biz.about && biz.about.length > 60 && (
           <section className="py-16 border-b border-warm-200">
