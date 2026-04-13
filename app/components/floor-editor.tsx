@@ -133,13 +133,13 @@ export function FloorEditor({ businessId, tables: initialTables }: { businessId:
   async function handleAddTable() {
     if (!newName.trim()) return;
     setSaving(true);
-    await addTable(businessId, { name: newName.trim(), zone: activeZone, capacity: newCapacity, shape: newShape });
+    const newTable = await addTable(businessId, { name: newName.trim(), zone: activeZone, capacity: newCapacity, shape: newShape });
+    setTables((prev) => [...prev, newTable]);
     setAdding(false);
     setNewName("");
     setNewCapacity(4);
     setNewShape("circle");
     setSaving(false);
-    router.refresh();
   }
 
   async function handleUpdateTable(field: string, value: string | number | boolean) {

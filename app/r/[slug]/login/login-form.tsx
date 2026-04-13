@@ -115,66 +115,54 @@ export function LoginForm({ slug, accent, radius, heroBg, heroText, heroTextMute
 
   return (
     <div>
-      {/* Mode toggle */}
-      <div className="flex gap-2 mb-8 justify-center">
-        <button onClick={() => { setMode("pin"); setError(""); }}
-          className="px-4 py-2 text-sm font-medium rounded-lg transition-all"
-          style={{
-            background: mode === "pin" ? "rgba(255,255,255,0.15)" : "transparent",
-            color: mode === "pin" ? heroText : heroTextMuted,
-            border: `1px solid ${mode === "pin" ? "rgba(255,255,255,0.3)" : "transparent"}`,
-            borderRadius: radius,
-          }}>
-          Staff PIN
-        </button>
-        <button onClick={() => { setMode("email"); setError(""); }}
-          className="px-4 py-2 text-sm font-medium rounded-lg transition-all"
-          style={{
-            background: mode === "email" ? "rgba(255,255,255,0.15)" : "transparent",
-            color: mode === "email" ? heroText : heroTextMuted,
-            border: `1px solid ${mode === "email" ? "rgba(255,255,255,0.3)" : "transparent"}`,
-            borderRadius: radius,
-          }}>
-          Admin Login
-        </button>
-      </div>
-
       {mode === "pin" ? (
-        <form onSubmit={handlePinSubmit}>
-          <input
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            placeholder="Enter PIN or password"
-            autoFocus
-            style={inputStyle}
-            className="mb-4"
-          />
-          {error && <p className="text-sm font-medium mb-4" style={{ color: "#f87171" }}>{error}</p>}
-          <button type="submit" disabled={loading || !password}
-            className="w-full text-lg font-bold py-4 transition-opacity disabled:opacity-40"
-            style={{ background: accent, color: "#fff", borderRadius: radius }}>
-            {loading ? "..." : "Sign In"}
+        <>
+          <form onSubmit={handlePinSubmit}>
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Enter password"
+              autoFocus
+              style={inputStyle}
+              className="mb-4"
+            />
+            {error && <p className="text-sm font-medium mb-4" style={{ color: "#f87171" }}>{error}</p>}
+            <button type="submit" disabled={loading || !password}
+              className="w-full text-lg font-bold py-4 transition-opacity disabled:opacity-40"
+              style={{ background: accent, color: "#fff", borderRadius: radius }}>
+              {loading ? "..." : "Sign In"}
+            </button>
+          </form>
+          <button onClick={() => { setMode("email"); setError(""); }}
+            className="mt-6 text-sm transition-opacity opacity-50 hover:opacity-80">
+            Use email login instead
           </button>
-        </form>
+        </>
       ) : (
-        <form onSubmit={handleEmailSubmit}>
-          <input
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="your@email.com"
-            autoFocus
-            style={inputStyle}
-            className="mb-4"
-          />
-          {error && <p className="text-sm font-medium mb-4" style={{ color: "#f87171" }}>{error}</p>}
-          <button type="submit" disabled={loading || !email}
-            className="w-full text-lg font-bold py-4 transition-opacity disabled:opacity-40"
-            style={{ background: accent, color: "#fff", borderRadius: radius }}>
-            {loading ? "Sending..." : "Send Login Link"}
+        <>
+          <form onSubmit={handleEmailSubmit}>
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="your@email.com"
+              autoFocus
+              style={inputStyle}
+              className="mb-4"
+            />
+            {error && <p className="text-sm font-medium mb-4" style={{ color: "#f87171" }}>{error}</p>}
+            <button type="submit" disabled={loading || !email}
+              className="w-full text-lg font-bold py-4 transition-opacity disabled:opacity-40"
+              style={{ background: accent, color: "#fff", borderRadius: radius }}>
+              {loading ? "Sending..." : "Send Login Link"}
+            </button>
+          </form>
+          <button onClick={() => { setMode("pin"); setError(""); }}
+            className="mt-6 text-sm transition-opacity opacity-50 hover:opacity-80">
+            Use password instead
           </button>
-        </form>
+        </>
       )}
     </div>
   );

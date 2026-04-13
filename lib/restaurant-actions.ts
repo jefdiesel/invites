@@ -412,8 +412,9 @@ export async function addTable(businessId: string, data: {
   const w = data.capacity <= 2 ? 6 : data.capacity <= 4 ? 8 : data.capacity <= 6 ? 11 : 14;
   const h = data.shape === "circle" ? w : (data.capacity <= 4 ? 8 : 8);
 
+  const id = randomUUID();
   await supabase.from("restaurant_tables").insert({
-    id: randomUUID(),
+    id,
     business_id: businessId,
     name: data.name,
     zone: data.zone,
@@ -426,6 +427,7 @@ export async function addTable(businessId: string, data: {
     sort_order: (maxOrder?.sort_order ?? 0) + 1,
   });
   revalidatePath(`/r/[slug]`, "layout");
+  return { id, name: data.name, zone: data.zone, capacity: data.capacity, shape: data.shape, pos_x: 50, pos_y: 50, width: w, height: h, is_active: true, sort_order: (maxOrder?.sort_order ?? 0) + 1 };
 }
 
 export async function deleteTable(tableId: string) {

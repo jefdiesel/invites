@@ -28,7 +28,7 @@ export default async function LoginPage({ params }: { params: Promise<{ slug: st
       <div className="w-full max-w-sm text-center">
         {biz.logo_url && <img src={biz.logo_url} alt="" className="h-12 mx-auto mb-6" />}
         <h1 style={{ fontFamily: displayFont }} className="text-3xl mb-2">{biz.name}</h1>
-        <p className="text-sm mb-10" style={{ color: t.heroTextMuted }}>Staff Login</p>
+        <p className="text-sm mb-10" style={{ color: t.heroTextMuted }}>Login</p>
 
         <LoginForm slug={slug} accent={t.accent} radius={rBtn} heroBg={t.heroBg} heroText={t.heroText} heroTextMuted={t.heroTextMuted} />
 
