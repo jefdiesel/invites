@@ -1,4 +1,6 @@
 import { getBusiness, getBusinessHours, getMenuItems } from "@/lib/restaurant-queries";
+import { getTheme } from "@/lib/themes";
+import { ThemeFonts } from "@/app/components/theme-fonts";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 
@@ -7,12 +9,11 @@ export const dynamic = "force-dynamic";
 const DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 const SHORT_DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
-// Dietary flag display
-const DIETARY: Record<string, { label: string; color: string }> = {
-  V: { label: "Vegetarian", color: "bg-sage-light text-sage" },
-  VG: { label: "Vegan", color: "bg-sage-light text-sage" },
-  GF: { label: "Gluten-Free", color: "bg-amber-50 text-amber-700" },
-  DF: { label: "Dairy-Free", color: "bg-blue-50 text-blue-700" },
+const DIETARY: Record<string, { label: string; bg: string; fg: string }> = {
+  V:  { label: "Vegetarian",  bg: "#e8f0ea", fg: "#5a7a62" },
+  VG: { label: "Vegan",       bg: "#e8f0ea", fg: "#5a7a62" },
+  GF: { label: "Gluten-Free", bg: "#fef3c7", fg: "#92400e" },
+  DF: { label: "Dairy-Free",  bg: "#dbeafe", fg: "#1e40af" },
 };
 
 export default async function RestaurantPage({ params }: { params: Promise<{ slug: string }> }) {
@@ -20,6 +21,7 @@ export default async function RestaurantPage({ params }: { params: Promise<{ slu
   const biz = await getBusiness(slug);
   if (!biz) return notFound();
 
+  const theme = getTheme(biz.theme);
   const hours = await getBusinessHours(biz.id);
   const menu = await getMenuItems(biz.id);
 
@@ -33,59 +35,85 @@ export default async function RestaurantPage({ params }: { params: Promise<{ slu
   const todayHours = hours.find((h) => h.day_of_week === today);
   const isOpenToday = todayHours && !todayHours.is_closed;
 
-  // Collect all dietary flags used in menu for legend
   const allFlags = new Set<string>();
   menu.forEach((m) => m.dietary_flags?.forEach((f: string) => allFlags.add(f)));
 
+  const t = theme.colors;
+  const displayFont = theme.fonts.display === "system" ? "var(--font-geist-sans)" : `'${theme.fonts.display}', serif`;
+  const bodyFont = theme.fonts.body === "system" ? "var(--font-geist-sans)" : `'${theme.fonts.body}', sans-serif`;
+
+  const r = theme.radius === "none" ? "0" : theme.radius === "sm" ? "0.375rem" : theme.radius === "lg" ? "0.75rem" : "9999px";
+  const rBtn = theme.radius === "full" ? "9999px" : r;
+  const rCard = theme.radius === "full" ? "1rem" : r;
+
+  const textureOverlay = theme.texture ? (
+    <div className="absolute inset-0 pointer-events-none opacity-[0.03]" style={{
+      backgroundImage: "url(\"data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E\")",
+    }} />
+  ) : null;
+
   return (
-    <div className="min-h-screen bg-cream scroll-pt-14">
+    <div style={{ background: t.bg, color: t.text, fontFamily: bodyFont }} className="min-h-screen scroll-pt-14">
+      <ThemeFonts theme={theme} />
+
       {/* Skip to content */}
       <a
         href="#main"
-        className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 focus:bg-warm-900 focus:text-white focus:px-4 focus:py-2 focus:rounded-lg focus:text-sm focus:font-bold"
+        className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 focus:px-4 focus:py-2 focus:text-sm focus:font-bold"
+        style={{ background: t.accent, color: "#fff", borderRadius: rBtn }}
       >
         Skip to content
       </a>
 
       {/* Nav */}
-      <nav aria-label={`${biz.name} navigation`} className="sticky top-0 z-40 bg-warm-900/95 backdrop-blur border-b border-warm-800">
+      <nav
+        aria-label={`${biz.name} navigation`}
+        className="sticky top-0 z-40 backdrop-blur"
+        style={{
+          background: t.navBg,
+          borderBottom: theme.navStyle === "light" ? `1px solid ${t.border}` : "1px solid rgba(255,255,255,0.1)",
+        }}
+      >
         <div className="max-w-4xl mx-auto px-6 flex items-center justify-between h-14">
-          <a href={`/r/${slug}`} className="flex items-center gap-3 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white rounded">
+          <a href={`/r/${slug}`} className="flex items-center gap-3 focus-visible:outline-2 focus-visible:outline-offset-2 rounded"
+             style={{ outlineColor: theme.navStyle === "light" ? t.accent : "#fff" }}>
             {biz.logo_url && <img src={biz.logo_url} alt="" className="h-8 w-auto" />}
-            <span className="font-[family-name:var(--font-display)] text-xl text-white">{biz.name}</span>
+            <span style={{ fontFamily: displayFont, color: theme.navStyle === "light" ? t.text : "#fff" }}
+                  className="text-xl">
+              {biz.name}
+            </span>
           </a>
-          {/* Desktop links */}
+          {/* Desktop */}
           <div className="hidden md:flex items-center gap-6 text-sm">
             {menuByCategory.length > 0 && (
-              <a href="#menu" className="text-warm-300 hover:text-white transition-colors font-medium focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white rounded">Menu</a>
+              <a href="#menu" className="font-medium transition-colors" style={{ color: t.navText }}
+                 onMouseEnter={undefined}>{/* hover handled by CSS below */}Menu</a>
             )}
-            <a href="#hours" className="text-warm-300 hover:text-white transition-colors font-medium focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white rounded">Hours</a>
-            <a href="#contact" className="text-warm-300 hover:text-white transition-colors font-medium focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white rounded">Find Us</a>
-            <Link
-              href={`/r/${slug}/book`}
-              className="rounded-full bg-accent px-5 py-1.5 text-sm font-bold text-white hover:bg-accent-light transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
-            >
+            <a href="#hours" className="font-medium transition-colors" style={{ color: t.navText }}>Hours</a>
+            <a href="#contact" className="font-medium transition-colors" style={{ color: t.navText }}>Find Us</a>
+            <Link href={`/r/${slug}/book`}
+              className="px-5 py-1.5 text-sm font-bold text-white transition-colors"
+              style={{ background: t.accent, borderRadius: rBtn }}>
               Reserve
             </Link>
           </div>
-          {/* Mobile: just the reserve button */}
+          {/* Mobile */}
           <div className="flex md:hidden">
-            <Link
-              href={`/r/${slug}/book`}
-              className="rounded-full bg-accent px-4 py-1.5 text-sm font-bold text-white hover:bg-accent-light transition-colors"
-            >
+            <Link href={`/r/${slug}/book`}
+              className="px-4 py-1.5 text-sm font-bold text-white transition-colors"
+              style={{ background: t.accent, borderRadius: rBtn }}>
               Reserve
             </Link>
           </div>
         </div>
         {/* Mobile section links */}
-        <div className="flex md:hidden border-t border-warm-800 overflow-x-auto">
+        <div className="flex md:hidden overflow-x-auto" style={{ borderTop: "1px solid rgba(255,255,255,0.1)" }}>
           <div className="flex items-center gap-1 px-6 py-2 text-xs">
             {menuByCategory.length > 0 && (
-              <a href="#menu" className="text-warm-400 hover:text-white px-3 py-1 rounded-full transition-colors">Menu</a>
+              <a href="#menu" className="px-3 py-1 transition-colors" style={{ color: t.navText, borderRadius: rBtn }}>Menu</a>
             )}
-            <a href="#hours" className="text-warm-400 hover:text-white px-3 py-1 rounded-full transition-colors">Hours</a>
-            <a href="#contact" className="text-warm-400 hover:text-white px-3 py-1 rounded-full transition-colors">Find Us</a>
+            <a href="#hours" className="px-3 py-1 transition-colors" style={{ color: t.navText, borderRadius: rBtn }}>Hours</a>
+            <a href="#contact" className="px-3 py-1 transition-colors" style={{ color: t.navText, borderRadius: rBtn }}>Find Us</a>
           </div>
         </div>
       </nav>
@@ -94,24 +122,20 @@ export default async function RestaurantPage({ params }: { params: Promise<{ slu
       <header className="relative overflow-hidden">
         {biz.cover_image_url ? (
           <div className="h-[480px] md:h-[520px] relative">
-            <img
-              src={biz.cover_image_url}
-              alt={`${biz.name} interior`}
-              className="absolute inset-0 w-full h-full object-cover"
-            />
+            <img src={biz.cover_image_url} alt={`${biz.name} interior`} className="absolute inset-0 w-full h-full object-cover" />
             <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
             <div className="relative z-10 h-full flex flex-col justify-end max-w-4xl mx-auto px-6 pb-14">
-              <HeroText biz={biz} slug={slug} isOpenToday={isOpenToday} todayHours={todayHours} overlay />
+              <HeroText biz={biz} slug={slug} isOpenToday={isOpenToday} todayHours={todayHours}
+                        displayFont={displayFont} accent={t.accent} rBtn={rBtn} overlay />
             </div>
           </div>
         ) : (
-          /* No image: atmospheric dark hero with subtle texture */
-          <div className="bg-warm-900 relative">
-            <div className="absolute inset-0 opacity-[0.03]" style={{
-              backgroundImage: "url(\"data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E\")",
-            }} />
+          <div className="relative" style={{ background: t.heroBg }}>
+            {textureOverlay}
             <div className="relative max-w-4xl mx-auto px-6 py-24 md:py-32">
-              <HeroText biz={biz} slug={slug} isOpenToday={isOpenToday} todayHours={todayHours} overlay={false} />
+              <HeroText biz={biz} slug={slug} isOpenToday={isOpenToday} todayHours={todayHours}
+                        displayFont={displayFont} accent={t.accent} rBtn={rBtn} overlay={false}
+                        heroText={t.heroText} heroTextMuted={t.heroTextMuted} />
             </div>
           </div>
         )}
@@ -120,9 +144,9 @@ export default async function RestaurantPage({ params }: { params: Promise<{ slu
       <main id="main">
         {/* About */}
         {biz.about && biz.about.length > 60 && (
-          <section className="bg-white">
+          <section style={{ background: t.surface }}>
             <div className="max-w-4xl mx-auto px-6 py-14 md:py-20">
-              <p className="text-lg md:text-xl text-warm-600 leading-relaxed max-w-2xl font-light">
+              <p className="text-lg md:text-xl leading-relaxed max-w-2xl font-light" style={{ color: t.textMuted }}>
                 {biz.about}
               </p>
             </div>
@@ -131,42 +155,45 @@ export default async function RestaurantPage({ params }: { params: Promise<{ slu
 
         {/* Menu */}
         {menuByCategory.length > 0 && (
-          <section id="menu" className="bg-cream">
+          <section id="menu" style={{ background: t.surfaceAlt }}>
             <div className="max-w-4xl mx-auto px-6 py-16 md:py-24">
-              <h2 className="font-[family-name:var(--font-display)] text-3xl md:text-4xl text-warm-900 mb-12">
+              <h2 style={{ fontFamily: displayFont, color: t.text }} className="text-3xl md:text-4xl mb-12">
                 Menu
               </h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-x-16 gap-y-14">
                 {menuByCategory.map((cat) => (
                   <div key={cat.category}>
-                    <h3 className="text-sm font-bold text-accent uppercase tracking-widest mb-6 pb-2 border-b border-warm-200">
+                    <h3 className="text-sm font-bold uppercase tracking-widest mb-6 pb-2"
+                        style={{ color: t.accent, borderBottom: `1px solid ${t.border}` }}>
                       {cat.category}
                     </h3>
                     <div className="space-y-5">
                       {cat.items.map((item) => (
                         <div key={item.id}>
                           <div className="flex items-baseline justify-between gap-3">
-                            <span className="text-base font-semibold text-warm-900">{item.name}</span>
-                            <span className="border-b border-dotted border-warm-300 flex-1 min-w-[20px] translate-y-[-4px]" />
-                            <span className="text-base font-medium text-warm-700 tabular-nums shrink-0">
+                            <span className="text-base font-semibold" style={{ color: t.text }}>{item.name}</span>
+                            {theme.menuStyle === "dots" && (
+                              <span className="flex-1 min-w-[20px] translate-y-[-4px]" style={{ borderBottom: `1px dotted ${t.border}` }} />
+                            )}
+                            {theme.menuStyle === "line" && (
+                              <span className="flex-1 min-w-[20px] translate-y-[-4px]" style={{ borderBottom: `1px solid ${t.border}` }} />
+                            )}
+                            <span className="text-base font-medium tabular-nums shrink-0" style={{ color: t.textMuted }}>
                               {item.price_cents > 0 ? `$${(item.price_cents / 100).toFixed(0)}` : ""}
                             </span>
                           </div>
                           {item.description && (
-                            <p className="text-sm text-warm-500 mt-1 leading-relaxed">{item.description}</p>
+                            <p className="text-sm mt-1 leading-relaxed" style={{ color: t.textLight }}>{item.description}</p>
                           )}
                           {item.dietary_flags && item.dietary_flags.length > 0 && (
                             <div className="flex gap-1.5 mt-2">
                               {item.dietary_flags.map((flag: string) => {
                                 const info = DIETARY[flag];
                                 return (
-                                  <span
-                                    key={flag}
-                                    className={`px-2 py-0.5 rounded-full text-[11px] font-semibold ${info?.color ?? "bg-warm-100 text-warm-600"}`}
-                                    title={info?.label ?? flag}
-                                    role="img"
-                                    aria-label={info?.label ?? flag}
-                                  >
+                                  <span key={flag}
+                                    className="px-2 py-0.5 text-[11px] font-semibold"
+                                    style={{ background: info?.bg ?? t.accentMuted, color: info?.fg ?? t.textMuted, borderRadius: rBtn }}
+                                    title={info?.label ?? flag} role="img" aria-label={info?.label ?? flag}>
                                     {flag}
                                   </span>
                                 );
@@ -179,15 +206,13 @@ export default async function RestaurantPage({ params }: { params: Promise<{ slu
                   </div>
                 ))}
               </div>
-
-              {/* Dietary legend */}
               {allFlags.size > 0 && (
-                <div className="mt-14 pt-6 border-t border-warm-200 flex flex-wrap gap-4 text-xs text-warm-500">
+                <div className="mt-14 pt-6 flex flex-wrap gap-4 text-xs" style={{ borderTop: `1px solid ${t.border}`, color: t.textLight }}>
                   {[...allFlags].map((flag) => {
                     const info = DIETARY[flag];
                     return (
                       <span key={flag} className="flex items-center gap-1.5">
-                        <span className={`inline-block w-2 h-2 rounded-full ${info?.color?.split(" ")[0] ?? "bg-warm-300"}`} />
+                        <span className="inline-block w-2 h-2 rounded-full" style={{ background: info?.fg ?? t.textLight }} />
                         {info?.label ?? flag}
                       </span>
                     );
@@ -198,37 +223,31 @@ export default async function RestaurantPage({ params }: { params: Promise<{ slu
           </section>
         )}
 
-        {/* Hours + Contact side by side on desktop */}
-        <section className="bg-white">
+        {/* Hours + Contact */}
+        <section style={{ background: t.surface }}>
           <div className="max-w-4xl mx-auto px-6 py-16 md:py-24 grid grid-cols-1 md:grid-cols-2 gap-12 md:gap-16">
-            {/* Hours */}
             {hours.length > 0 && (
               <div id="hours">
-                <h2 className="font-[family-name:var(--font-display)] text-3xl text-warm-900 mb-8">Hours</h2>
+                <h2 style={{ fontFamily: displayFont, color: t.text }} className="text-3xl mb-8">Hours</h2>
                 <div className="space-y-2.5">
                   {hours.map((h) => {
                     const isToday = h.day_of_week === today;
                     return (
-                      <div
-                        key={h.day_of_week}
-                        className={`flex items-center justify-between py-1.5 ${
-                          isToday ? "text-warm-900" : "text-warm-600"
-                        }`}
-                      >
+                      <div key={h.day_of_week} className="flex items-center justify-between py-1.5"
+                           style={{ color: isToday ? t.text : t.textMuted }}>
                         <span className={`text-sm ${isToday ? "font-semibold" : ""}`}>
                           {DAYS[h.day_of_week]}
                           {isToday && (
-                            <span className="ml-2 text-[11px] font-bold text-white bg-accent rounded-full px-2 py-0.5 align-middle">
+                            <span className="ml-2 text-[11px] font-bold text-white px-2 py-0.5 align-middle"
+                                  style={{ background: t.accent, borderRadius: rBtn }}>
                               Today
                             </span>
                           )}
                         </span>
                         {h.is_closed ? (
-                          <span className="text-sm text-warm-400 italic">Closed</span>
+                          <span className="text-sm italic" style={{ color: t.textLight }}>Closed</span>
                         ) : (
-                          <span className="text-sm tabular-nums font-medium">
-                            {formatTime(h.open_time)} – {formatTime(h.close_time)}
-                          </span>
+                          <span className="text-sm tabular-nums font-medium">{formatTime(h.open_time)} – {formatTime(h.close_time)}</span>
                         )}
                       </div>
                     );
@@ -236,30 +255,22 @@ export default async function RestaurantPage({ params }: { params: Promise<{ slu
                 </div>
               </div>
             )}
-
-            {/* Contact */}
             <div id="contact">
-              <h2 className="font-[family-name:var(--font-display)] text-3xl text-warm-900 mb-8">Find Us</h2>
+              <h2 style={{ fontFamily: displayFont, color: t.text }} className="text-3xl mb-8">Find Us</h2>
               <div className="space-y-4">
                 {biz.address && (
                   <div>
-                    <p className="text-base text-warm-700 font-medium">
-                      {biz.address}
-                    </p>
-                    <p className="text-sm text-warm-500">
+                    <p className="text-base font-medium" style={{ color: t.text }}>{biz.address}</p>
+                    <p className="text-sm" style={{ color: t.textMuted }}>
                       {[biz.city, biz.state, biz.zip].filter(Boolean).join(", ")}
                     </p>
                   </div>
                 )}
                 {biz.phone && (
-                  <a href={`tel:${biz.phone}`} className="block text-base text-warm-700 hover:text-accent transition-colors">
-                    {biz.phone}
-                  </a>
+                  <a href={`tel:${biz.phone}`} className="block text-base transition-colors" style={{ color: t.textMuted }}>{biz.phone}</a>
                 )}
                 {biz.email && (
-                  <a href={`mailto:${biz.email}`} className="block text-base text-warm-700 hover:text-accent transition-colors">
-                    {biz.email}
-                  </a>
+                  <a href={`mailto:${biz.email}`} className="block text-base transition-colors" style={{ color: t.textMuted }}>{biz.email}</a>
                 )}
               </div>
             </div>
@@ -267,86 +278,89 @@ export default async function RestaurantPage({ params }: { params: Promise<{ slu
         </section>
 
         {/* CTA */}
-        <section className="bg-warm-900 relative overflow-hidden">
-          <div className="absolute inset-0 opacity-[0.03]" style={{
-            backgroundImage: "url(\"data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E\")",
-          }} />
+        <section className="relative overflow-hidden" style={{ background: t.heroBg }}>
+          {textureOverlay}
           <div className="relative max-w-4xl mx-auto px-6 py-20 md:py-28 text-center">
-            <h2 className="font-[family-name:var(--font-display)] text-3xl md:text-4xl text-white mb-4">
+            <h2 style={{ fontFamily: displayFont, color: t.heroText }} className="text-3xl md:text-4xl mb-4">
               {isOpenToday ? "Join us tonight" : "Make a reservation"}
             </h2>
-            <p className="text-base text-warm-400 mb-10">
+            <p className="text-base mb-10" style={{ color: t.heroTextMuted }}>
               {isOpenToday && todayHours
                 ? `Open today until ${formatTime(todayHours.close_time)}`
                 : `${hours.filter(h => !h.is_closed).map(h => SHORT_DAYS[h.day_of_week]).join(", ")}`}
             </p>
-            <Link
-              href={`/r/${slug}/book`}
-              className="inline-block rounded-full bg-accent px-10 py-4 text-lg font-bold text-white hover:bg-accent-light transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
-            >
+            <Link href={`/r/${slug}/book`}
+              className="inline-block px-10 py-4 text-lg font-bold text-white transition-colors"
+              style={{ background: t.accent, borderRadius: rBtn }}>
               Reserve a Table
             </Link>
           </div>
         </section>
       </main>
 
-      <footer className="bg-warm-900 border-t border-warm-800 py-10">
+      <footer style={{ background: t.footerBg, borderTop: "1px solid rgba(255,255,255,0.1)" }} className="py-10">
         <div className="max-w-4xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-4">
           <div>
-            <span className="font-[family-name:var(--font-display)] text-lg text-white">{biz.name}</span>
+            <span style={{ fontFamily: displayFont, color: t.footerText }} className="text-lg">{biz.name}</span>
             {biz.address && (
-              <span className="text-sm text-warm-500 ml-3">
+              <span className="text-sm ml-3" style={{ color: t.footerTextMuted }}>
                 {biz.address}{biz.city ? `, ${biz.city}` : ""}
               </span>
             )}
           </div>
-          <div className="flex items-center gap-4 text-sm text-warm-500">
-            {biz.phone && <a href={`tel:${biz.phone}`} className="hover:text-warm-300 transition-colors">{biz.phone}</a>}
-            {biz.email && <a href={`mailto:${biz.email}`} className="hover:text-warm-300 transition-colors">{biz.email}</a>}
+          <div className="flex items-center gap-4 text-sm" style={{ color: t.footerTextMuted }}>
+            {biz.phone && <a href={`tel:${biz.phone}`} className="transition-colors hover:opacity-80">{biz.phone}</a>}
+            {biz.email && <a href={`mailto:${biz.email}`} className="transition-colors hover:opacity-80">{biz.email}</a>}
           </div>
         </div>
       </footer>
+
+      {/* Hover styles for nav links (can't do inline) */}
+      <style>{`
+        nav a:hover { color: ${t.navTextHover} !important; }
+        #contact a:hover { color: ${t.accent} !important; }
+      `}</style>
     </div>
   );
 }
 
 function HeroText({
-  biz,
-  slug,
-  isOpenToday,
-  todayHours,
-  overlay,
+  biz, slug, isOpenToday, todayHours, displayFont, accent, rBtn, overlay,
+  heroText, heroTextMuted,
 }: {
-  biz: { name: string; cuisine: string; price_range: string; about: string; cover_image_url: string };
+  biz: { name: string; cuisine: string; price_range: string; about: string };
   slug: string;
   isOpenToday: boolean | null | undefined;
   todayHours: { open_time: string; close_time: string } | null | undefined;
-  overlay: boolean;
+  displayFont: string; accent: string; rBtn: string; overlay: boolean;
+  heroText?: string; heroTextMuted?: string;
 }) {
+  const textColor = overlay ? "#ffffff" : (heroText ?? "#ffffff");
+  const mutedColor = overlay ? "rgba(255,255,255,0.6)" : (heroTextMuted ?? "rgba(255,255,255,0.6)");
+
   return (
     <>
       {(biz.cuisine || biz.price_range) && (
-        <div className={`text-sm tracking-[0.2em] uppercase mb-4 ${overlay ? "text-white/60" : "text-warm-400"}`}>
+        <div className="text-sm tracking-[0.2em] uppercase mb-4" style={{ color: mutedColor }}>
           {[biz.cuisine, biz.price_range].filter(Boolean).join(" · ")}
         </div>
       )}
-      <h1 className={`font-[family-name:var(--font-display)] text-5xl md:text-7xl tracking-tight ${overlay ? "text-white" : "text-white"}`}>
+      <h1 style={{ fontFamily: displayFont, color: textColor }} className="text-5xl md:text-7xl tracking-tight">
         {biz.name}
       </h1>
       {biz.about && biz.about.length <= 80 && (
-        <p className={`mt-4 text-lg md:text-xl font-light ${overlay ? "text-white/70" : "text-warm-400"} max-w-xl`}>
+        <p className="mt-4 text-lg md:text-xl font-light max-w-xl" style={{ color: mutedColor }}>
           {biz.about}
         </p>
       )}
       <div className="mt-8 flex flex-wrap items-center gap-4">
-        <Link
-          href={`/r/${slug}/book`}
-          className="rounded-full bg-accent px-8 py-3.5 text-base font-bold text-white hover:bg-accent-light transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
-        >
+        <Link href={`/r/${slug}/book`}
+          className="px-8 py-3.5 text-base font-bold text-white transition-colors"
+          style={{ background: accent, borderRadius: rBtn }}>
           Reserve a Table
         </Link>
         {isOpenToday && todayHours && (
-          <span className={`text-sm font-medium ${overlay ? "text-white/50" : "text-warm-500"}`}>
+          <span className="text-sm font-medium" style={{ color: mutedColor }}>
             Open tonight until {formatTime(todayHours.close_time)}
           </span>
         )}
