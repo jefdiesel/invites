@@ -22,6 +22,22 @@ const DEMO_NAMES: Record<ThemeId, string> = {
   bright: "Volta",
 };
 
+const DEMO_IMAGES: Record<ThemeId, string> = {
+  modern: "https://images.unsplash.com/photo-1579027989536-b7b1f875659b?w=1200&q=80",
+  classic: "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=1200&q=80",
+  rustic: "https://images.unsplash.com/photo-1466978913421-dad2ebd01d17?w=1200&q=80",
+  playful: "https://images.unsplash.com/photo-1466220549276-aef9ce186540?w=1200&q=80",
+  bright: "https://images.unsplash.com/photo-1559329007-40df8a9345d8?w=1200&q=80",
+};
+
+const DEMO_CUISINES: Record<ThemeId, string> = {
+  modern: "JAPANESE · $$$$",
+  classic: "FRENCH-AMERICAN · $$$",
+  rustic: "FARM-TO-TABLE · $$",
+  playful: "BURGERS & SHAKES · $",
+  bright: "NEW AMERICAN · $$$",
+};
+
 const PHILOSOPHY: Record<ThemeId, { vibe: string; bestFor: string; fontNote: string; colorNote: string; details: string }> = {
   modern: {
     vibe: "Less is more. Sharp edges, monochrome palette, every element earns its place.",
@@ -126,11 +142,17 @@ export default function ThemesPage() {
                         </span>
                       </div>
                     </div>
-                    {/* Fake hero preview */}
-                    <div className="h-32 flex items-end px-5 pb-4" style={{ background: t.heroBg }}>
-                      <div>
-                        <div className="text-[10px] tracking-widest uppercase mb-1" style={{ color: t.heroTextMuted }}>CUISINE · $$</div>
-                        <div className="text-2xl font-bold" style={{ color: t.heroText }}>{name}</div>
+                    {/* Hero preview with cover image */}
+                    <div className="h-48 md:h-56 relative flex items-end">
+                      <img
+                        src={DEMO_IMAGES[theme.id]}
+                        alt={`${name} restaurant interior`}
+                        className="absolute inset-0 w-full h-full object-cover"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-black/20" />
+                      <div className="relative z-10 px-5 pb-5" style={{ textShadow: "0 2px 12px rgba(0,0,0,0.8), 0 1px 3px rgba(0,0,0,0.9)" }}>
+                        <div className="text-[10px] tracking-widest uppercase mb-1 text-white/80">{DEMO_CUISINES[theme.id]}</div>
+                        <div className="text-3xl md:text-4xl font-bold text-white">{name}</div>
                       </div>
                     </div>
                     {/* Fake content preview */}
