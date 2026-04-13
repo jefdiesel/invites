@@ -155,6 +155,30 @@ export async function updateBusinessClientNotes(
     .eq("client_id", clientId);
 }
 
+// ── Setup / Onboarding ──
+
+export async function setupBusiness(
+  businessId: string,
+  slug: string,
+  data: { adminEmail: string; staffPin: string; adminPassword: string }
+) {
+  // Add admin email to business_admins
+  await supabase.from("business_admins").insert({
+    id: randomUUID(),
+    business_id: businessId,
+    email: data.adminEmail.toLowerCase(),
+    role: "admin",
+  });
+
+  // Set passwords on the business
+  await supabase.from("businesses").update({
+    staff_password: data.staffPin,
+    admin_password: data.adminPassword,
+  }).eq("id", businessId);
+
+  revalidatePath(`/r/${slug}`, "layout");
+}
+
 // ── Auth ──
 
 export async function loginWithPassword(slug: string, password: string): Promise<{ role: "staff" | "admin" | null }> {

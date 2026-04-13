@@ -1,5 +1,13 @@
 import { supabase } from "./db";
 
+export async function hasAdmins(businessId: string): Promise<boolean> {
+  const { count } = await supabase
+    .from("business_admins")
+    .select("*", { count: "exact", head: true })
+    .eq("business_id", businessId);
+  return (count ?? 0) > 0;
+}
+
 export async function getBusiness(slug: string) {
   const { data } = await supabase
     .from("businesses")

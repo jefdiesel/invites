@@ -143,11 +143,9 @@ export function LoginForm({ slug, accent, radius, heroBg, heroText, heroTextMute
         <form onSubmit={handlePinSubmit}>
           <input
             type="password"
-            inputMode="numeric"
-            pattern="[0-9]*"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            placeholder="Enter PIN"
+            placeholder="Enter PIN or password"
             autoFocus
             style={inputStyle}
             className="mb-4"
