@@ -2,7 +2,7 @@ import { themes, type ThemeId } from "@/lib/themes";
 import Link from "next/link";
 
 export const metadata = {
-  title: "Themes — Restaurant Site Templates",
+  title: "Themes — Remi",
   description: "5 professionally designed themes for restaurant websites. Modern, Classic, Rustic, Playful, Bright.",
 };
 
@@ -81,10 +81,25 @@ export default function ThemesPage() {
 
   return (
     <div className="min-h-screen bg-white">
+      {/* Nav — matches home page */}
+      <nav className="sticky top-0 z-50 bg-white/95 backdrop-blur border-b border-neutral-100">
+        <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
+          <Link href="/" className="font-[family-name:var(--font-display)] text-2xl text-neutral-900">Remi</Link>
+          <div className="flex items-center gap-6 text-sm">
+            <Link href="/#features" className="text-neutral-500 hover:text-neutral-900 transition-colors font-medium">Features</Link>
+            <Link href="/themes" className="text-neutral-900 font-medium">Themes</Link>
+            <Link href="/#pricing" className="text-neutral-500 hover:text-neutral-900 transition-colors font-medium">Pricing</Link>
+            <Link href="/polls" className="text-neutral-500 hover:text-neutral-900 transition-colors font-medium">Events</Link>
+            <Link href="/themes" className="rounded-full bg-neutral-900 text-white px-5 py-2 font-bold hover:bg-neutral-700 transition-colors">
+              Get Started
+            </Link>
+          </div>
+        </div>
+      </nav>
+
       {/* Header */}
       <header className="border-b border-neutral-200">
         <div className="max-w-5xl mx-auto px-6 py-16 md:py-24">
-          <Link href="/" className="text-sm text-neutral-400 hover:text-neutral-600 transition-colors mb-6 inline-block">&larr; Back</Link>
           <h1 className="font-[family-name:var(--font-display)] text-5xl md:text-6xl text-neutral-900 mb-6">
             Themes
           </h1>
@@ -129,7 +144,6 @@ export default function ThemesPage() {
                 <article key={theme.id} className="group">
                   {/* Preview bar */}
                   <div className="rounded-xl overflow-hidden shadow-lg mb-8">
-                    {/* Fake nav preview */}
                     <div className="h-12 flex items-center px-5 gap-4 text-sm" style={{ background: t.navBg }}>
                       <span className="font-bold" style={{ color: theme.navStyle === "light" ? t.text : "#fff" }}>{name}</span>
                       <span style={{ color: t.navText }} className="hidden sm:inline">Menu</span>
@@ -142,20 +156,14 @@ export default function ThemesPage() {
                         </span>
                       </div>
                     </div>
-                    {/* Hero preview with cover image */}
                     <div className="h-48 md:h-56 relative flex items-end">
-                      <img
-                        src={DEMO_IMAGES[theme.id]}
-                        alt={`${name} restaurant interior`}
-                        className="absolute inset-0 w-full h-full object-cover"
-                      />
+                      <img src={DEMO_IMAGES[theme.id]} alt={`${name} restaurant interior`} className="absolute inset-0 w-full h-full object-cover" />
                       <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-black/20" />
                       <div className="relative z-10 px-5 pb-5" style={{ textShadow: "0 2px 12px rgba(0,0,0,0.8), 0 1px 3px rgba(0,0,0,0.9)" }}>
                         <div className="text-[10px] tracking-widest uppercase mb-1 text-white/80">{DEMO_CUISINES[theme.id]}</div>
                         <div className="text-3xl md:text-4xl font-bold text-white">{name}</div>
                       </div>
                     </div>
-                    {/* Fake content preview */}
                     <div className="h-20 flex items-center px-5 gap-8" style={{ background: t.surfaceAlt }}>
                       <div>
                         <div className="text-xs font-bold uppercase tracking-wider mb-1" style={{ color: t.accent }}>Starters</div>
@@ -168,7 +176,6 @@ export default function ThemesPage() {
                         <div className="text-xs mt-0.5" style={{ color: t.textMuted }}>Description text here</div>
                       </div>
                     </div>
-                    {/* Fake footer preview */}
                     <div className="h-8 flex items-center px-5" style={{ background: t.footerBg }}>
                       <span className="text-[10px]" style={{ color: t.footerTextMuted }}>{name} · About · Gallery · Contact · Accessibility</span>
                     </div>
@@ -181,9 +188,7 @@ export default function ThemesPage() {
                         {theme.label}
                         <span className="text-sm font-normal text-neutral-400 ml-3">{theme.description}</span>
                       </h3>
-                      <p className="text-base text-neutral-600 leading-relaxed mt-3 mb-4">
-                        {phil.vibe}
-                      </p>
+                      <p className="text-base text-neutral-600 leading-relaxed mt-3 mb-4">{phil.vibe}</p>
                       <div className="space-y-2 text-sm text-neutral-500">
                         <p><span className="font-semibold text-neutral-700">Typography:</span> {phil.fontNote}</p>
                         <p><span className="font-semibold text-neutral-700">Color:</span> {phil.colorNote}</p>
@@ -192,11 +197,7 @@ export default function ThemesPage() {
                       </div>
                     </div>
                     <div className="flex flex-col gap-3 justify-center">
-                      <Link
-                        href={`/r/${slug}`}
-                        className="block text-center px-6 py-3 text-base font-bold text-white rounded-lg transition-colors"
-                        style={{ background: t.accent }}
-                      >
+                      <Link href={`/r/${slug}`} className="block text-center px-6 py-3 text-base font-bold text-white rounded-lg transition-colors" style={{ background: t.accent }}>
                         View Demo &rarr;
                       </Link>
                       <div className="flex gap-2 text-sm">
@@ -205,7 +206,6 @@ export default function ThemesPage() {
                         <Link href={`/r/${slug}/contact`} className="flex-1 text-center py-2 rounded-lg border border-neutral-200 text-neutral-600 hover:bg-neutral-50 transition-colors">Contact</Link>
                         <Link href={`/r/${slug}/book`} className="flex-1 text-center py-2 rounded-lg border border-neutral-200 text-neutral-600 hover:bg-neutral-50 transition-colors">Book</Link>
                       </div>
-                      {/* Color swatches */}
                       <div className="flex gap-1 mt-2">
                         {[t.bg, t.surface, t.surfaceAlt, t.text, t.textMuted, t.accent, t.navBg, t.heroBg].map((color, i) => (
                           <div key={i} className="w-6 h-6 rounded-full border border-neutral-200" style={{ background: color }} title={color} />
@@ -220,8 +220,16 @@ export default function ThemesPage() {
         </section>
       </main>
 
-      <footer className="border-t border-neutral-200 py-10 text-center text-sm text-neutral-400">
-        Restaurant Website Templates — WCAG 2.2 AA Compliant
+      {/* Footer — matches home page */}
+      <footer className="border-t border-neutral-100 py-12">
+        <div className="max-w-6xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-6">
+          <span className="font-[family-name:var(--font-display)] text-xl text-neutral-900">Remi</span>
+          <div className="flex items-center gap-6 text-sm text-neutral-500">
+            <Link href="/themes" className="hover:text-neutral-900 transition-colors">Themes</Link>
+            <Link href="/polls" className="hover:text-neutral-900 transition-colors">Events</Link>
+            <Link href="/r/volta" className="hover:text-neutral-900 transition-colors">Demo</Link>
+          </div>
+        </div>
       </footer>
     </div>
   );

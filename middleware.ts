@@ -5,7 +5,8 @@ const PLATFORM_HOSTS = new Set([
   "localhost",
   "127.0.0.1",
   "nat-iota.vercel.app",
-  // Add your production domain here when you have one
+  "itsremi.app",
+  "www.itsremi.app",
 ]);
 
 export async function middleware(request: NextRequest) {

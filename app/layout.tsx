@@ -19,8 +19,8 @@ const dmSerif = DM_Serif_Display({
 });
 
 export const metadata: Metadata = {
-  title: "Club Poll",
-  description: "Member management and event planning for dinner clubs",
+  title: "Remi",
+  description: "Reservation management and booking platform",
 };
 
 export default function RootLayout({
