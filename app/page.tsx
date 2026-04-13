@@ -148,7 +148,7 @@ export default function HomePage() {
           {/* Group 1: Your Restaurant Online */}
           <div className="mb-16">
             <h3 className="text-xs font-bold text-neutral-400 uppercase tracking-widest mb-6">Your Restaurant Online</h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               <FeatureCard
                 title="Branded Website"
                 desc="5 themes designed for restaurants. Menu, about, gallery, contact — your domain, your brand. Not a listing on someone else's platform."
@@ -160,6 +160,11 @@ export default function HomePage() {
               <FeatureCard
                 title="Menu Editor"
                 desc="Add, edit, 86 items. Dietary flags, categories, prices. Changes go live instantly. No third-party menu service."
+              />
+              <FeatureCard
+                title="Accessibility Built In"
+                desc="Every site meets WCAG 2.2 AA — the legal standard for ADA, EAA, and AODA compliance. Alt text enforced at the database level. Keyboard navigation, screen reader support, contrast-safe text over images. Your restaurant is protected."
+                highlight
               />
             </div>
           </div>
@@ -195,10 +200,6 @@ export default function HomePage() {
               <FeatureCard
                 title="Data Ownership"
                 desc="Your guest list, booking history, and reviews belong to you. We never sell your data or market to your guests."
-              />
-              <FeatureCard
-                title="Accessibility"
-                desc="WCAG 2.2 AA compliant across all themes. Alt text enforced at the database level. Screen reader and keyboard support."
               />
             </div>
           </div>
@@ -297,6 +298,7 @@ export default function HomePage() {
             <Link href="/themes" className="hover:text-neutral-900 transition-colors">Themes</Link>
             <a href="#pricing" className="hover:text-neutral-900 transition-colors">Pricing</a>
             <Link href="/r/volta" className="hover:text-neutral-900 transition-colors">Demo</Link>
+            <Link href="/accessibility" className="hover:text-neutral-900 transition-colors">Accessibility</Link>
           </div>
         </div>
       </footer>
