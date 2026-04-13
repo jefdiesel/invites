@@ -89,6 +89,7 @@ export function FloorEditor({ businessId, tables: initialTables }: { businessId:
   const [addingZone, setAddingZone] = useState(false);
   const [newZoneName, setNewZoneName] = useState("");
   const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
 
   const canvasRef = useRef<HTMLDivElement>(null);
   const dragRef = useRef<{ id: string; startX: number; startY: number; origX: number; origY: number } | null>(null);
@@ -120,12 +121,11 @@ export function FloorEditor({ businessId, tables: initialTables }: { businessId:
 
   const handlePointerUp = useCallback(async () => {
     if (!dragRef.current) return;
-    const table = tables.find((t) => t.id === dragRef.current!.id);
-    if (table) {
-      // Find the updated position from state
-      const updated = document.querySelector(`[data-table-id="${dragRef.current.id}"]`);
-      const t = tables.find((t) => t.id === dragRef.current!.id);
-      if (t) await updateTablePosition(t.id, { pos_x: t.pos_x, pos_y: t.pos_y });
+    const t = tables.find((t) => t.id === dragRef.current!.id);
+    if (t) {
+      await updateTablePosition(t.id, { pos_x: t.pos_x, pos_y: t.pos_y });
+      setSaved(true);
+      setTimeout(() => setSaved(false), 1500);
     }
     dragRef.current = null;
   }, [tables]);
@@ -176,6 +176,12 @@ export function FloorEditor({ businessId, tables: initialTables }: { businessId:
 
   return (
     <div>
+      {/* Mobile warning */}
+      <div className="md:hidden mb-4 border border-amber-200 bg-amber-50 rounded-xl p-4 text-center">
+        <p className="text-sm font-semibold text-amber-800 mb-1">Use a larger screen to edit</p>
+        <p className="text-xs text-amber-600">The floor plan editor works best on a tablet or desktop.</p>
+      </div>
+
       {/* Zone tabs */}
       <div className="flex items-center gap-1 mb-4 border-b border-neutral-200">
         {zones.map((z) => (
@@ -261,13 +267,24 @@ export function FloorEditor({ businessId, tables: initialTables }: { businessId:
         {/* Empty state */}
         {zoneTables.length === 0 && !adding && (
           <div className="absolute inset-0 flex items-center justify-center">
-            <div className="text-center">
-              <p className="text-sm text-neutral-400 mb-3">No tables in {activeZone}</p>
+            <div className="text-center max-w-xs">
+              <div className="w-12 h-12 rounded-full bg-neutral-200 flex items-center justify-center mx-auto mb-4">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#999" strokeWidth="2" strokeLinecap="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+              </div>
+              <p className="text-base font-semibold text-neutral-700 mb-1">Build your floor plan</p>
+              <p className="text-sm text-neutral-400 mb-4">Add tables, pick circle or rectangle, then drag them into position.</p>
               <button onClick={() => setAdding(true)}
-                className="rounded-lg bg-neutral-900 text-white px-4 py-2 text-sm font-bold hover:bg-neutral-700 transition-colors">
+                className="rounded-lg bg-neutral-900 text-white px-5 py-2.5 text-sm font-bold hover:bg-neutral-700 transition-colors">
                 Add First Table
               </button>
             </div>
+          </div>
+        )}
+
+        {/* Save toast */}
+        {saved && (
+          <div className="absolute top-3 right-3 z-30 bg-neutral-900 text-white text-xs font-medium px-3 py-1.5 rounded-lg shadow-lg animate-[fadeIn_0.2s]">
+            Saved
           </div>
         )}
       </div>

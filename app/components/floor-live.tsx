@@ -134,6 +134,11 @@ export function FloorLive({ tables, bookings: initialBookings, businessId }: {
 
   return (
     <div>
+      {/* Mobile: show list instead of map */}
+      <div className="md:hidden mb-4 text-xs text-neutral-400 text-center">
+        Rotate to landscape or use a larger screen for the floor map.
+      </div>
+
       {/* Zone tabs */}
       {zones.length > 1 && (
         <div className="flex items-center gap-1 mb-4 border-b border-neutral-200">
