@@ -42,6 +42,9 @@ CREATE TABLE IF NOT EXISTS businesses (
   custom_domain TEXT UNIQUE,
   -- Theme: modern, classic, rustic, playful, bright
   theme TEXT DEFAULT 'classic',
+  -- Auth: simple passwords for staff/admin (magic link for production later)
+  staff_password TEXT DEFAULT '',  -- hostess/staff login
+  admin_password TEXT DEFAULT '',  -- owner/admin login
   -- Operating config
   booking_window_days INT DEFAULT 30, -- how far ahead can you book
   min_party_size INT DEFAULT 1,

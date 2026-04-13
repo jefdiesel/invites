@@ -154,6 +154,27 @@ export async function updateBusinessClientNotes(
     .eq("client_id", clientId);
 }
 
+// ── Auth ──
+
+export async function loginWithPassword(slug: string, password: string): Promise<{ role: "staff" | "admin" | null }> {
+  const { data: biz } = await supabase
+    .from("businesses")
+    .select("staff_password, admin_password")
+    .eq("slug", slug)
+    .single();
+
+  if (!biz) return { role: null };
+
+  // Check admin first (admin password also grants admin access)
+  if (biz.admin_password && password === biz.admin_password) {
+    return { role: "admin" };
+  }
+  if (biz.staff_password && password === biz.staff_password) {
+    return { role: "staff" };
+  }
+  return { role: null };
+}
+
 // ── Menu Management ──
 
 export async function addMenuItem(businessId: string, data: {
