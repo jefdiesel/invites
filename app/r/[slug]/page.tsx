@@ -5,6 +5,7 @@ import Link from "next/link";
 export const dynamic = "force-dynamic";
 
 const DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+const SHORT_DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 export default async function RestaurantPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
@@ -14,75 +15,97 @@ export default async function RestaurantPage({ params }: { params: Promise<{ slu
   const hours = await getBusinessHours(biz.id);
   const menu = await getMenuItems(biz.id);
 
-  // Group menu by category
   const categories = [...new Set(menu.map((m) => m.category))];
   const menuByCategory = categories.map((cat) => ({
     category: cat,
     items: menu.filter((m) => m.category === cat),
   }));
 
+  // Today's hours for the hero
+  const today = new Date().getDay();
+  const todayHours = hours.find((h) => h.day_of_week === today);
+  const isOpenToday = todayHours && !todayHours.is_closed;
+
   return (
     <div className="min-h-screen bg-warm-50">
-      {/* Hero */}
-      <header className="bg-warm-900 text-white">
-        <div className="max-w-3xl mx-auto px-6 py-16 text-center">
-          {biz.price_range && (
-            <div className="text-warm-400 text-sm tracking-widest uppercase mb-2">{biz.cuisine} · {biz.price_range}</div>
-          )}
-          <h1 className="text-4xl font-bold tracking-tight">{biz.name}</h1>
-          {biz.about && (
-            <p className="mt-4 text-base text-warm-300 max-w-lg mx-auto leading-relaxed">{biz.about}</p>
-          )}
-          <div className="mt-8">
+      {/* Hero — full bleed, big presence */}
+      <header className="relative">
+        {biz.cover_image_url ? (
+          <div className="h-[420px] relative">
+            <img
+              src={biz.cover_image_url}
+              alt={biz.name}
+              className="absolute inset-0 w-full h-full object-cover"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-black/10" />
+            <div className="relative z-10 h-full flex flex-col justify-end max-w-3xl mx-auto px-6 pb-12">
+              <HeroContent biz={biz} slug={slug} isOpenToday={isOpenToday} todayHours={todayHours} />
+            </div>
+          </div>
+        ) : (
+          <div className="bg-warm-900 text-white">
+            <div className="max-w-3xl mx-auto px-6 py-20">
+              <HeroContent biz={biz} slug={slug} isOpenToday={isOpenToday} todayHours={todayHours} />
+            </div>
+          </div>
+        )}
+      </header>
+
+      {/* Sticky nav */}
+      <nav className="sticky top-0 z-40 bg-white/95 backdrop-blur border-b border-warm-200">
+        <div className="max-w-3xl mx-auto px-6 flex items-center justify-between h-12">
+          <span className="text-sm font-bold text-warm-900">{biz.name}</span>
+          <div className="flex items-center gap-5 text-sm">
+            {menuByCategory.length > 0 && (
+              <a href="#menu" className="text-warm-500 hover:text-warm-900 transition-colors">Menu</a>
+            )}
+            <a href="#hours" className="text-warm-500 hover:text-warm-900 transition-colors">Hours</a>
+            <a href="#contact" className="text-warm-500 hover:text-warm-900 transition-colors">Find Us</a>
             <Link
               href={`/r/${slug}/book`}
-              className="inline-block rounded-lg bg-accent px-8 py-3 text-base font-bold text-white hover:bg-accent-light transition-colors"
+              className="rounded-full bg-accent px-4 py-1.5 text-sm font-bold text-white hover:bg-accent-light transition-colors"
             >
-              Reserve a Table
+              Reserve
             </Link>
           </div>
         </div>
-      </header>
+      </nav>
 
-      {/* Info bar */}
-      <div className="border-b border-warm-200 bg-white">
-        <div className="max-w-3xl mx-auto px-6 py-4 flex items-center justify-between text-sm text-warm-600">
-          <div className="flex items-center gap-4">
-            {biz.address && <span>{biz.address}{biz.city ? `, ${biz.city}` : ""}{biz.state ? ` ${biz.state}` : ""}</span>}
-            {biz.phone && <span>{biz.phone}</span>}
-          </div>
-          <div className="flex items-center gap-3">
-            <Link href={`/r/${slug}/book`} className="font-semibold text-accent hover:text-accent-light transition-colors">Book</Link>
-            <a href="#menu" className="hover:text-warm-900 transition-colors">Menu</a>
-            <a href="#hours" className="hover:text-warm-900 transition-colors">Hours</a>
-          </div>
-        </div>
-      </div>
+      <main className="max-w-3xl mx-auto px-6">
+        {/* About — if there's a longer description */}
+        {biz.about && biz.about.length > 60 && (
+          <section className="py-16 border-b border-warm-200">
+            <p className="text-lg text-warm-700 leading-relaxed max-w-xl">
+              {biz.about}
+            </p>
+          </section>
+        )}
 
-      <main className="max-w-3xl mx-auto px-6 py-12">
         {/* Menu */}
         {menuByCategory.length > 0 && (
-          <section id="menu" className="mb-16">
-            <h2 className="text-2xl font-bold text-warm-900 mb-8">Menu</h2>
-            {menuByCategory.map((cat) => (
-              <div key={cat.category} className="mb-10">
-                <h3 className="text-sm font-bold text-warm-500 uppercase tracking-wider mb-4">{cat.category}</h3>
-                <div className="space-y-4">
+          <section id="menu" className="py-16 border-b border-warm-200">
+            <h2 className="text-sm font-bold text-warm-400 uppercase tracking-widest mb-10">Menu</h2>
+            {menuByCategory.map((cat, catIdx) => (
+              <div key={cat.category} className={catIdx > 0 ? "mt-12" : ""}>
+                <h3 className="text-xl font-bold text-warm-900 mb-6">{cat.category}</h3>
+                <div className="space-y-5">
                   {cat.items.map((item) => (
-                    <div key={item.id} className="flex items-start justify-between gap-4">
-                      <div>
+                    <div key={item.id} className="flex items-start justify-between gap-6">
+                      <div className="min-w-0">
                         <div className="text-base font-semibold text-warm-900">
                           {item.name}
                           {item.dietary_flags && item.dietary_flags.length > 0 && (
-                            <span className="ml-2 text-xs text-warm-400">{item.dietary_flags.join(" · ")}</span>
+                            <span className="ml-2 text-xs font-medium text-warm-400">
+                              {item.dietary_flags.join(" · ")}
+                            </span>
                           )}
                         </div>
                         {item.description && (
-                          <p className="text-sm text-warm-500 mt-0.5">{item.description}</p>
+                          <p className="text-sm text-warm-500 mt-1">{item.description}</p>
                         )}
                       </div>
                       <span className="text-base font-medium text-warm-700 tabular-nums shrink-0">
-                        ${(item.price_cents / 100).toFixed(0)}
+                        {item.price_cents > 0 ? `$${(item.price_cents / 100).toFixed(0)}` : ""}
                       </span>
                     </div>
                   ))}
@@ -94,52 +117,141 @@ export default async function RestaurantPage({ params }: { params: Promise<{ slu
 
         {/* Hours */}
         {hours.length > 0 && (
-          <section id="hours" className="mb-16">
-            <h2 className="text-2xl font-bold text-warm-900 mb-6">Hours</h2>
-            <div className="border border-warm-200 rounded-lg bg-white divide-y divide-warm-100">
-              {hours.map((h) => (
-                <div key={h.day_of_week} className="flex items-center justify-between px-5 py-3">
-                  <span className="text-sm font-medium text-warm-700">{DAYS[h.day_of_week]}</span>
-                  {h.is_closed ? (
-                    <span className="text-sm text-warm-400">Closed</span>
-                  ) : (
-                    <span className="text-sm text-warm-600 tabular-nums">
-                      {formatTime(h.open_time)} – {formatTime(h.close_time)}
+          <section id="hours" className="py-16 border-b border-warm-200">
+            <h2 className="text-sm font-bold text-warm-400 uppercase tracking-widest mb-10">Hours</h2>
+            <div className="grid grid-cols-1 gap-3">
+              {hours.map((h) => {
+                const isToday = h.day_of_week === today;
+                return (
+                  <div
+                    key={h.day_of_week}
+                    className={`flex items-center justify-between py-2 ${
+                      isToday ? "text-warm-900 font-semibold" : "text-warm-600"
+                    }`}
+                  >
+                    <span className="text-sm">
+                      {DAYS[h.day_of_week]}
+                      {isToday && <span className="ml-2 text-xs text-accent font-bold">Today</span>}
                     </span>
-                  )}
-                </div>
-              ))}
+                    {h.is_closed ? (
+                      <span className="text-sm text-warm-400">Closed</span>
+                    ) : (
+                      <span className="text-sm tabular-nums">
+                        {formatTime(h.open_time)} – {formatTime(h.close_time)}
+                      </span>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </section>
         )}
 
-        {/* Contact */}
-        <section className="mb-16">
-          <h2 className="text-2xl font-bold text-warm-900 mb-6">Contact</h2>
-          <div className="border border-warm-200 rounded-lg bg-white p-5 space-y-2">
+        {/* Contact / Location */}
+        <section id="contact" className="py-16 border-b border-warm-200">
+          <h2 className="text-sm font-bold text-warm-400 uppercase tracking-widest mb-10">Find Us</h2>
+          <div className="space-y-3">
             {biz.address && (
-              <p className="text-sm text-warm-700">{biz.address}{biz.city ? `, ${biz.city}` : ""}{biz.state ? ` ${biz.state}` : ""} {biz.zip}</p>
+              <p className="text-base text-warm-700">
+                {biz.address}
+                {biz.city && <>, {biz.city}</>}
+                {biz.state && <> {biz.state}</>}
+                {biz.zip && <> {biz.zip}</>}
+              </p>
             )}
-            {biz.phone && <p className="text-sm text-warm-700">{biz.phone}</p>}
-            {biz.email && <p className="text-sm text-warm-700">{biz.email}</p>}
+            {biz.phone && (
+              <p>
+                <a href={`tel:${biz.phone}`} className="text-base text-warm-700 hover:text-accent transition-colors">
+                  {biz.phone}
+                </a>
+              </p>
+            )}
+            {biz.email && (
+              <p>
+                <a href={`mailto:${biz.email}`} className="text-base text-warm-700 hover:text-accent transition-colors">
+                  {biz.email}
+                </a>
+              </p>
+            )}
           </div>
         </section>
 
-        {/* CTA */}
-        <div className="text-center">
+        {/* Final CTA */}
+        <section className="py-20 text-center">
+          <h2 className="text-2xl font-bold text-warm-900 mb-3">Ready to join us?</h2>
+          <p className="text-base text-warm-500 mb-8">
+            {isOpenToday
+              ? `Open today until ${formatTime(todayHours!.close_time)}`
+              : "Check our hours for availability"}
+          </p>
           <Link
             href={`/r/${slug}/book`}
-            className="inline-block rounded-lg bg-accent px-8 py-3 text-base font-bold text-white hover:bg-accent-light transition-colors"
+            className="inline-block rounded-full bg-accent px-10 py-3.5 text-base font-bold text-white hover:bg-accent-light transition-colors"
           >
             Reserve a Table
           </Link>
-        </div>
+        </section>
       </main>
 
-      <footer className="border-t border-warm-200 py-8 text-center text-sm text-warm-400">
-        {biz.name} · Powered by {biz.name}
+      <footer className="border-t border-warm-200 bg-white py-10 text-center">
+        <div className="text-sm text-warm-400">
+          {biz.name}
+          {biz.address && <> · {biz.address}</>}
+          {biz.city && <>, {biz.city}</>}
+        </div>
+        {hours.length > 0 && (
+          <div className="text-xs text-warm-300 mt-2">
+            {hours.filter(h => !h.is_closed).map(h => SHORT_DAYS[h.day_of_week]).join(", ")}
+            {" · "}
+            {formatTime(hours.find(h => !h.is_closed)?.open_time ?? "17:00")} – {formatTime(hours.find(h => !h.is_closed)?.close_time ?? "22:00")}
+          </div>
+        )}
       </footer>
     </div>
+  );
+}
+
+function HeroContent({
+  biz,
+  slug,
+  isOpenToday,
+  todayHours,
+}: {
+  biz: { name: string; cuisine: string; price_range: string; about: string; cover_image_url: string };
+  slug: string;
+  isOpenToday: boolean | null | undefined;
+  todayHours: { open_time: string; close_time: string } | null | undefined;
+}) {
+  const hasImage = !!biz.cover_image_url;
+  return (
+    <>
+      {(biz.cuisine || biz.price_range) && (
+        <div className={`text-sm tracking-widest uppercase mb-3 ${hasImage ? "text-white/70" : "text-warm-400"}`}>
+          {[biz.cuisine, biz.price_range].filter(Boolean).join(" · ")}
+        </div>
+      )}
+      <h1 className={`text-5xl font-bold tracking-tight ${hasImage ? "text-white" : ""}`}>
+        {biz.name}
+      </h1>
+      {biz.about && biz.about.length <= 60 && (
+        <p className={`mt-3 text-lg ${hasImage ? "text-white/80" : "text-warm-300"}`}>
+          {biz.about}
+        </p>
+      )}
+      <div className="mt-6 flex items-center gap-4">
+        <Link
+          href={`/r/${slug}/book`}
+          className="rounded-full bg-accent px-8 py-3 text-base font-bold text-white hover:bg-accent-light transition-colors"
+        >
+          Reserve a Table
+        </Link>
+        {isOpenToday && todayHours && (
+          <span className={`text-sm ${hasImage ? "text-white/60" : "text-warm-400"}`}>
+            Open today · {formatTime(todayHours.close_time)}
+          </span>
+        )}
+      </div>
+    </>
   );
 }
 

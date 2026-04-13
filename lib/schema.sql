@@ -36,6 +36,8 @@ CREATE TABLE IF NOT EXISTS businesses (
   about TEXT DEFAULT '',
   logo_url TEXT DEFAULT '',
   cover_image_url TEXT DEFAULT '',
+  -- Custom domain (e.g., "chezlaurent.com") — middleware maps hostname → slug
+  custom_domain TEXT UNIQUE,
   -- Operating config
   booking_window_days INT DEFAULT 30, -- how far ahead can you book
   min_party_size INT DEFAULT 1,

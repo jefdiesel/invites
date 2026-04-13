@@ -9,6 +9,15 @@ export async function getBusiness(slug: string) {
   return data;
 }
 
+export async function getBusinessByDomain(domain: string) {
+  const { data } = await supabase
+    .from("businesses")
+    .select("slug")
+    .eq("custom_domain", domain)
+    .single();
+  return data;
+}
+
 export async function getBusinessHours(businessId: string) {
   const { data } = await supabase
     .from("business_hours")
