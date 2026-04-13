@@ -51,19 +51,24 @@ export default async function RestaurantPage({ params }: { params: Promise<{ slu
         )}
       </header>
 
-      {/* Sticky nav */}
-      <nav className="sticky top-0 z-40 bg-white/95 backdrop-blur border-b border-warm-200">
-        <div className="max-w-3xl mx-auto px-6 flex items-center justify-between h-12">
-          <span className="text-sm font-bold text-warm-900">{biz.name}</span>
-          <div className="flex items-center gap-5 text-sm">
+      {/* Site header */}
+      <nav className="sticky top-0 z-40 bg-warm-900/95 backdrop-blur border-b border-warm-800">
+        <div className="max-w-3xl mx-auto px-6 flex items-center justify-between h-14">
+          <a href={`/r/${slug}`} className="flex items-center gap-3">
+            {biz.logo_url ? (
+              <img src={biz.logo_url} alt="" className="h-8 w-auto" />
+            ) : null}
+            <span className="text-lg font-bold tracking-tight text-white">{biz.name}</span>
+          </a>
+          <div className="flex items-center gap-6 text-sm">
             {menuByCategory.length > 0 && (
-              <a href="#menu" className="text-warm-500 hover:text-warm-900 transition-colors">Menu</a>
+              <a href="#menu" className="text-warm-300 hover:text-white transition-colors font-medium">Menu</a>
             )}
-            <a href="#hours" className="text-warm-500 hover:text-warm-900 transition-colors">Hours</a>
-            <a href="#contact" className="text-warm-500 hover:text-warm-900 transition-colors">Find Us</a>
+            <a href="#hours" className="text-warm-300 hover:text-white transition-colors font-medium">Hours</a>
+            <a href="#contact" className="text-warm-300 hover:text-white transition-colors font-medium">Find Us</a>
             <Link
               href={`/r/${slug}/book`}
-              className="rounded-full bg-accent px-4 py-1.5 text-sm font-bold text-white hover:bg-accent-light transition-colors"
+              className="rounded-full bg-accent px-5 py-1.5 text-sm font-bold text-white hover:bg-accent-light transition-colors"
             >
               Reserve
             </Link>
