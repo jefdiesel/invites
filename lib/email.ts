@@ -1,6 +1,10 @@
 import { Resend } from "resend";
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+let _resend: Resend | null = null;
+function getResend() {
+  if (!_resend) _resend = new Resend(process.env.RESEND_API_KEY!);
+  return _resend;
+}
 
 const FROM = "Remi <reservations@itsremi.app>";
 
@@ -31,7 +35,7 @@ export async function sendBookingConfirmation(data: {
   const timeStr = formatTime(time);
 
   try {
-    await resend.emails.send({
+    await getResend().emails.send({
       from: `${restaurantName} via Remi <reservations@itsremi.app>`,
       to: guestEmail,
       subject: `Reservation confirmed — ${dateStr} at ${timeStr}`,
@@ -82,7 +86,7 @@ export async function sendBookingReminder(data: {
   const timeStr = formatTime(time);
 
   try {
-    await resend.emails.send({
+    await getResend().emails.send({
       from: `${restaurantName} via Remi <reservations@itsremi.app>`,
       to: guestEmail,
       subject: `Reminder: ${restaurantName} tomorrow at ${timeStr}`,
