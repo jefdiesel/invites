@@ -50,21 +50,6 @@ export function BookingForm({
   const maxDate = new Date(Date.now() + windowDays * 86400000).toISOString().split("T")[0];
   const availableSlots = slots.filter((s) => s.available);
 
-  // Group time slots into early/prime/late
-  function groupSlots(slots: Slot[]) {
-    const early: Slot[] = [];
-    const prime: Slot[] = [];
-    const late: Slot[] = [];
-    for (const s of slots) {
-      if (!s.available) continue;
-      const h = parseInt(s.time.split(":")[0]);
-      if (h < 18) early.push(s);
-      else if (h < 20) prime.push(s);
-      else late.push(s);
-    }
-    return { early, prime, late };
-  }
-
   async function loadSlots(d: string, ps: number) {
     setLoadingSlots(true);
     setSelectedTime("");
@@ -243,37 +228,19 @@ export function BookingForm({
                   </p>
                 </div>
               ) : (
-                <div>
-                  {(() => {
-                    const groups = groupSlots(slots);
-                    const sections = [
-                      { label: "Early", slots: groups.early },
-                      { label: "Prime", slots: groups.prime },
-                      { label: "Later", slots: groups.late },
-                    ].filter(s => s.slots.length > 0);
-
-                    return sections.map(section => (
-                      <div key={section.label} className="mb-3">
-                        <div className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: t.textLight }}>
-                          {section.label}
-                        </div>
-                        <div className="flex flex-wrap gap-2">
-                          {section.slots.map((slot) => (
-                            <button key={slot.time} type="button" onClick={() => selectTime(slot.time)}
-                              className="px-4 py-2.5 text-sm font-medium transition-all"
-                              style={{
-                                border: `1.5px solid ${selectedTime === slot.time ? t.accent : t.border}`,
-                                background: selectedTime === slot.time ? t.accent : t.surface,
-                                color: selectedTime === slot.time ? "#ffffff" : t.text,
-                                borderRadius: t.radius,
-                              }}>
-                              {formatTime(slot.time)}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    ));
-                  })()}
+                <div className="flex flex-wrap gap-2">
+                  {availableSlots.map((slot) => (
+                    <button key={slot.time} type="button" onClick={() => selectTime(slot.time)}
+                      className="px-4 py-2.5 text-sm font-medium transition-all"
+                      style={{
+                        border: `1.5px solid ${selectedTime === slot.time ? t.accent : t.border}`,
+                        background: selectedTime === slot.time ? t.accent : t.surface,
+                        color: selectedTime === slot.time ? "#ffffff" : t.text,
+                        borderRadius: t.radius,
+                      }}>
+                      {formatTime(slot.time)}
+                    </button>
+                  ))}
                 </div>
               )}
             </div>
