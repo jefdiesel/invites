@@ -58,6 +58,7 @@ type Business = {
   cover_image_url: string; logo_url: string;
   slot_duration_minutes: number; booking_window_days: number;
   min_party_size: number; max_party_size: number;
+  slot_interval_minutes: number;
 };
 
 type BookingStat = {
@@ -140,10 +141,10 @@ export function AdminDashboard({
       </div>
 
       {tab === "reservations" && (
-        <ReservationsTab bookings={bookings} tables={tables} today={today} slotDuration={business.slot_duration_minutes} businessId={business.id} hours={hours} waitlist={waitlist} />
+        <ReservationsTab bookings={bookings} tables={tables} today={today} slotDuration={business.slot_duration_minutes} businessId={business.id} hours={hours} waitlist={waitlist} slotInterval={business.slot_interval_minutes || 30} />
       )}
       {tab === "tables" && (
-        <TablesInventoryTab businessId={business.id} inventory={inventory} />
+        <TablesInventoryTab businessId={business.id} inventory={inventory} currentInterval={business.slot_interval_minutes || 30} />
       )}
       {tab === "menu" && (
         <MenuTab menu={menu} businessId={business.id} />
@@ -172,8 +173,8 @@ export function AdminDashboard({
 const MONTH_NAMES = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
-function ReservationsTab({ bookings, tables, today, slotDuration, businessId, hours, waitlist }: {
-  bookings: Booking[]; tables: RestaurantTable[]; today: string; slotDuration: number; businessId: string; hours: Hour[]; waitlist: WaitlistEntry[];
+function ReservationsTab({ bookings, tables, today, slotDuration, businessId, hours, waitlist, slotInterval }: {
+  bookings: Booking[]; tables: RestaurantTable[]; today: string; slotDuration: number; businessId: string; hours: Hour[]; waitlist: WaitlistEntry[]; slotInterval: number;
 }) {
   const [selectedDate, setSelectedDate] = useState<string>(today);
   const [viewMonth, setViewMonth] = useState(() => {
@@ -468,7 +469,7 @@ function ReservationsTab({ bookings, tables, today, slotDuration, businessId, ho
                         const open = timeToMins(selectedHours.open_time);
                         const last = selectedHours.last_seating ? timeToMins(selectedHours.last_seating) : timeToMins(selectedHours.close_time) - 90;
                         const slots: string[] = [];
-                        for (let m = open; m <= last; m += 30) {
+                        for (let m = open; m <= last; m += slotInterval) {
                           slots.push(formatTime2(m));
                         }
                         return slots.map(time => {
@@ -1604,7 +1605,7 @@ function HoursEditor({ hours: initialHours, businessId }: { hours: Hour[]; busin
   );
 }
 
-function TablesInventoryTab({ businessId, inventory: initial }: { businessId: string; inventory: InventoryRow[] }) {
+function TablesInventoryTab({ businessId, inventory: initial, currentInterval }: { businessId: string; inventory: InventoryRow[]; currentInterval: number }) {
   const DEFAULT_SIZES = [
     { size: 2, label: "2-tops", defaultTurn: 60 },
     { size: 4, label: "4-tops", defaultTurn: 90 },
@@ -1622,6 +1623,7 @@ function TablesInventoryTab({ businessId, inventory: initial }: { businessId: st
       };
     })
   );
+  const [interval, setInterval_] = useState(currentInterval);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
 
@@ -1630,6 +1632,8 @@ function TablesInventoryTab({ businessId, inventory: initial }: { businessId: st
     await updateTableInventory(businessId, rows.map(r => ({
       size: r.size, count: r.count, turn_time_minutes: r.turn,
     })));
+    // Save interval setting
+    await updateBusinessSettings(businessId, { slot_interval_minutes: interval } as Record<string, unknown>);
     setSaving(false);
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
@@ -1686,17 +1690,25 @@ function TablesInventoryTab({ businessId, inventory: initial }: { businessId: st
         </table>
       </div>
 
-      <div className="flex items-center justify-between mb-6">
-        <div className="text-sm text-neutral-500">
-          {totalTables} tables · {totalSeats} seats
+      {/* Slot interval */}
+      <div className="flex items-center gap-4 mb-4">
+        <div className="text-sm text-neutral-500">{totalTables} tables · {totalSeats} seats</div>
+        <div className="flex items-center gap-2">
+          <label className="text-sm font-semibold text-neutral-600">Slot interval:</label>
+          <select value={interval} onChange={e => setInterval_(parseInt(e.target.value))}
+            className="border border-neutral-200 rounded-lg px-2 py-1.5 text-sm bg-white text-neutral-900">
+            <option value={15}>15 min</option>
+            <option value={30}>30 min</option>
+          </select>
         </div>
-        <div className="flex items-center gap-3">
-          {saved && <span className="text-sm font-medium text-emerald-600">Saved</span>}
-          <button onClick={handleSave} disabled={saving}
-            className="px-5 py-2.5 bg-neutral-900 text-white text-sm font-bold rounded-lg hover:bg-neutral-700 disabled:opacity-50 transition-colors">
-            {saving ? "Saving..." : "Save Inventory"}
-          </button>
-        </div>
+      </div>
+
+      <div className="flex items-center gap-3 mb-6">
+        {saved && <span className="text-sm font-medium text-emerald-600">Saved</span>}
+        <button onClick={handleSave} disabled={saving}
+          className="px-5 py-2.5 bg-neutral-900 text-white text-sm font-bold rounded-lg hover:bg-neutral-700 disabled:opacity-50 transition-colors">
+          {saving ? "Saving..." : "Save"}
+        </button>
       </div>
 
       <div className="border border-neutral-200 rounded-lg px-5 py-4 bg-neutral-50">

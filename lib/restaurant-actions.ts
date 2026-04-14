@@ -383,6 +383,7 @@ export async function updateBusinessSettings(businessId: string, data: {
   state?: string; zip?: string; phone?: string; email?: string;
   cover_image_url?: string; logo_url?: string; theme?: string;
   qr_waitlist_enabled?: boolean; qr_checkin_enabled?: boolean;
+  slot_interval_minutes?: number;
 }) {
   await takeSnapshot(businessId, "settings", "Before settings update");
   await supabase.from("businesses").update(data).eq("id", businessId);

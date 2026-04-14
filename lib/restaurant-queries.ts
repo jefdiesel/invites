@@ -165,11 +165,12 @@ export async function getAvailableSlots(businessId: string, date: string, partyS
   // Get business config
   const { data: biz } = await supabase
     .from("businesses")
-    .select("slot_duration_minutes, min_advance_minutes")
+    .select("slot_duration_minutes, min_advance_minutes, slot_interval_minutes")
     .eq("id", businessId)
     .single();
 
   const minAdvance = biz?.min_advance_minutes ?? 120;
+  const slotInterval = biz?.slot_interval_minutes ?? 30;
 
   // Determine which table size this party needs (strict — no upsizing)
   // 1-2 → 2, 3-4 → 4, 5-6 → 6, 7-8 → 8, etc.
@@ -209,7 +210,7 @@ export async function getAvailableSlots(businessId: string, date: string, partyS
     const earliestMins = isToday ? nowMins + minAdvance : 0;
 
     const slots: { time: string; available: boolean }[] = [];
-    for (let mins = openMinutes; mins <= lastSeating; mins += 30) {
+    for (let mins = openMinutes; mins <= lastSeating; mins += slotInterval) {
       if (mins < earliestMins) { slots.push({ time: minutesToTime(mins), available: false }); continue; }
       const available = tables.some((table) => {
         const conflict = existingBookings.some((b) => {
@@ -263,7 +264,7 @@ export async function getAvailableSlots(businessId: string, date: string, partyS
 
   const slots: { time: string; available: boolean }[] = [];
 
-  for (let mins = openMinutes; mins <= lastSeating; mins += 30) {
+  for (let mins = openMinutes; mins <= lastSeating; mins += slotInterval) {
     const timeStr = minutesToTime(mins);
 
     // Enforce minimum advance

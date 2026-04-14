@@ -58,6 +58,7 @@ CREATE TABLE IF NOT EXISTS businesses (
   max_party_size INT DEFAULT 12,
   slot_duration_minutes INT DEFAULT 90, -- how long a booking holds the table (legacy, use table_inventory.turn_time_minutes)
   min_advance_minutes INT DEFAULT 120, -- can't book less than 2 hours ahead
+  slot_interval_minutes INT DEFAULT 30, -- 15 or 30
   created_at TIMESTAMPTZ DEFAULT now()
 );
 
