@@ -145,7 +145,7 @@ export function AdminDashboard({
         <MenuTab menu={menu} businessId={business.id} />
       )}
       {tab === "site" && (
-        <SiteTab business={business} hours={hours} isLive={isLive} onToggleLive={handleToggleLive} togglingLive={togglingLive} />
+        <SiteTab business={business} slug={slug} hours={hours} isLive={isLive} onToggleLive={handleToggleLive} togglingLive={togglingLive} />
       )}
       {tab === "photos" && (
         <PhotosTab photos={photos} businessId={business.id} />
@@ -705,8 +705,8 @@ function MenuTab({ menu, businessId }: { menu: MenuItem[]; businessId: string })
 
 // ── Site Settings Tab ──
 
-function SiteTab({ business, hours, isLive, onToggleLive, togglingLive }: {
-  business: Business; hours: Hour[]; isLive: boolean; onToggleLive: () => void; togglingLive: boolean;
+function SiteTab({ business, slug, hours, isLive, onToggleLive, togglingLive }: {
+  business: Business; slug: string; hours: Hour[]; isLive: boolean; onToggleLive: () => void; togglingLive: boolean;
 }) {
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({
@@ -749,6 +749,9 @@ function SiteTab({ business, hours, isLive, onToggleLive, togglingLive }: {
             {togglingLive ? "..." : isLive ? "Take Offline" : "Go Live"}
           </button>
         </section>
+
+        {/* QR Check-in */}
+        <QRCheckinSection business={business} slug={slug} />
 
         {/* Basic info */}
         <section>
@@ -1282,6 +1285,86 @@ function DomainTab({ business, slug }: { business: Business; slug: string }) {
   );
 }
 
+// ── QR Check-in Section ──
+
+function QRCheckinSection({ business, slug }: { business: Business; slug: string }) {
+  const [qrWaitlist, setQrWaitlist] = useState((business as Record<string, unknown>).qr_waitlist_enabled as boolean ?? false);
+  const [qrCheckin, setQrCheckin] = useState((business as Record<string, unknown>).qr_checkin_enabled as boolean ?? false);
+  const [saving, setSaving] = useState(false);
+
+  async function toggleWaitlist() {
+    setSaving(true);
+    const val = !qrWaitlist;
+    await updateBusinessSettings(business.id, { qr_waitlist_enabled: val });
+    setQrWaitlist(val);
+    setSaving(false);
+  }
+
+  async function toggleCheckin() {
+    setSaving(true);
+    const val = !qrCheckin;
+    await updateBusinessSettings(business.id, { qr_checkin_enabled: val });
+    setQrCheckin(val);
+    setSaving(false);
+  }
+
+  const checkinUrl = `https://itsremi.app/r/${slug}/checkin`;
+  const qrImgUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(checkinUrl)}`;
+  const anyEnabled = qrWaitlist || qrCheckin;
+
+  return (
+    <section className="border border-neutral-200 rounded-lg px-5 py-4">
+      <h3 className="text-sm font-bold text-neutral-600 uppercase tracking-wider mb-4">QR Check-in</h3>
+      <p className="text-xs text-neutral-400 mb-4">
+        Generate a QR code for your host stand. Guests scan to join the waitlist or check in for their reservation.
+      </p>
+
+      <div className="space-y-3 mb-4">
+        <label className="flex items-center justify-between cursor-pointer" onClick={toggleWaitlist}>
+          <div>
+            <div className="text-sm font-semibold text-neutral-900">Self-service waitlist</div>
+            <div className="text-xs text-neutral-400">Guests add themselves to the waitlist by scanning</div>
+          </div>
+          <div className={`w-10 h-6 rounded-full transition-colors relative ${qrWaitlist ? "bg-neutral-900" : "bg-neutral-200"}`}>
+            <span className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${qrWaitlist ? "left-[18px]" : "left-0.5"}`} />
+          </div>
+        </label>
+
+        <label className="flex items-center justify-between cursor-pointer" onClick={toggleCheckin}>
+          <div>
+            <div className="text-sm font-semibold text-neutral-900">Reservation check-in</div>
+            <div className="text-xs text-neutral-400">Guests with a reservation scan to check in on arrival</div>
+          </div>
+          <div className={`w-10 h-6 rounded-full transition-colors relative ${qrCheckin ? "bg-neutral-900" : "bg-neutral-200"}`}>
+            <span className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${qrCheckin ? "left-[18px]" : "left-0.5"}`} />
+          </div>
+        </label>
+      </div>
+
+      {anyEnabled && (
+        <div className="flex items-start gap-4 pt-4 border-t border-neutral-100">
+          <img src={qrImgUrl} alt="QR code for check-in" className="w-28 h-28 rounded-lg border border-neutral-200" />
+          <div>
+            <p className="text-sm font-medium text-neutral-900 mb-1">Print this QR code</p>
+            <p className="text-xs text-neutral-400 mb-2">Place at your host stand or entrance. Guests scan with their phone camera.</p>
+            <div className="flex items-center gap-2">
+              <code className="text-xs bg-neutral-100 px-2 py-1 rounded text-neutral-600">{checkinUrl}</code>
+              <button onClick={() => navigator.clipboard.writeText(checkinUrl)}
+                className="text-xs font-medium text-neutral-500 hover:text-neutral-900 transition-colors">
+                Copy
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {!anyEnabled && (
+        <p className="text-xs text-neutral-400 pt-2">Enable at least one option to generate a QR code.</p>
+      )}
+    </section>
+  );
+}
+
 // ── Export Helpers ──
 
 function exportGuestsCSV(clients: BizClient[]) {
@@ -1325,6 +1408,7 @@ function TabBtn({ active, onClick, children }: { active: boolean; onClick: () =>
 function StatusBadge({ status }: { status: string }) {
   const colors: Record<string, string> = {
     confirmed: "bg-emerald-500/10 text-emerald-600",
+    checked_in: "bg-green-500/10 text-green-700 ring-1 ring-green-300",
     seated: "bg-blue-500/10 text-blue-600",
     completed: "bg-neutral-100 text-neutral-500",
     cancelled: "bg-rose-500/10 text-rose-600",

@@ -412,6 +412,7 @@ export async function updateBusinessSettings(businessId: string, data: {
   cuisine?: string; price_range?: string; address?: string; city?: string;
   state?: string; zip?: string; phone?: string; email?: string;
   cover_image_url?: string; logo_url?: string; theme?: string;
+  qr_waitlist_enabled?: boolean; qr_checkin_enabled?: boolean;
 }) {
   await takeSnapshot(businessId, "settings", "Before settings update");
   await supabase.from("businesses").update(data).eq("id", businessId);
@@ -654,6 +655,39 @@ export async function createWalkIn(businessId: string, data: {
   });
   revalidatePath(`/r/[slug]`, "layout");
   return { bookingId };
+}
+
+// ── Check-in ──
+
+export async function checkinBooking(bookingId: string) {
+  await supabase.from("bookings").update({
+    status: "checked_in",
+    updated_at: new Date().toISOString(),
+  }).eq("id", bookingId);
+}
+
+export async function lookupReservationForCheckin(businessId: string, contact: string) {
+  const today = new Date().toISOString().split("T")[0];
+  const normalized = contact.toLowerCase().trim();
+  const digits = contact.replace(/\D/g, "");
+
+  // Try email match first
+  const { data: byEmail } = await supabase
+    .from("bookings")
+    .select("id, booking_date, booking_time, party_size, status, clients(name, email, phone)")
+    .eq("business_id", businessId)
+    .eq("booking_date", today)
+    .eq("status", "confirmed")
+    .order("booking_time");
+
+  const matches = (byEmail ?? []).filter(b => {
+    const c = b.clients as unknown as { name: string; email: string; phone: string } | null;
+    if (!c) return false;
+    return c.email?.toLowerCase() === normalized ||
+      (digits.length >= 10 && c.phone?.replace(/\D/g, "").includes(digits));
+  });
+
+  return matches;
 }
 
 // ── Go Live ──

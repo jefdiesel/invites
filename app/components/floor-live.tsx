@@ -223,8 +223,8 @@ export function FloorLive({ tables, bookings: initialBookings, businessId, waitl
       </div>
 
       <div className="flex gap-0" data-floor-container style={{ userSelect: dragging ? "none" : "auto" }}>
-      {/* Left: Floor map */}
-      <div className="flex-1 min-w-0 pr-2 overflow-hidden">
+      {/* Left: Floor map — clips content, doesn't shrink tables */}
+      <div className="flex-1 pr-2 overflow-hidden" style={{ minWidth: 0 }}>
       {/* Zone tabs */}
       {zones.length > 1 && (
         <div className="flex items-center gap-1 mb-4 border-b border-neutral-200">
@@ -245,7 +245,7 @@ export function FloorLive({ tables, bookings: initialBookings, businessId, waitl
       {/* Canvas */}
       <div
         className="relative border border-neutral-200 rounded-xl bg-neutral-50 overflow-hidden select-none"
-        style={{ aspectRatio: "16 / 10" }}
+        style={{ minWidth: 500, aspectRatio: "16 / 10" }}
         onClick={() => setSelectedTableId(null)}
       >
         {/* Grid dots */}

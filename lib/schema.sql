@@ -49,6 +49,9 @@ CREATE TABLE IF NOT EXISTS businesses (
   -- (stored in business_magic_links table below)
   -- Go live
   is_live BOOLEAN DEFAULT false, -- false = site visible but bookings disabled
+  -- QR check-in
+  qr_waitlist_enabled BOOLEAN DEFAULT false,
+  qr_checkin_enabled BOOLEAN DEFAULT false,
   -- Operating config
   booking_window_days INT DEFAULT 30, -- how far ahead can you book
   min_party_size INT DEFAULT 1,
