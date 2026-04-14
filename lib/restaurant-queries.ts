@@ -139,6 +139,17 @@ export async function getBusinessClient(businessId: string, clientId: string) {
   return data;
 }
 
+export async function getAllBookings(businessId: string) {
+  const { data } = await supabase
+    .from("bookings")
+    .select("*, clients(name, email, phone)")
+    .eq("business_id", businessId)
+    .order("booking_date", { ascending: false })
+    .order("booking_time", { ascending: false })
+    .limit(500);
+  return data ?? [];
+}
+
 export async function getClientBookings(businessId: string, clientId: string) {
   const { data } = await supabase
     .from("bookings")

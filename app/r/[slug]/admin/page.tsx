@@ -1,4 +1,4 @@
-import { getBusiness, getBusinessHours, getMenuItems, getUpcomingBookings, getBusinessClients, getTables, getBusinessPhotos, getBookingStats, getWaitlist, getTableInventory } from "@/lib/restaurant-queries";
+import { getBusiness, getBusinessHours, getMenuItems, getUpcomingBookings, getBusinessClients, getTables, getBusinessPhotos, getBookingStats, getWaitlist, getTableInventory, getAllBookings } from "@/lib/restaurant-queries";
 import { getTheme } from "@/lib/themes";
 import { requireAuth } from "@/lib/auth";
 import { notFound } from "next/navigation";
@@ -14,7 +14,7 @@ export default async function AdminPage({ params }: { params: Promise<{ slug: st
   if (!biz) return notFound();
 
   const theme = getTheme(biz.theme);
-  const [bookings, clients, tables, hours, menu, photos, stats, waitlist, inventory] = await Promise.all([
+  const [bookings, clients, tables, hours, menu, photos, stats, waitlist, inventory, allBookings] = await Promise.all([
     getUpcomingBookings(biz.id, 30),
     getBusinessClients(biz.id),
     getTables(biz.id),
@@ -24,6 +24,7 @@ export default async function AdminPage({ params }: { params: Promise<{ slug: st
     getBookingStats(biz.id, 30),
     getWaitlist(biz.id),
     getTableInventory(biz.id),
+    getAllBookings(biz.id),
   ]);
 
   return (
@@ -58,6 +59,7 @@ export default async function AdminPage({ params }: { params: Promise<{ slug: st
           stats={stats}
           waitlist={waitlist}
           inventory={inventory}
+          allBookings={allBookings}
         />
       </main>
     </div>

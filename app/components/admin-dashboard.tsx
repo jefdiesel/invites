@@ -78,13 +78,14 @@ type WaitlistEntry = {
 type InventoryRow = { id: string; size: number; count: number; turn_time_minutes: number };
 
 export function AdminDashboard({
-  business, slug, theme, bookings, clients, tables, hours, menu, photos, stats, waitlist, inventory,
+  business, slug, theme, bookings, clients, tables, hours, menu, photos, stats, waitlist, inventory, allBookings,
 }: {
   business: Business; slug: string; theme: Theme;
   bookings: Booking[]; clients: BizClient[]; tables: RestaurantTable[];
   hours: Hour[]; menu: MenuItem[]; photos: Photo[]; stats: BookingStat[];
   waitlist: WaitlistEntry[];
   inventory: InventoryRow[];
+  allBookings: Booking[];
 }) {
   const [tab, setTab] = useState<Tab>("reservations");
   const [isLive, setIsLive] = useState((business as Record<string, unknown>).is_live as boolean ?? false);
@@ -156,7 +157,7 @@ export function AdminDashboard({
         <PhotosTab photos={photos} businessId={business.id} />
       )}
       {tab === "guests" && (
-        <GuestsTab clients={clients} businessId={business.id} bookings={bookings} />
+        <GuestsTab clients={clients} businessId={business.id} bookings={allBookings} />
       )}
       {tab === "analytics" && (
         <AnalyticsTab stats={stats} clients={clients} />
@@ -1104,6 +1105,7 @@ function GuestsTab({ clients, businessId, bookings }: { clients: BizClient[]; bu
 
             {editingId === c.id && (
               <div className="border-t border-neutral-100 px-4 py-3 bg-neutral-50 rounded-b-lg">
+                {/* Guest details */}
                 <div className="grid grid-cols-2 gap-3 mb-3">
                   <div>
                     <label className="text-xs font-semibold text-neutral-500 mb-1 block">Notes</label>
@@ -1122,13 +1124,68 @@ function GuestsTab({ clients, businessId, bookings }: { clients: BizClient[]; bu
                     <input value={editTags} onChange={e => setEditTags(e.target.value)} className={inputClass} placeholder="VIP, Regular, Industry..." />
                   </div>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex gap-2 mb-4">
                   <button onClick={() => saveEdit(c.client_id)} disabled={savingGuest}
                     className="px-3 py-1.5 bg-neutral-900 text-white text-sm font-bold rounded-lg hover:bg-neutral-700 disabled:opacity-50 transition-colors">
                     {savingGuest ? "Saving..." : "Save"}
                   </button>
                   <button onClick={() => setEditingId(null)} className="text-sm text-neutral-400 hover:text-neutral-600 transition-colors px-2">Cancel</button>
                 </div>
+
+                {/* Booking history */}
+                {(() => {
+                  const guestBookings = bookings
+                    .filter(b => b.clients?.email === c.clients?.email)
+                    .sort((a, b) => b.booking_date.localeCompare(a.booking_date) || b.booking_time.localeCompare(a.booking_time));
+
+                  if (guestBookings.length === 0) return null;
+
+                  return (
+                    <div className="border-t border-neutral-200 pt-3">
+                      <h4 className="text-xs font-bold text-neutral-500 uppercase tracking-wider mb-2">
+                        Visit History ({guestBookings.length})
+                      </h4>
+                      <div className="border border-neutral-200 rounded-lg overflow-hidden">
+                        <table className="w-full text-xs">
+                          <thead>
+                            <tr className="bg-neutral-100 border-b border-neutral-200">
+                              <th className="px-3 py-1.5 text-left font-semibold text-neutral-500">Date</th>
+                              <th className="px-3 py-1.5 text-left font-semibold text-neutral-500">Time</th>
+                              <th className="px-3 py-1.5 text-right font-semibold text-neutral-500">Party</th>
+                              <th className="px-3 py-1.5 text-left font-semibold text-neutral-500">Table</th>
+                              <th className="px-3 py-1.5 text-left font-semibold text-neutral-500">Status</th>
+                              <th className="px-3 py-1.5 text-left font-semibold text-neutral-500">Source</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {guestBookings.map(b => (
+                              <tr key={b.id} className="border-b border-neutral-50">
+                                <td className="px-3 py-1.5 tabular-nums text-neutral-700">
+                                  {new Date(b.booking_date + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                                </td>
+                                <td className="px-3 py-1.5 tabular-nums text-neutral-700">{formatTime(b.booking_time)}</td>
+                                <td className="px-3 py-1.5 text-right tabular-nums text-neutral-700">{b.party_size}</td>
+                                <td className="px-3 py-1.5 text-neutral-500">{(b as Record<string, unknown>).table_label as string || "—"}</td>
+                                <td className="px-3 py-1.5">
+                                  <span className={`font-medium ${
+                                    b.status === "completed" ? "text-neutral-400" :
+                                    b.status === "confirmed" ? "text-emerald-600" :
+                                    b.status === "seated" ? "text-blue-600" :
+                                    b.status === "cancelled" ? "text-rose-500" :
+                                    b.status === "no_show" ? "text-amber-500" :
+                                    b.status === "checked_in" ? "text-green-600" :
+                                    "text-neutral-400"
+                                  }`}>{b.status}</span>
+                                </td>
+                                <td className="px-3 py-1.5 text-neutral-400">{b.source}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  );
+                })()}
               </div>
             )}
           </div>
