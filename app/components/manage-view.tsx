@@ -7,6 +7,7 @@ import {
   assignTable,
 } from "@/lib/restaurant-actions";
 import { TablePicker } from "./table-picker";
+import { FloorLive } from "./floor-live";
 
 type Booking = {
   id: string; booking_date: string; booking_time: string; party_size: number;
@@ -17,6 +18,7 @@ type Booking = {
 type Table = {
   id: string; name: string; zone: string; capacity: number;
   is_active: boolean; sort_order: number;
+  shape?: string; pos_x?: number; pos_y?: number; width?: number; height?: number;
 };
 
 type WaitlistEntry = {
@@ -42,6 +44,8 @@ export function ManageView({ businessId, businessName, slug, bookings, tables, s
   const completed = todaysBookings.filter(b => b.status === "completed" || b.status === "no_show");
   const todayCovers = todaysBookings.filter(b => b.status !== "cancelled" && b.status !== "no_show")
     .reduce((s, b) => s + b.party_size, 0);
+
+  const [view, setView] = useState<"map" | "list">("map");
 
   // Waitlist add form
   const [showAdd, setShowAdd] = useState<"waitlist" | "walkin" | null>(null);
@@ -149,6 +153,29 @@ export function ManageView({ businessId, businessName, slug, bookings, tables, s
         </div>
       </div>
 
+      {/* View toggle */}
+      <div className="flex items-center gap-2 mb-6">
+        <button onClick={() => setView("map")}
+          className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${view === "map" ? "bg-neutral-900 text-white" : "bg-neutral-100 text-neutral-600"}`}>
+          Floor Map
+        </button>
+        <button onClick={() => setView("list")}
+          className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${view === "list" ? "bg-neutral-900 text-white" : "bg-neutral-100 text-neutral-600"}`}>
+          List View
+        </button>
+      </div>
+
+      {view === "map" ? (
+        <FloorLive
+          tables={tables.filter(t => t.is_active).map(t => ({
+            id: t.id, name: t.name, zone: t.zone, capacity: t.capacity,
+            shape: t.shape ?? "circle", pos_x: t.pos_x ?? 50, pos_y: t.pos_y ?? 50,
+            width: t.width ?? 8, height: t.height ?? 8,
+          }))}
+          bookings={todaysBookings.map(b => ({ ...b, source: (b as Record<string, unknown>).source as string ?? "website" }))}
+          businessId={businessId}
+        />
+      ) : (
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_280px] gap-6">
       <div>
       {/* Add buttons */}
@@ -542,6 +569,7 @@ export function ManageView({ businessId, businessName, slug, bookings, tables, s
         </div>
       </div>
       </div>
+      )}
     </div>
   );
 }
