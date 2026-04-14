@@ -19,7 +19,7 @@ export default async function AdminPage({ params }: { params: Promise<{ slug: st
     getBusinessClients(biz.id),
     getTables(biz.id),
     getBusinessHours(biz.id),
-    getMenuItems(biz.id),
+    getMenuItems(biz.id, true),
     getBusinessPhotos(biz.id),
   ]);
 

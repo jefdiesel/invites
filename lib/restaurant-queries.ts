@@ -35,12 +35,13 @@ export async function getBusinessHours(businessId: string) {
   return data ?? [];
 }
 
-export async function getMenuItems(businessId: string) {
-  const { data } = await supabase
+export async function getMenuItems(businessId: string, includeUnavailable = false) {
+  let query = supabase
     .from("menu_items")
     .select("*")
-    .eq("business_id", businessId)
-    .eq("available", true)
+    .eq("business_id", businessId);
+  if (!includeUnavailable) query = query.eq("available", true);
+  const { data } = await query
     .order("sort_order");
   return data ?? [];
 }
