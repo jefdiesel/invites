@@ -208,6 +208,23 @@ CREATE TABLE IF NOT EXISTS business_photos (
 ALTER TABLE business_photos ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Allow all business_photos" ON business_photos FOR ALL USING (true) WITH CHECK (true);
 
+-- Waitlist / walk-in queue (per-service day)
+CREATE TABLE IF NOT EXISTS waitlist_entries (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  business_id UUID NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  phone TEXT DEFAULT '',
+  party_size INT NOT NULL DEFAULT 2,
+  notes TEXT DEFAULT '',
+  status TEXT NOT NULL DEFAULT 'waiting', -- waiting, seated, removed
+  quoted_wait_minutes INT DEFAULT 30,
+  created_at TIMESTAMPTZ DEFAULT now(),
+  seated_at TIMESTAMPTZ
+);
+
+ALTER TABLE waitlist_entries ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Allow all waitlist_entries" ON waitlist_entries FOR ALL USING (true) WITH CHECK (true);
+
 -- Client-sensitive data (isolated for HIPAA/SOC2 readiness)
 -- This table can be encrypted at rest, moved to isolated storage,
 -- or omitted entirely for non-healthcare verticals.

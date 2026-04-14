@@ -435,6 +435,75 @@ export async function deleteTable(tableId: string) {
   revalidatePath(`/r/[slug]`, "layout");
 }
 
+// ── Waitlist / Walk-in ──
+
+export async function addToWaitlist(businessId: string, data: {
+  name: string; phone: string; party_size: number; notes: string; quoted_wait_minutes: number;
+}) {
+  const id = randomUUID();
+  await supabase.from("waitlist_entries").insert({ id, business_id: businessId, ...data });
+  revalidatePath(`/r/[slug]`, "layout");
+  return { id };
+}
+
+export async function seatFromWaitlist(entryId: string) {
+  await supabase.from("waitlist_entries").update({
+    status: "seated",
+    seated_at: new Date().toISOString(),
+  }).eq("id", entryId);
+  revalidatePath(`/r/[slug]`, "layout");
+}
+
+export async function removeFromWaitlist(entryId: string) {
+  await supabase.from("waitlist_entries").update({
+    status: "removed",
+  }).eq("id", entryId);
+  revalidatePath(`/r/[slug]`, "layout");
+}
+
+export async function createWalkIn(businessId: string, data: {
+  name: string; phone: string; party_size: number; notes: string; tableId: string | null;
+}) {
+  // Create a walk-in booking for right now
+  let clientId: string;
+  if (data.name) {
+    const email = `walkin-${randomUUID().slice(0, 8)}@walkin.local`;
+    clientId = randomUUID();
+    await supabase.from("clients").insert({
+      id: clientId, name: data.name, email, phone: data.phone,
+    });
+    await supabase.from("business_clients").insert({
+      id: randomUUID(), business_id: businessId, client_id: clientId,
+      first_visit: new Date().toISOString(), last_visit: new Date().toISOString(), visit_count: 1,
+    });
+  } else {
+    clientId = randomUUID();
+    await supabase.from("clients").insert({
+      id: clientId, name: "Walk-in", email: `walkin-${randomUUID().slice(0, 8)}@walkin.local`, phone: data.phone,
+    });
+  }
+
+  const now = new Date();
+  const bookingId = randomUUID();
+  await supabase.from("bookings").insert({
+    id: bookingId, business_id: businessId, client_id: clientId,
+    booking_date: now.toISOString().split("T")[0],
+    booking_time: `${now.getHours().toString().padStart(2, "0")}:${now.getMinutes().toString().padStart(2, "0")}`,
+    party_size: data.party_size, notes: data.notes, status: "seated",
+    source: "walk_in", table_id: data.tableId,
+  });
+  revalidatePath(`/r/[slug]`, "layout");
+  return { bookingId };
+}
+
+// ── Custom Domain ──
+
+export async function updateCustomDomain(businessId: string, domain: string) {
+  const cleaned = domain.toLowerCase().replace(/^(https?:\/\/)?(www\.)?/, "").replace(/\/+$/, "");
+  await supabase.from("businesses").update({ custom_domain: cleaned || null }).eq("id", businessId);
+  revalidatePath(`/r/[slug]`, "layout");
+}
+
 // ── Existing ──
 
 export async function createBusiness(data: {

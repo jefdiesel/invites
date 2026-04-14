@@ -6,6 +6,7 @@ import {
   addMenuItem, updateMenuItem, deleteMenuItem,
   updateBusinessSettings, updateBusinessHours,
   addPhoto, deletePhoto,
+  updateCustomDomain,
 } from "@/lib/restaurant-actions";
 import type { Theme } from "@/lib/themes";
 import { FloorEditor } from "./floor-editor";
@@ -55,16 +56,21 @@ type Business = {
   min_party_size: number; max_party_size: number;
 };
 
-type Tab = "reservations" | "floor" | "menu" | "site" | "photos" | "guests";
+type BookingStat = {
+  booking_date: string; booking_time: string; party_size: number;
+  status: string; source: string;
+};
+
+type Tab = "reservations" | "floor" | "menu" | "site" | "photos" | "guests" | "analytics" | "domain";
 
 // ── Main Component ──
 
 export function AdminDashboard({
-  business, slug, theme, bookings, clients, tables, hours, menu, photos,
+  business, slug, theme, bookings, clients, tables, hours, menu, photos, stats,
 }: {
   business: Business; slug: string; theme: Theme;
   bookings: Booking[]; clients: BizClient[]; tables: RestaurantTable[];
-  hours: Hour[]; menu: MenuItem[]; photos: Photo[];
+  hours: Hour[]; menu: MenuItem[]; photos: Photo[]; stats: BookingStat[];
 }) {
   const [tab, setTab] = useState<Tab>("reservations");
 
@@ -86,11 +92,14 @@ export function AdminDashboard({
 
       {/* Tabs */}
       <div className="flex items-center gap-1 border-b border-neutral-200 mb-6 overflow-x-auto">
-        {(["reservations", "floor", "menu", "site", "photos", "guests"] as Tab[]).map((t) => (
-          <TabBtn key={t} active={tab === t} onClick={() => setTab(t)}>
-            {t === "reservations" ? "Reservations" : t === "floor" ? "Floor Plan" : t === "menu" ? "Menu" : t === "site" ? "Site Settings" : t === "photos" ? "Photos" : "Guests"}
-          </TabBtn>
-        ))}
+        {(["reservations", "floor", "menu", "site", "domain", "photos", "guests", "analytics"] as Tab[]).map((t) => {
+          const labels: Record<Tab, string> = {
+            reservations: "Reservations", floor: "Floor Plan", menu: "Menu",
+            site: "Site Settings", domain: "Domain", photos: "Photos",
+            guests: "Guests", analytics: "Analytics",
+          };
+          return <TabBtn key={t} active={tab === t} onClick={() => setTab(t)}>{labels[t]}</TabBtn>;
+        })}
       </div>
 
       {tab === "reservations" && (
@@ -109,7 +118,13 @@ export function AdminDashboard({
         <PhotosTab photos={photos} businessId={business.id} />
       )}
       {tab === "guests" && (
-        <GuestsTab clients={clients} businessId={business.id} />
+        <GuestsTab clients={clients} businessId={business.id} bookings={bookings} />
+      )}
+      {tab === "analytics" && (
+        <AnalyticsTab stats={stats} clients={clients} />
+      )}
+      {tab === "domain" && (
+        <DomainTab business={business} slug={slug} />
       )}
     </div>
   );
@@ -233,8 +248,39 @@ function ReservationsTab({ bookings, tables, today, slotDuration }: {
       {todaysBookings.length === 0 && upcomingBookings.length === 0 && (
         <p className="text-sm text-neutral-400 py-8 text-center">No bookings yet.</p>
       )}
+
+      {bookings.length > 0 && (
+        <div className="mt-6 pt-6 border-t border-neutral-100">
+          <button onClick={() => exportBookingsCSV(bookings, activeTables)}
+            className="text-sm font-medium text-neutral-500 hover:text-neutral-900 transition-colors">
+            Export Reservations (CSV)
+          </button>
+        </div>
+      )}
     </div>
   );
+}
+
+function exportBookingsCSV(bookings: Booking[], tables: RestaurantTable[]) {
+  const header = "Date,Time,Guest,Email,Phone,Party Size,Table,Status,Source,Notes";
+  const rows = bookings.map(b => {
+    const tableName = tables.find(t => t.id === b.table_id)?.name ?? "";
+    return [
+      b.booking_date, b.booking_time, b.clients?.name ?? "", b.clients?.email ?? "",
+      b.clients?.phone ?? "", b.party_size, tableName, b.status, b.source, `"${(b.notes || "").replace(/"/g, '""')}"`,
+    ].join(",");
+  });
+  downloadCSV([header, ...rows].join("\n"), "reservations.csv");
+}
+
+function downloadCSV(csv: string, filename: string) {
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
 }
 
 function BookingTable({ bookings, tables, showActions }: { bookings: Booking[]; tables: RestaurantTable[]; showActions: boolean }) {
@@ -600,7 +646,7 @@ function PhotosTab({ photos, businessId }: { photos: Photo[]; businessId: string
 
 // ── Guests Tab ──
 
-function GuestsTab({ clients, businessId }: { clients: BizClient[]; businessId: string }) {
+function GuestsTab({ clients, businessId, bookings }: { clients: BizClient[]; businessId: string; bookings: Booking[] }) {
   const [search, setSearch] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editNotes, setEditNotes] = useState("");
@@ -653,7 +699,15 @@ function GuestsTab({ clients, businessId }: { clients: BizClient[]; businessId: 
           placeholder="Search by name, email, phone, tags, dietary, notes..."
           className="w-full max-w-md rounded-lg border border-neutral-200 bg-white px-4 py-2.5 text-sm text-neutral-900 placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-neutral-900/10" />
       </div>
-      <div className="text-sm text-neutral-500 mb-3">{filtered.length} guests</div>
+      <div className="flex items-center justify-between mb-3">
+        <div className="text-sm text-neutral-500">{filtered.length} guests</div>
+        {clients.length > 0 && (
+          <button onClick={() => exportGuestsCSV(clients)}
+            className="text-sm font-medium text-neutral-500 hover:text-neutral-900 transition-colors">
+            Export Guests (CSV)
+          </button>
+        )}
+      </div>
       <div className="space-y-2">
         {filtered.length === 0 ? (
           <div className="text-center text-neutral-400 py-8">{search ? "No guests match." : "No guests yet."}</div>
@@ -709,6 +763,259 @@ function GuestsTab({ clients, businessId }: { clients: BizClient[]; businessId: 
       </div>
     </div>
   );
+}
+
+// ── Analytics Tab ──
+
+function AnalyticsTab({ stats, clients }: { stats: BookingStat[]; clients: BizClient[] }) {
+  // Group by date
+  const byDate = new Map<string, { covers: number; bookings: number; noShows: number }>();
+  for (const s of stats) {
+    const d = s.booking_date;
+    const entry = byDate.get(d) || { covers: 0, bookings: 0, noShows: 0 };
+    entry.bookings++;
+    entry.covers += s.party_size;
+    if (s.status === "no_show") entry.noShows++;
+    byDate.set(d, entry);
+  }
+  const dates = [...byDate.entries()].sort((a, b) => a[0].localeCompare(b[0]));
+  const maxCovers = Math.max(1, ...dates.map(([, d]) => d.covers));
+
+  // Busiest hours
+  const byHour = new Map<number, number>();
+  for (const s of stats) {
+    if (s.status === "cancelled") continue;
+    const h = parseInt(s.booking_time.split(":")[0]);
+    byHour.set(h, (byHour.get(h) || 0) + 1);
+  }
+  const hours = [...byHour.entries()].sort((a, b) => a[0] - b[0]);
+  const maxHour = Math.max(1, ...hours.map(([, c]) => c));
+
+  // Source breakdown
+  const bySrc = new Map<string, number>();
+  for (const s of stats) {
+    if (s.status === "cancelled") continue;
+    bySrc.set(s.source || "website", (bySrc.get(s.source || "website") || 0) + 1);
+  }
+
+  // Totals
+  const totalBookings = stats.filter(s => s.status !== "cancelled").length;
+  const totalCovers = stats.filter(s => s.status !== "cancelled").reduce((s, b) => s + b.party_size, 0);
+  const totalNoShows = stats.filter(s => s.status === "no_show").length;
+  const noShowRate = totalBookings > 0 ? ((totalNoShows / totalBookings) * 100).toFixed(1) : "0";
+
+  // Top guests
+  const topGuests = [...clients].sort((a, b) => b.visit_count - a.visit_count).slice(0, 5);
+
+  return (
+    <div>
+      {/* Summary cards */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+        <div className="border border-neutral-200 rounded-lg p-4">
+          <div className="text-2xl font-bold tabular-nums text-neutral-900">{totalBookings}</div>
+          <div className="text-sm text-neutral-500">Reservations (30d)</div>
+        </div>
+        <div className="border border-neutral-200 rounded-lg p-4">
+          <div className="text-2xl font-bold tabular-nums text-neutral-900">{totalCovers}</div>
+          <div className="text-sm text-neutral-500">Total Covers</div>
+        </div>
+        <div className="border border-neutral-200 rounded-lg p-4">
+          <div className="text-2xl font-bold tabular-nums text-amber-600">{noShowRate}%</div>
+          <div className="text-sm text-neutral-500">No-show Rate</div>
+        </div>
+        <div className="border border-neutral-200 rounded-lg p-4">
+          <div className="text-2xl font-bold tabular-nums text-neutral-900">{totalBookings > 0 ? (totalCovers / dates.length).toFixed(1) : 0}</div>
+          <div className="text-sm text-neutral-500">Avg Covers/Day</div>
+        </div>
+      </div>
+
+      {/* Covers per day chart */}
+      <div className="mb-10">
+        <h3 className="text-sm font-bold text-neutral-600 uppercase tracking-wider mb-4">Covers per Day</h3>
+        {dates.length === 0 ? (
+          <p className="text-sm text-neutral-400 text-center py-8">No booking data yet.</p>
+        ) : (
+          <div className="flex items-end gap-1 h-40">
+            {dates.map(([date, d]) => (
+              <div key={date} className="flex-1 flex flex-col items-center justify-end h-full group relative">
+                <div className="absolute -top-6 left-1/2 -translate-x-1/2 bg-neutral-900 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
+                  {new Date(date + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" })} — {d.covers} covers, {d.bookings} res
+                  {d.noShows > 0 ? `, ${d.noShows} NS` : ""}
+                </div>
+                <div className="w-full rounded-t" style={{
+                  height: `${(d.covers / maxCovers) * 100}%`,
+                  background: d.noShows > 0 ? "#f59e0b" : "#171717",
+                  minHeight: "2px",
+                }} />
+              </div>
+            ))}
+          </div>
+        )}
+        {dates.length > 0 && (
+          <div className="flex justify-between text-[10px] text-neutral-400 mt-1">
+            <span>{new Date(dates[0][0] + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" })}</span>
+            <span>{new Date(dates[dates.length - 1][0] + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" })}</span>
+          </div>
+        )}
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+        {/* Busiest hours */}
+        <div>
+          <h3 className="text-sm font-bold text-neutral-600 uppercase tracking-wider mb-4">Busiest Hours</h3>
+          <div className="space-y-2">
+            {hours.map(([h, count]) => (
+              <div key={h} className="flex items-center gap-3">
+                <span className="text-sm tabular-nums text-neutral-500 w-14">{h % 12 || 12}{h >= 12 ? " PM" : " AM"}</span>
+                <div className="flex-1 bg-neutral-100 rounded-full h-5 overflow-hidden">
+                  <div className="h-full bg-neutral-900 rounded-full" style={{ width: `${(count / maxHour) * 100}%` }} />
+                </div>
+                <span className="text-sm tabular-nums text-neutral-600 w-8 text-right">{count}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Source breakdown */}
+        <div>
+          <h3 className="text-sm font-bold text-neutral-600 uppercase tracking-wider mb-4">Booking Sources</h3>
+          <div className="space-y-2">
+            {[...bySrc.entries()].sort((a, b) => b[1] - a[1]).map(([src, count]) => (
+              <div key={src} className="flex items-center justify-between border border-neutral-100 rounded-lg px-3 py-2">
+                <span className="text-sm font-medium text-neutral-700 capitalize">{src.replace("_", " ")}</span>
+                <span className="text-sm tabular-nums font-bold text-neutral-900">{count}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Top guests */}
+        <div>
+          <h3 className="text-sm font-bold text-neutral-600 uppercase tracking-wider mb-4">Top Guests</h3>
+          <div className="space-y-2">
+            {topGuests.length === 0 ? (
+              <p className="text-sm text-neutral-400">No guests yet.</p>
+            ) : topGuests.map((g, i) => (
+              <div key={g.id} className="flex items-center gap-3 border border-neutral-100 rounded-lg px-3 py-2">
+                <span className="text-sm font-bold text-neutral-300 w-5">{i + 1}</span>
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm font-semibold text-neutral-900 truncate">{g.clients?.name ?? "—"}</div>
+                </div>
+                <span className="text-sm tabular-nums font-bold text-neutral-700">{g.visit_count} visits</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Domain Tab ──
+
+function DomainTab({ business, slug }: { business: Business; slug: string }) {
+  const [domain, setDomain] = useState((business as Record<string, unknown>).custom_domain as string || "");
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+
+  async function handleSave() {
+    setSaving(true);
+    await updateCustomDomain(business.id, domain);
+    setSaving(false);
+    setSaved(true);
+    setTimeout(() => setSaved(false), 3000);
+  }
+
+  const currentDomain = (business as Record<string, unknown>).custom_domain as string;
+  const inputClass = "w-full border border-neutral-200 rounded-lg px-4 py-3 text-base bg-white text-neutral-900 placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-neutral-900/10";
+
+  return (
+    <div className="max-w-2xl">
+      <h3 className="text-sm font-bold text-neutral-600 uppercase tracking-wider mb-4">Custom Domain</h3>
+      <p className="text-sm text-neutral-500 mb-6">
+        Point your own domain to your Remi restaurant site. Your site is always available at{" "}
+        <a href={`https://itsremi.app/r/${slug}`} className="font-medium text-neutral-900 underline" target="_blank">
+          itsremi.app/r/{slug}
+        </a>.
+      </p>
+
+      <div className="space-y-6">
+        <div>
+          <label className="block text-sm font-semibold text-neutral-700 mb-1.5">Domain</label>
+          <input value={domain} onChange={e => setDomain(e.target.value)}
+            placeholder="yourdomain.com" className={inputClass} />
+        </div>
+
+        <div className="flex items-center gap-3">
+          <button onClick={handleSave} disabled={saving}
+            className="px-6 py-3 bg-neutral-900 text-white text-sm font-bold rounded-lg hover:bg-neutral-700 disabled:opacity-50 transition-colors">
+            {saving ? "Saving..." : "Save Domain"}
+          </button>
+          {saved && <span className="text-sm font-medium text-emerald-600">Saved</span>}
+        </div>
+
+        {/* DNS instructions */}
+        <div className="border border-neutral-200 rounded-lg p-6 bg-neutral-50">
+          <h4 className="text-sm font-bold text-neutral-900 mb-3">DNS Setup</h4>
+          <p className="text-sm text-neutral-500 mb-4">
+            Add these records at your domain registrar (Namecheap, GoDaddy, Cloudflare, etc):
+          </p>
+          <div className="border border-neutral-200 rounded-lg overflow-hidden bg-white">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="bg-neutral-50 border-b border-neutral-200">
+                  <th className="px-4 py-2 text-left font-semibold text-neutral-600">Type</th>
+                  <th className="px-4 py-2 text-left font-semibold text-neutral-600">Name</th>
+                  <th className="px-4 py-2 text-left font-semibold text-neutral-600">Value</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr className="border-b border-neutral-100">
+                  <td className="px-4 py-2 font-mono text-neutral-900">CNAME</td>
+                  <td className="px-4 py-2 font-mono text-neutral-700">{domain ? domain.replace(/^www\./, "") : "yourdomain.com"}</td>
+                  <td className="px-4 py-2 font-mono text-neutral-700">cname.vercel-dns.com</td>
+                </tr>
+                <tr>
+                  <td className="px-4 py-2 font-mono text-neutral-900">CNAME</td>
+                  <td className="px-4 py-2 font-mono text-neutral-700">www</td>
+                  <td className="px-4 py-2 font-mono text-neutral-700">cname.vercel-dns.com</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <p className="text-xs text-neutral-400 mt-3">
+            SSL is automatic. After DNS propagates (up to 48 hours), your site will be live at your domain.
+          </p>
+        </div>
+
+        {currentDomain && (
+          <div className="flex items-center gap-2 text-sm">
+            <span className="w-2 h-2 rounded-full bg-emerald-500" />
+            <span className="text-neutral-600">
+              Domain configured: <span className="font-mono font-medium text-neutral-900">{currentDomain}</span>
+            </span>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ── Export Helpers ──
+
+function exportGuestsCSV(clients: BizClient[]) {
+  const header = "Name,Email,Phone,City,Visits,Last Visit,Tags,Dietary,Preferences,Notes";
+  const rows = clients.map(c => [
+    `"${(c.clients?.name ?? "").replace(/"/g, '""')}"`,
+    c.clients?.email ?? "", c.clients?.phone ?? "", c.clients?.city ?? "",
+    c.visit_count,
+    c.last_visit ? new Date(c.last_visit).toLocaleDateString() : "",
+    `"${(c.tags || []).join(", ")}"`,
+    `"${(c.dietary || "").replace(/"/g, '""')}"`,
+    `"${(c.preferences || "").replace(/"/g, '""')}"`,
+    `"${(c.notes || "").replace(/"/g, '""')}"`,
+  ].join(","));
+  downloadCSV([header, ...rows].join("\n"), "guests.csv");
 }
 
 // ── Shared Components ──

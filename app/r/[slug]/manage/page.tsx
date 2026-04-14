@@ -1,4 +1,4 @@
-import { getBusiness, getUpcomingBookings, getTables } from "@/lib/restaurant-queries";
+import { getBusiness, getUpcomingBookings, getTables, getWaitlist } from "@/lib/restaurant-queries";
 import { requireAuth } from "@/lib/auth";
 import { notFound } from "next/navigation";
 import { ManageView } from "@/app/components/manage-view";
@@ -12,8 +12,11 @@ export default async function ManagePage({ params }: { params: Promise<{ slug: s
   const biz = await getBusiness(slug);
   if (!biz) return notFound();
 
-  const bookings = await getUpcomingBookings(biz.id, 1); // today + tomorrow
-  const tables = await getTables(biz.id);
+  const [bookings, tables, waitlist] = await Promise.all([
+    getUpcomingBookings(biz.id, 1),
+    getTables(biz.id),
+    getWaitlist(biz.id),
+  ]);
 
   return (
     <div className="min-h-screen bg-white">
@@ -45,6 +48,7 @@ export default async function ManagePage({ params }: { params: Promise<{ slug: s
           bookings={bookings}
           tables={tables}
           slotDuration={biz.slot_duration_minutes}
+          waitlist={waitlist}
         />
       </main>
     </div>

@@ -202,6 +202,31 @@ export async function getAvailableSlots(businessId: string, date: string, partyS
   return slots;
 }
 
+// ── Waitlist ──
+
+export async function getWaitlist(businessId: string) {
+  const { data } = await supabase
+    .from("waitlist_entries")
+    .select("*")
+    .eq("business_id", businessId)
+    .eq("status", "waiting")
+    .order("created_at");
+  return data ?? [];
+}
+
+// ── Analytics ──
+
+export async function getBookingStats(businessId: string, days = 30) {
+  const start = new Date(Date.now() - days * 86400000).toISOString().split("T")[0];
+  const { data } = await supabase
+    .from("bookings")
+    .select("booking_date, booking_time, party_size, status, source")
+    .eq("business_id", businessId)
+    .gte("booking_date", start)
+    .order("booking_date");
+  return data ?? [];
+}
+
 function timeToMinutes(time: string): number {
   const [h, m] = time.split(":").map(Number);
   return h * 60 + m;

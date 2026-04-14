@@ -46,15 +46,15 @@ export default function HomePage() {
             <a href="#features" className="text-neutral-500 hover:text-neutral-900 transition-colors font-medium">Features</a>
             <a href="#themes" className="text-neutral-500 hover:text-neutral-900 transition-colors font-medium">Themes</a>
             <a href="#pricing" className="text-neutral-500 hover:text-neutral-900 transition-colors font-medium">Pricing</a>
-            <Link href="/themes" className="rounded-full bg-neutral-900 text-white px-5 py-2 font-bold hover:bg-neutral-700 transition-colors">
-              Browse Themes
+            <Link href="/signup" className="rounded-full bg-neutral-900 text-white px-5 py-2 font-bold hover:bg-neutral-700 transition-colors">
+              Get Started
             </Link>
           </div>
           {/* Mobile */}
           <div className="flex md:hidden items-center gap-3">
             <a href="#pricing" className="text-sm font-medium text-neutral-500">Pricing</a>
-            <Link href="/themes" className="rounded-full bg-neutral-900 text-white px-4 py-1.5 text-sm font-bold hover:bg-neutral-700 transition-colors">
-              Browse Themes
+            <Link href="/signup" className="rounded-full bg-neutral-900 text-white px-4 py-1.5 text-sm font-bold hover:bg-neutral-700 transition-colors">
+              Get Started
             </Link>
           </div>
         </div>
@@ -279,8 +279,8 @@ export default function HomePage() {
               <span>Events</span><span className="text-neutral-300">+</span>
               <span>Custom Domain</span>
             </div>
-            <Link href="/themes" className="inline-block rounded-full bg-neutral-900 text-white px-10 py-4 text-lg font-bold hover:bg-neutral-700 transition-colors">
-              Browse Themes
+            <Link href="/signup" className="inline-block rounded-full bg-neutral-900 text-white px-10 py-4 text-lg font-bold hover:bg-neutral-700 transition-colors">
+              Get Started — $99/mo
             </Link>
             <p className="text-sm text-neutral-400 mt-6">
               No per-cover fees. No setup fees. No contracts. Cancel anytime.

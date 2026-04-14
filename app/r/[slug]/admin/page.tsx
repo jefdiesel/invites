@@ -1,4 +1,4 @@
-import { getBusiness, getBusinessHours, getMenuItems, getUpcomingBookings, getBusinessClients, getTables, getBusinessPhotos } from "@/lib/restaurant-queries";
+import { getBusiness, getBusinessHours, getMenuItems, getUpcomingBookings, getBusinessClients, getTables, getBusinessPhotos, getBookingStats } from "@/lib/restaurant-queries";
 import { getTheme } from "@/lib/themes";
 import { requireAuth } from "@/lib/auth";
 import { notFound } from "next/navigation";
@@ -14,13 +14,14 @@ export default async function AdminPage({ params }: { params: Promise<{ slug: st
   if (!biz) return notFound();
 
   const theme = getTheme(biz.theme);
-  const [bookings, clients, tables, hours, menu, photos] = await Promise.all([
+  const [bookings, clients, tables, hours, menu, photos, stats] = await Promise.all([
     getUpcomingBookings(biz.id, 14),
     getBusinessClients(biz.id),
     getTables(biz.id),
     getBusinessHours(biz.id),
     getMenuItems(biz.id, true),
     getBusinessPhotos(biz.id),
+    getBookingStats(biz.id, 30),
   ]);
 
   return (
@@ -52,6 +53,7 @@ export default async function AdminPage({ params }: { params: Promise<{ slug: st
           hours={hours}
           menu={menu}
           photos={photos}
+          stats={stats}
         />
       </main>
     </div>
