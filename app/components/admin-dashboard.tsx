@@ -154,7 +154,7 @@ export function AdminDashboard({
   );
 }
 
-// ── Reservations Tab with Table Turn Logic ──
+// ── Reservations Tab ──
 
 function ReservationsTab({ bookings, tables, today, slotDuration }: {
   bookings: Booking[]; tables: RestaurantTable[]; today: string; slotDuration: number;
@@ -162,114 +162,185 @@ function ReservationsTab({ bookings, tables, today, slotDuration }: {
   const todaysBookings = bookings.filter(b => b.booking_date === today);
   const upcomingBookings = bookings.filter(b => b.booking_date > today);
   const activeTables = tables.filter(t => t.is_active).sort((a, b) => a.sort_order - b.sort_order);
-  const zones = [...new Set(activeTables.map(t => t.zone || "Main"))];
 
   const now = new Date();
   const nowMins = now.getHours() * 60 + now.getMinutes();
 
-  function getTableStatus(table: RestaurantTable) {
-    const tableBookings = todaysBookings.filter(b =>
-      b.table_id === table.id && (b.status === "confirmed" || b.status === "seated")
-    ).sort((a, b) => timeToMins(a.booking_time) - timeToMins(b.booking_time));
-
-    const current = tableBookings.find(b => {
-      const start = timeToMins(b.booking_time);
-      const end = start + (b.duration_minutes || slotDuration);
-      return nowMins >= start && nowMins < end;
-    });
-
-    const next = tableBookings.find(b => {
-      const start = timeToMins(b.booking_time);
-      return start > nowMins;
-    });
-
-    if (current) {
-      const end = timeToMins(current.booking_time) + (current.duration_minutes || slotDuration);
-      const minsLeft = end - nowMins;
-      return {
-        status: minsLeft <= 15 ? "turning" as const : "occupied" as const,
-        booking: current,
-        minsLeft,
-        next,
-      };
-    }
-
-    if (next) {
-      const minsUntil = timeToMins(next.booking_time) - nowMins;
-      return {
-        status: minsUntil <= 30 ? "upcoming" as const : "open" as const,
-        booking: null,
-        minsLeft: 0,
-        next,
-      };
-    }
-
-    return { status: "open" as const, booking: null, minsLeft: 0, next: null };
-  }
+  const arriving = todaysBookings.filter(b => b.status === "confirmed").sort((a, b) => timeToMins(a.booking_time) - timeToMins(b.booking_time));
+  const seated = todaysBookings.filter(b => b.status === "seated").sort((a, b) => timeToMins(a.booking_time) - timeToMins(b.booking_time));
+  const done = todaysBookings.filter(b => b.status === "completed" || b.status === "no_show");
 
   return (
     <div>
-      {/* Floor view */}
-      <div className="mb-10">
-        <h3 className="text-sm font-bold text-neutral-600 uppercase tracking-wider mb-4">Floor — Right Now</h3>
-        {zones.map(zone => {
-          const zoneTables = activeTables.filter(t => (t.zone || "Main") === zone);
-          return (
-            <div key={zone} className="mb-6">
-              <div className="text-xs font-bold text-neutral-400 uppercase tracking-wider mb-2">{zone}</div>
-              <div className="flex gap-2 flex-wrap">
-                {zoneTables.map(table => {
-                  const ts = getTableStatus(table);
-                  const colors = {
-                    open: "border-emerald-300 bg-emerald-50 text-emerald-700",
-                    occupied: "border-rose-300 bg-rose-50 text-rose-700",
-                    turning: "border-amber-300 bg-amber-50 text-amber-700",
-                    upcoming: "border-blue-200 bg-blue-50 text-blue-700",
-                  };
+      {/* Arriving */}
+      {arriving.length > 0 && (
+        <div className="mb-8">
+          <h3 className="text-sm font-bold text-neutral-600 uppercase tracking-wider mb-3">Arriving ({arriving.length})</h3>
+          <div className="border border-neutral-200 rounded-lg overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="bg-neutral-50 border-b border-neutral-200">
+                  <th className="px-4 py-2.5 text-left font-semibold text-neutral-600">Time</th>
+                  <th className="px-4 py-2.5 text-left font-semibold text-neutral-600">Guest</th>
+                  <th className="px-4 py-2.5 text-right font-semibold text-neutral-600">Party</th>
+                  <th className="px-4 py-2.5 text-left font-semibold text-neutral-600">Table</th>
+                  <th className="px-4 py-2.5 text-left font-semibold text-neutral-600">Notes</th>
+                  <th className="px-4 py-2.5 text-right font-semibold text-neutral-600"></th>
+                </tr>
+              </thead>
+              <tbody>
+                {arriving.map(b => {
+                  const tableName = activeTables.find(t => t.id === b.table_id)?.name;
                   return (
-                    <div key={table.id} className={`border rounded-lg px-4 py-3 min-w-[100px] ${colors[ts.status]}`}>
-                      <div className="text-sm font-bold">{table.name}</div>
-                      <div className="text-xs mt-0.5">{table.capacity} seats</div>
-                      <div className="text-[10px] font-semibold mt-1 uppercase">
-                        {ts.status === "open" && "OPEN"}
-                        {ts.status === "occupied" && `${ts.minsLeft}m left`}
-                        {ts.status === "turning" && `TURNING — ${ts.minsLeft}m`}
-                        {ts.status === "upcoming" && `Next: ${formatTime(ts.next!.booking_time)}`}
-                      </div>
-                      {ts.booking && (
-                        <div className="text-[10px] mt-0.5 truncate">{ts.booking.clients?.name} · {ts.booking.party_size}p</div>
-                      )}
-                    </div>
+                    <tr key={b.id} className="border-b border-neutral-100 hover:bg-neutral-50">
+                      <td className="px-4 py-3 tabular-nums font-bold text-neutral-900">{formatTime(b.booking_time)}</td>
+                      <td className="px-4 py-3">
+                        <div className="font-semibold text-neutral-900">{b.clients?.name ?? "—"}</div>
+                        <div className="text-xs text-neutral-400">{b.clients?.email}</div>
+                      </td>
+                      <td className="px-4 py-3 text-right tabular-nums font-medium">{b.party_size}</td>
+                      <td className="px-4 py-3 text-neutral-600">{tableName ?? "—"}</td>
+                      <td className="px-4 py-3 text-neutral-500 max-w-[200px] truncate">{b.notes || "—"}</td>
+                      <td className="px-4 py-3 text-right">
+                        <div className="flex items-center justify-end gap-1">
+                          <ActionBtn label="Seat" onClick={() => seatBooking(b.id).then(() => location.reload())} color="emerald" />
+                          <ActionBtn label="No-show" onClick={() => noShowBooking(b.id).then(() => location.reload())} color="amber" />
+                          <ActionBtn label="Cancel" onClick={() => cancelBooking(b.id).then(() => location.reload())} color="rose" />
+                        </div>
+                      </td>
+                    </tr>
                   );
                 })}
-              </div>
-            </div>
-          );
-        })}
-        <div className="flex gap-4 text-xs text-neutral-500 mt-4">
-          <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-emerald-200" /> Open</span>
-          <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-rose-200" /> Occupied</span>
-          <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-amber-200" /> Turning (15m or less)</span>
-          <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-blue-200" /> Next booking within 30m</span>
+              </tbody>
+            </table>
+          </div>
         </div>
-      </div>
+      )}
 
-      {/* Today's bookings with actions */}
-      {todaysBookings.length > 0 && (
+      {/* Seated */}
+      {seated.length > 0 && (
         <div className="mb-8">
-          <h3 className="text-sm font-bold text-neutral-600 uppercase tracking-wider mb-3">Today</h3>
-          <BookingTable bookings={todaysBookings} tables={activeTables} showActions />
+          <h3 className="text-sm font-bold text-neutral-600 uppercase tracking-wider mb-3">Seated ({seated.length})</h3>
+          <div className="border border-neutral-200 rounded-lg overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="bg-neutral-50 border-b border-neutral-200">
+                  <th className="px-4 py-2.5 text-left font-semibold text-neutral-600">Time Left</th>
+                  <th className="px-4 py-2.5 text-left font-semibold text-neutral-600">Guest</th>
+                  <th className="px-4 py-2.5 text-right font-semibold text-neutral-600">Party</th>
+                  <th className="px-4 py-2.5 text-left font-semibold text-neutral-600">Table</th>
+                  <th className="px-4 py-2.5 text-left font-semibold text-neutral-600">Seated</th>
+                  <th className="px-4 py-2.5 text-left font-semibold text-neutral-600">Notes</th>
+                  <th className="px-4 py-2.5 text-right font-semibold text-neutral-600"></th>
+                </tr>
+              </thead>
+              <tbody>
+                {seated.map(b => {
+                  const end = timeToMins(b.booking_time) + (b.duration_minutes || slotDuration);
+                  const minsLeft = end - nowMins;
+                  const tableName = activeTables.find(t => t.id === b.table_id)?.name;
+                  const turning = minsLeft <= 15;
+                  return (
+                    <tr key={b.id} className={`border-b border-neutral-100 ${turning ? "bg-amber-50" : "hover:bg-neutral-50"}`}>
+                      <td className={`px-4 py-3 tabular-nums font-bold ${turning ? "text-amber-700" : "text-neutral-900"}`}>
+                        {minsLeft > 0 ? `${minsLeft}m` : "Over"}
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="font-semibold text-neutral-900">{b.clients?.name ?? "—"}</div>
+                        <div className="text-xs text-neutral-400">{b.clients?.email}</div>
+                      </td>
+                      <td className="px-4 py-3 text-right tabular-nums font-medium">{b.party_size}</td>
+                      <td className="px-4 py-3 text-neutral-600">{tableName ?? "—"}</td>
+                      <td className="px-4 py-3 tabular-nums text-neutral-500">{formatTime(b.booking_time)}</td>
+                      <td className="px-4 py-3 text-neutral-500 max-w-[200px] truncate">{b.notes || "—"}</td>
+                      <td className="px-4 py-3 text-right">
+                        <div className="flex items-center justify-end gap-1">
+                          <ActionBtn label="Done" onClick={() => completeBooking(b.id).then(() => location.reload())} color="blue" />
+                          <ActionBtn label="No-show" onClick={() => noShowBooking(b.id).then(() => location.reload())} color="amber" />
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
 
+      {/* Done today */}
+      {done.length > 0 && (
+        <div className="mb-8">
+          <h3 className="text-sm font-bold text-neutral-600 uppercase tracking-wider mb-3">Done ({done.length})</h3>
+          <div className="border border-neutral-100 rounded-lg overflow-x-auto">
+            <table className="w-full text-sm text-neutral-400">
+              <tbody>
+                {done.map(b => {
+                  const tableName = activeTables.find(t => t.id === b.table_id)?.name;
+                  return (
+                    <tr key={b.id} className="border-b border-neutral-50">
+                      <td className="px-4 py-2 tabular-nums">{formatTime(b.booking_time)}</td>
+                      <td className="px-4 py-2">{b.clients?.name ?? "—"}</td>
+                      <td className="px-4 py-2 text-right tabular-nums">{b.party_size}</td>
+                      <td className="px-4 py-2">{tableName ?? "—"}</td>
+                      <td className="px-4 py-2">
+                        <span className={b.status === "no_show" ? "text-amber-500 font-medium" : ""}>
+                          {b.status === "no_show" ? "no-show" : "done"}
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* Upcoming (future days) */}
       {upcomingBookings.length > 0 && (
-        <div>
-          <h3 className="text-sm font-bold text-neutral-600 uppercase tracking-wider mb-3">Upcoming</h3>
-          <BookingTable bookings={upcomingBookings} tables={activeTables} showActions={false} />
+        <div className="mb-8">
+          <h3 className="text-sm font-bold text-neutral-600 uppercase tracking-wider mb-3">Upcoming ({upcomingBookings.length})</h3>
+          <div className="border border-neutral-200 rounded-lg overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="bg-neutral-50 border-b border-neutral-200">
+                  <th className="px-4 py-2.5 text-left font-semibold text-neutral-600">Date</th>
+                  <th className="px-4 py-2.5 text-left font-semibold text-neutral-600">Time</th>
+                  <th className="px-4 py-2.5 text-left font-semibold text-neutral-600">Guest</th>
+                  <th className="px-4 py-2.5 text-right font-semibold text-neutral-600">Party</th>
+                  <th className="px-4 py-2.5 text-left font-semibold text-neutral-600">Table</th>
+                  <th className="px-4 py-2.5 text-left font-semibold text-neutral-600">Status</th>
+                  <th className="px-4 py-2.5 text-left font-semibold text-neutral-600">Notes</th>
+                </tr>
+              </thead>
+              <tbody>
+                {upcomingBookings.map(b => {
+                  const tableName = activeTables.find(t => t.id === b.table_id)?.name;
+                  return (
+                    <tr key={b.id} className="border-b border-neutral-100 hover:bg-neutral-50">
+                      <td className="px-4 py-3 tabular-nums text-neutral-700">
+                        {new Date(b.booking_date + "T12:00:00").toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}
+                      </td>
+                      <td className="px-4 py-3 tabular-nums font-medium text-neutral-900">{formatTime(b.booking_time)}</td>
+                      <td className="px-4 py-3">
+                        <div className="font-semibold text-neutral-900">{b.clients?.name ?? "—"}</div>
+                        <div className="text-xs text-neutral-400">{b.clients?.email}</div>
+                      </td>
+                      <td className="px-4 py-3 text-right tabular-nums font-medium">{b.party_size}</td>
+                      <td className="px-4 py-3 text-neutral-600">{tableName ?? "—"}</td>
+                      <td className="px-4 py-3"><StatusBadge status={b.status} /></td>
+                      <td className="px-4 py-3 text-neutral-500 max-w-[200px] truncate">{b.notes || "—"}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
 
-      {todaysBookings.length === 0 && upcomingBookings.length === 0 && (
+      {arriving.length === 0 && seated.length === 0 && upcomingBookings.length === 0 && (
         <p className="text-sm text-neutral-400 py-8 text-center">No bookings yet.</p>
       )}
 
@@ -305,68 +376,6 @@ function downloadCSV(csv: string, filename: string) {
   a.download = filename;
   a.click();
   URL.revokeObjectURL(url);
-}
-
-function BookingTable({ bookings, tables, showActions }: { bookings: Booking[]; tables: RestaurantTable[]; showActions: boolean }) {
-  return (
-    <div className="border border-neutral-200 rounded-lg overflow-x-auto">
-      <table className="w-full text-sm">
-        <thead>
-          <tr className="bg-neutral-50 border-b border-neutral-200">
-            <th className="px-4 py-2.5 text-left font-semibold text-neutral-600">Time</th>
-            <th className="px-4 py-2.5 text-left font-semibold text-neutral-600">Guest</th>
-            <th className="px-4 py-2.5 text-right font-semibold text-neutral-600">Party</th>
-            <th className="px-4 py-2.5 text-left font-semibold text-neutral-600">Table</th>
-            <th className="px-4 py-2.5 text-left font-semibold text-neutral-600">Status</th>
-            <th className="px-4 py-2.5 text-left font-semibold text-neutral-600">Notes</th>
-            <th className="px-4 py-2.5 text-left font-semibold text-neutral-600">Date</th>
-            {showActions && <th className="px-4 py-2.5 text-right font-semibold text-neutral-600">Actions</th>}
-          </tr>
-        </thead>
-        <tbody>
-          {bookings.map(b => {
-            const tableName = tables.find(t => t.id === b.table_id)?.name;
-            return (
-              <tr key={b.id} className="border-b border-neutral-100 hover:bg-neutral-50 transition-colors">
-                <td className="px-4 py-3 tabular-nums font-medium text-neutral-900">{formatTime(b.booking_time)}</td>
-                <td className="px-4 py-3">
-                  <div className="font-semibold text-neutral-900">{b.clients?.name ?? "—"}</div>
-                  <div className="text-xs text-neutral-400">{b.clients?.email}</div>
-                </td>
-                <td className="px-4 py-3 text-right tabular-nums font-medium text-neutral-700">{b.party_size}</td>
-                <td className="px-4 py-3 text-neutral-600">{tableName ?? "Unassigned"}</td>
-                <td className="px-4 py-3">
-                  <StatusBadge status={b.status} />
-                </td>
-                <td className="px-4 py-3 text-neutral-500 max-w-[200px] truncate">{b.notes || "—"}</td>
-                <td className="px-4 py-3 text-neutral-500 tabular-nums">
-                  {new Date(b.booking_date + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" })}
-                </td>
-                {showActions && (
-                  <td className="px-4 py-3 text-right">
-                    <div className="flex items-center justify-end gap-1">
-                      {b.status === "confirmed" && (
-                        <ActionBtn label="Seat" onClick={() => seatBooking(b.id).then(() => location.reload())} color="emerald" />
-                      )}
-                      {b.status === "seated" && (
-                        <ActionBtn label="Complete" onClick={() => completeBooking(b.id).then(() => location.reload())} color="blue" />
-                      )}
-                      {(b.status === "confirmed" || b.status === "seated") && (
-                        <>
-                          <ActionBtn label="No-show" onClick={() => noShowBooking(b.id).then(() => location.reload())} color="amber" />
-                          <ActionBtn label="Cancel" onClick={() => cancelBooking(b.id).then(() => location.reload())} color="rose" />
-                        </>
-                      )}
-                    </div>
-                  </td>
-                )}
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
-    </div>
-  );
 }
 
 // ── Menu Tab ──
