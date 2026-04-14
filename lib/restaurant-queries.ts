@@ -229,6 +229,17 @@ export async function getAvailableSlots(businessId: string, date: string, partyS
   const tableCount = inventory.count;
   const turnTime = inventory.turn_time_minutes;
 
+  // Get blocked slots for this date
+  const blockedSlots = await getBlockedSlots(businessId, date);
+  // If any row has table_size=0, the whole day is blocked
+  const dayBlocked = blockedSlots.some(b => b.table_size === 0);
+  if (dayBlocked) return [];
+  const blockedSet = new Set(
+    blockedSlots
+      .filter(b => b.table_size === neededSize)
+      .map(b => b.slot_time.slice(0, 5))
+  );
+
   // Get existing bookings for this date that use this table size
   const existingBookings = await getBookingsForDate(businessId, date);
 
@@ -253,9 +264,17 @@ export async function getAvailableSlots(businessId: string, date: string, partyS
   const slots: { time: string; available: boolean }[] = [];
 
   for (let mins = openMinutes; mins <= lastSeating; mins += 30) {
+    const timeStr = minutesToTime(mins);
+
     // Enforce minimum advance
     if (mins < earliestMins) {
-      slots.push({ time: minutesToTime(mins), available: false });
+      slots.push({ time: timeStr, available: false });
+      continue;
+    }
+
+    // Check if slot is blocked by manager
+    if (blockedSet.has(timeStr)) {
+      slots.push({ time: timeStr, available: false });
       continue;
     }
 
@@ -268,10 +287,21 @@ export async function getAvailableSlots(businessId: string, date: string, partyS
     });
 
     const available = overlapping.length < tableCount;
-    slots.push({ time: minutesToTime(mins), available });
+    slots.push({ time: timeStr, available });
   }
 
   return slots;
+}
+
+// ── Blocked Slots ──
+
+export async function getBlockedSlots(businessId: string, date: string) {
+  const { data } = await supabase
+    .from("blocked_slots")
+    .select("slot_time, table_size")
+    .eq("business_id", businessId)
+    .eq("slot_date", date);
+  return data ?? [];
 }
 
 // ── Table Inventory ──

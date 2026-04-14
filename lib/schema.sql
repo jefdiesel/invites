@@ -244,6 +244,20 @@ CREATE TABLE IF NOT EXISTS table_inventory (
 ALTER TABLE table_inventory ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Allow all table_inventory" ON table_inventory FOR ALL USING (true) WITH CHECK (true);
 
+-- Blocked slots (manager overrides)
+CREATE TABLE IF NOT EXISTS blocked_slots (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  business_id UUID NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
+  slot_date DATE NOT NULL,
+  slot_time TIME NOT NULL,
+  table_size INT NOT NULL,          -- which size is blocked (2, 4, 6, etc. or 0 for all sizes)
+  created_at TIMESTAMPTZ DEFAULT now(),
+  UNIQUE(business_id, slot_date, slot_time, table_size)
+);
+
+ALTER TABLE blocked_slots ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Allow all blocked_slots" ON blocked_slots FOR ALL USING (true) WITH CHECK (true);
+
 -- Guest magic links (for /my portal login)
 CREATE TABLE IF NOT EXISTS guest_magic_links (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

@@ -648,6 +648,61 @@ export async function updateTableInventory(businessId: string, inventory: {
   revalidatePath(`/r/[slug]`, "layout");
 }
 
+// ── Slot Blocking ──
+
+export async function toggleSlotBlock(businessId: string, date: string, time: string, tableSize: number) {
+  // Check if already blocked
+  const { data: existing } = await supabase
+    .from("blocked_slots")
+    .select("id")
+    .eq("business_id", businessId)
+    .eq("slot_date", date)
+    .eq("slot_time", time)
+    .eq("table_size", tableSize)
+    .single();
+
+  if (existing) {
+    // Unblock
+    await supabase.from("blocked_slots").delete().eq("id", existing.id);
+  } else {
+    // Block
+    await supabase.from("blocked_slots").insert({
+      id: randomUUID(),
+      business_id: businessId,
+      slot_date: date,
+      slot_time: time,
+      table_size: tableSize,
+    });
+  }
+}
+
+export async function blockAllSlotsForDate(businessId: string, date: string) {
+  // Block all sizes at all times — use size 0 meaning "all"
+  const { data: existing } = await supabase
+    .from("blocked_slots")
+    .select("id")
+    .eq("business_id", businessId)
+    .eq("slot_date", date)
+    .eq("table_size", 0);
+
+  if (existing && existing.length > 0) {
+    // Already have a block-all for this date, remove it (toggle off)
+    await supabase.from("blocked_slots").delete().eq("business_id", businessId).eq("slot_date", date).eq("table_size", 0);
+  } else {
+    // Also remove individual blocks since we're doing a blanket block
+    await supabase.from("blocked_slots").delete().eq("business_id", businessId).eq("slot_date", date);
+    // Insert one block-all entry for each slot time
+    // Actually simpler: just insert one row with size=0 and a sentinel time
+    await supabase.from("blocked_slots").insert({
+      id: randomUUID(),
+      business_id: businessId,
+      slot_date: date,
+      slot_time: "00:00",
+      table_size: 0,
+    });
+  }
+}
+
 // ── Check-in ──
 
 export async function checkinBooking(bookingId: string) {

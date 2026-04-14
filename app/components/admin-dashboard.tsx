@@ -11,6 +11,7 @@ import {
   adminCancelBooking,
   adminCancelAllDay,
   updateTableInventory,
+  toggleSlotBlock,
 } from "@/lib/restaurant-actions";
 import type { Theme } from "@/lib/themes";
 
@@ -185,6 +186,33 @@ function ReservationsTab({ bookings, tables, today, slotDuration, businessId, ho
   const [cancelAllDate, setCancelAllDate] = useState<string | null>(null);
   const [cancelAllNote, setCancelAllNote] = useState("");
   const [cancellingAll, setCancellingAll] = useState(false);
+  const [showSlots, setShowSlots] = useState(false);
+  const [blockedSlots, setBlockedSlots] = useState<Set<string>>(new Set());
+  const [loadingSlots, setLoadingSlots] = useState(false);
+
+  async function loadBlockedSlots(date: string) {
+    setLoadingSlots(true);
+    try {
+      const res = await fetch(`/api/r/${businessId}/blocked-slots?date=${date}`);
+      if (res.ok) {
+        const data = await res.json();
+        setBlockedSlots(new Set((data.blocked as string[]) || []));
+      }
+    } catch { /* */ }
+    setLoadingSlots(false);
+  }
+
+  async function handleToggleSlot(time: string) {
+    const key = `${time}:all`;
+    const newBlocked = new Set(blockedSlots);
+    if (newBlocked.has(time)) {
+      newBlocked.delete(time);
+    } else {
+      newBlocked.add(time);
+    }
+    setBlockedSlots(newBlocked);
+    await toggleSlotBlock(businessId, selectedDate, time, 0);
+  }
 
   const activeTables = tables.filter(t => t.is_active).sort((a, b) => a.sort_order - b.sort_order);
   const now = new Date();
@@ -406,6 +434,48 @@ function ReservationsTab({ bookings, tables, today, slotDuration, businessId, ho
               </button>
             )}
           </div>
+
+          {/* Slot toggles */}
+          {selectedHours && (
+            <div className="mb-6">
+              <button onClick={() => { setShowSlots(!showSlots); if (!showSlots) loadBlockedSlots(selectedDate); }}
+                className="text-xs font-medium text-neutral-500 hover:text-neutral-900 transition-colors mb-2">
+                {showSlots ? "Hide slot controls" : "Manage available slots"}
+              </button>
+              {showSlots && (
+                <div className="border border-neutral-200 rounded-lg p-4 bg-neutral-50">
+                  <p className="text-xs text-neutral-400 mb-3">Toggle slots on/off. Blocked slots won't show to guests.</p>
+                  {loadingSlots ? (
+                    <p className="text-xs text-neutral-400">Loading...</p>
+                  ) : (
+                    <div className="flex flex-wrap gap-2">
+                      {(() => {
+                        const open = timeToMins(selectedHours.open_time);
+                        const last = selectedHours.last_seating ? timeToMins(selectedHours.last_seating) : timeToMins(selectedHours.close_time) - 90;
+                        const slots: string[] = [];
+                        for (let m = open; m <= last; m += 30) {
+                          slots.push(formatTime2(m));
+                        }
+                        return slots.map(time => {
+                          const isBlocked = blockedSlots.has(time);
+                          return (
+                            <button key={time} onClick={() => handleToggleSlot(time)}
+                              className={`px-3 py-2 text-xs font-medium rounded-lg border transition-colors ${
+                                isBlocked
+                                  ? "bg-rose-50 border-rose-200 text-rose-500 line-through"
+                                  : "bg-white border-neutral-200 text-neutral-900 hover:border-neutral-400"
+                              }`}>
+                              {fmtTimeShort(time)}
+                            </button>
+                          );
+                        });
+                      })()}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
 
           {!selectedHours && dayBookings.length === 0 ? (
             <div className="text-center py-12 text-neutral-300">
@@ -1633,6 +1703,19 @@ function timeToMins(time: string): number {
 }
 
 function formatTime(time: string): string {
+  const [h, m] = time.split(":").map(Number);
+  const ampm = h >= 12 ? "PM" : "AM";
+  const hour = h % 12 || 12;
+  return m === 0 ? `${hour} ${ampm}` : `${hour}:${m.toString().padStart(2, "0")} ${ampm}`;
+}
+
+function formatTime2(mins: number): string {
+  const h = Math.floor(mins / 60);
+  const m = mins % 60;
+  return `${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}`;
+}
+
+function fmtTimeShort(time: string): string {
   const [h, m] = time.split(":").map(Number);
   const ampm = h >= 12 ? "PM" : "AM";
   const hour = h % 12 || 12;
