@@ -109,7 +109,7 @@ export function AdminDashboard({
         <PhotosTab photos={photos} businessId={business.id} />
       )}
       {tab === "guests" && (
-        <GuestsTab clients={clients} />
+        <GuestsTab clients={clients} businessId={business.id} />
       )}
     </div>
   );
@@ -470,6 +470,9 @@ function SiteTab({ business, hours }: { business: Business; hours: Hour[] }) {
           </div>
         </section>
 
+        {/* Hours */}
+        <HoursEditor hours={hours} businessId={business.id} />
+
         {/* About */}
         <section>
           <h3 className="text-sm font-bold text-neutral-600 uppercase tracking-wider mb-4">About Page</h3>
@@ -597,8 +600,14 @@ function PhotosTab({ photos, businessId }: { photos: Photo[]; businessId: string
 
 // ── Guests Tab ──
 
-function GuestsTab({ clients }: { clients: BizClient[] }) {
+function GuestsTab({ clients, businessId }: { clients: BizClient[]; businessId: string }) {
   const [search, setSearch] = useState("");
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editNotes, setEditNotes] = useState("");
+  const [editDietary, setEditDietary] = useState("");
+  const [editPrefs, setEditPrefs] = useState("");
+  const [editTags, setEditTags] = useState("");
+  const [savingGuest, setSavingGuest] = useState(false);
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase().trim();
@@ -608,53 +617,95 @@ function GuestsTab({ clients }: { clients: BizClient[] }) {
       c.clients?.email.toLowerCase().includes(q) ||
       c.clients?.phone?.toLowerCase().includes(q) ||
       c.tags?.some(t => t.toLowerCase().includes(q)) ||
-      c.dietary?.toLowerCase().includes(q)
+      c.dietary?.toLowerCase().includes(q) ||
+      c.notes?.toLowerCase().includes(q)
     );
   }, [clients, search]);
+
+  function startEdit(c: BizClient) {
+    setEditingId(c.id);
+    setEditNotes(c.notes || "");
+    setEditDietary(c.dietary || "");
+    setEditPrefs(c.preferences || "");
+    setEditTags((c.tags || []).join(", "));
+  }
+
+  async function saveEdit(clientId: string) {
+    setSavingGuest(true);
+    const { updateBusinessClientNotes } = await import("@/lib/restaurant-actions");
+    await updateBusinessClientNotes(businessId, clientId, {
+      notes: editNotes,
+      dietary: editDietary,
+      preferences: editPrefs,
+      tags: editTags.split(",").map(t => t.trim()).filter(Boolean),
+    });
+    setEditingId(null);
+    setSavingGuest(false);
+    location.reload();
+  }
+
+  const inputClass = "w-full border border-neutral-200 rounded-lg px-3 py-1.5 text-sm bg-white text-neutral-900 focus:outline-none focus:ring-2 focus:ring-neutral-900/10";
 
   return (
     <div>
       <div className="mb-4">
         <input type="text" value={search} onChange={e => setSearch(e.target.value)}
-          placeholder="Search by name, email, phone, tags..."
+          placeholder="Search by name, email, phone, tags, dietary, notes..."
           className="w-full max-w-md rounded-lg border border-neutral-200 bg-white px-4 py-2.5 text-sm text-neutral-900 placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-neutral-900/10" />
       </div>
       <div className="text-sm text-neutral-500 mb-3">{filtered.length} guests</div>
-      <div className="border border-neutral-200 rounded-lg overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="bg-neutral-50 border-b border-neutral-200">
-              <th className="px-4 py-2.5 text-left font-semibold text-neutral-600">Name</th>
-              <th className="px-4 py-2.5 text-left font-semibold text-neutral-600">Email</th>
-              <th className="px-4 py-2.5 text-right font-semibold text-neutral-600">Visits</th>
-              <th className="px-4 py-2.5 text-left font-semibold text-neutral-600">Last Visit</th>
-              <th className="px-4 py-2.5 text-left font-semibold text-neutral-600">Tags</th>
-              <th className="px-4 py-2.5 text-left font-semibold text-neutral-600">Dietary</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filtered.length === 0 ? (
-              <tr><td colSpan={6} className="px-4 py-8 text-center text-neutral-400">{search ? "No guests match." : "No guests yet."}</td></tr>
-            ) : filtered.map(c => (
-              <tr key={c.id} className="border-b border-neutral-100 hover:bg-neutral-50 transition-colors">
-                <td className="px-4 py-3 font-semibold text-neutral-900">{c.clients?.name ?? "—"}</td>
-                <td className="px-4 py-3 text-neutral-500">{c.clients?.email ?? "—"}</td>
-                <td className="px-4 py-3 text-right tabular-nums font-medium text-neutral-700">{c.visit_count}</td>
-                <td className="px-4 py-3 text-neutral-500 tabular-nums">
-                  {c.last_visit ? new Date(c.last_visit).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : "—"}
-                </td>
-                <td className="px-4 py-3">
-                  {c.tags?.length > 0 ? (
-                    <div className="flex gap-1 flex-wrap">
-                      {c.tags.map(t => <span key={t} className="px-1.5 py-0.5 rounded text-xs font-medium bg-neutral-100 text-neutral-600">{t}</span>)}
-                    </div>
-                  ) : "—"}
-                </td>
-                <td className="px-4 py-3 text-neutral-500">{c.dietary || "—"}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      <div className="space-y-2">
+        {filtered.length === 0 ? (
+          <div className="text-center text-neutral-400 py-8">{search ? "No guests match." : "No guests yet."}</div>
+        ) : filtered.map(c => (
+          <div key={c.id} className="border border-neutral-200 rounded-lg bg-white hover:border-neutral-300 transition-colors">
+            <div className="flex items-center gap-4 px-4 py-3 cursor-pointer" onClick={() => editingId === c.id ? setEditingId(null) : startEdit(c)}>
+              <div className="flex-1 min-w-0">
+                <div className="font-semibold text-neutral-900">{c.clients?.name ?? "—"}</div>
+                <div className="text-sm text-neutral-400">{c.clients?.email} {c.clients?.phone ? `· ${c.clients.phone}` : ""}</div>
+              </div>
+              <div className="text-right tabular-nums text-sm">
+                <div className="font-medium text-neutral-700">{c.visit_count} visits</div>
+                <div className="text-neutral-400">{c.last_visit ? new Date(c.last_visit).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : "—"}</div>
+              </div>
+              <div className="flex gap-1 flex-wrap max-w-[200px]">
+                {c.tags?.map(t => <span key={t} className="px-1.5 py-0.5 rounded text-xs font-medium bg-neutral-100 text-neutral-600">{t}</span>)}
+                {c.dietary && <span className="px-1.5 py-0.5 rounded text-xs font-medium bg-amber-50 text-amber-700">{c.dietary}</span>}
+              </div>
+              <span className="text-neutral-300 text-sm">{editingId === c.id ? "▲" : "▼"}</span>
+            </div>
+
+            {editingId === c.id && (
+              <div className="border-t border-neutral-100 px-4 py-3 bg-neutral-50 rounded-b-lg">
+                <div className="grid grid-cols-2 gap-3 mb-3">
+                  <div>
+                    <label className="text-xs font-semibold text-neutral-500 mb-1 block">Notes</label>
+                    <textarea value={editNotes} onChange={e => setEditNotes(e.target.value)} rows={2} className={inputClass} placeholder="Window seat preference, birthday June 4..." />
+                  </div>
+                  <div>
+                    <label className="text-xs font-semibold text-neutral-500 mb-1 block">Preferences</label>
+                    <textarea value={editPrefs} onChange={e => setEditPrefs(e.target.value)} rows={2} className={inputClass} placeholder="Quiet table, no shellfish..." />
+                  </div>
+                  <div>
+                    <label className="text-xs font-semibold text-neutral-500 mb-1 block">Dietary</label>
+                    <input value={editDietary} onChange={e => setEditDietary(e.target.value)} className={inputClass} placeholder="Vegetarian, gluten-free, nut allergy..." />
+                  </div>
+                  <div>
+                    <label className="text-xs font-semibold text-neutral-500 mb-1 block">Tags (comma separated)</label>
+                    <input value={editTags} onChange={e => setEditTags(e.target.value)} className={inputClass} placeholder="VIP, Regular, Industry..." />
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <button onClick={() => saveEdit(c.client_id)} disabled={savingGuest}
+                    className="px-3 py-1.5 bg-neutral-900 text-white text-sm font-bold rounded-lg hover:bg-neutral-700 disabled:opacity-50 transition-colors">
+                    {savingGuest ? "Saving..." : "Save"}
+                  </button>
+                  <button onClick={() => setEditingId(null)} className="text-sm text-neutral-400 hover:text-neutral-600 transition-colors px-2">Cancel</button>
+                </div>
+              </div>
+            )}
+          </div>
+        ))}
       </div>
     </div>
   );
@@ -709,6 +760,87 @@ function ActionBtn({ label, onClick, color }: { label: string; onClick: () => vo
     <button onClick={onClick} className={`px-2 py-1 text-xs font-medium rounded transition-colors ${colors[color] ?? ""}`}>
       {label}
     </button>
+  );
+}
+
+const DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+
+function HoursEditor({ hours: initialHours, businessId }: { hours: Hour[]; businessId: string }) {
+  const [hours, setHours] = useState<Hour[]>(() => {
+    // Ensure all 7 days exist
+    const existing = new Map(initialHours.map(h => [h.day_of_week, h]));
+    return Array.from({ length: 7 }, (_, i) => existing.get(i) ?? {
+      id: `new-${i}`, day_of_week: i, open_time: "17:00", close_time: "22:00", last_seating: "20:30", is_closed: true,
+    });
+  });
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+
+  function updateDay(day: number, field: string, value: string | boolean) {
+    setHours(prev => prev.map(h => h.day_of_week === day ? { ...h, [field]: value } : h));
+  }
+
+  async function handleSave() {
+    setSaving(true);
+    await updateBusinessHours(businessId, hours.map(h => ({
+      day_of_week: h.day_of_week,
+      open_time: h.open_time,
+      close_time: h.close_time,
+      last_seating: h.last_seating,
+      is_closed: h.is_closed,
+    })));
+    setSaving(false);
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2000);
+  }
+
+  const inputClass = "border border-neutral-200 rounded-lg px-2 py-1.5 text-sm bg-white text-neutral-900 focus:outline-none focus:ring-2 focus:ring-neutral-900/10";
+
+  return (
+    <section>
+      <h3 className="text-sm font-bold text-neutral-600 uppercase tracking-wider mb-4">Hours</h3>
+      <div className="border border-neutral-200 rounded-lg overflow-hidden">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="bg-neutral-50 border-b border-neutral-200">
+              <th className="px-3 py-2 text-left font-semibold text-neutral-600 w-28">Day</th>
+              <th className="px-3 py-2 text-center font-semibold text-neutral-600 w-16">Open</th>
+              <th className="px-3 py-2 text-left font-semibold text-neutral-600">Opens</th>
+              <th className="px-3 py-2 text-left font-semibold text-neutral-600">Closes</th>
+              <th className="px-3 py-2 text-left font-semibold text-neutral-600">Last Seating</th>
+            </tr>
+          </thead>
+          <tbody>
+            {hours.map(h => (
+              <tr key={h.day_of_week} className="border-b border-neutral-100">
+                <td className="px-3 py-2 font-medium text-neutral-900">{DAYS[h.day_of_week]}</td>
+                <td className="px-3 py-2 text-center">
+                  <input type="checkbox" checked={!h.is_closed} onChange={e => updateDay(h.day_of_week, "is_closed", !e.target.checked)}
+                    className="w-4 h-4 rounded border-neutral-300" />
+                </td>
+                <td className="px-3 py-2">
+                  {!h.is_closed && <input type="time" value={h.open_time} onChange={e => updateDay(h.day_of_week, "open_time", e.target.value)} className={inputClass} />}
+                  {h.is_closed && <span className="text-neutral-400">Closed</span>}
+                </td>
+                <td className="px-3 py-2">
+                  {!h.is_closed && <input type="time" value={h.close_time} onChange={e => updateDay(h.day_of_week, "close_time", e.target.value)} className={inputClass} />}
+                </td>
+                <td className="px-3 py-2">
+                  {!h.is_closed && <input type="time" value={h.last_seating ?? ""} onChange={e => updateDay(h.day_of_week, "last_seating", e.target.value)} className={inputClass} />}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <div className="flex items-center gap-3 mt-3">
+        <button onClick={handleSave} disabled={saving}
+          className="px-4 py-2 bg-neutral-900 text-white text-sm font-bold rounded-lg hover:bg-neutral-700 disabled:opacity-50 transition-colors">
+          {saving ? "Saving..." : "Save Hours"}
+        </button>
+        {saved && <span className="text-sm font-medium text-emerald-600">Saved</span>}
+      </div>
+    </section>
   );
 }
 
