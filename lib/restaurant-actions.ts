@@ -130,19 +130,23 @@ export async function createBooking(
     source: "website",
   });
 
-  // Send confirmation email (don't block the response)
+  // Send confirmation email
   const { data: bizInfo } = await supabase.from("businesses").select("name, slug").eq("id", businessId).single();
   if (bizInfo && data.email) {
-    sendBookingConfirmation({
-      guestEmail: data.email,
-      guestName: data.name,
-      restaurantName: bizInfo.name,
-      date: data.date,
-      time: data.time,
-      partySize: data.partySize,
-      slug: bizInfo.slug,
-      bookingId,
-    }).catch(() => {}); // fire and forget
+    try {
+      await sendBookingConfirmation({
+        guestEmail: data.email,
+        guestName: data.name,
+        restaurantName: bizInfo.name,
+        date: data.date,
+        time: data.time,
+        partySize: data.partySize,
+        slug: bizInfo.slug,
+        bookingId,
+      });
+    } catch (err) {
+      console.error("Email send failed:", err);
+    }
   }
 
   return { bookingId, clientId };
