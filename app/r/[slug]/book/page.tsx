@@ -41,31 +41,50 @@ export default async function BookPage({ params }: { params: Promise<{ slug: str
 
       <main className="flex-1 w-full">
         <div className="max-w-lg mx-auto px-6 py-12 md:py-16">
-          <h1 style={{ fontFamily: displayFont, color: t.text }} className="text-3xl md:text-4xl mb-2">
-            Reserve a Table
-          </h1>
-          <p className="text-sm mb-10" style={{ color: t.textMuted }}>
-            {biz.min_party_size}–{biz.max_party_size} guests · Book up to {biz.booking_window_days} days ahead
-          </p>
-          <BookingForm
-            businessId={biz.id}
-            slug={slug}
-            minParty={biz.min_party_size}
-            maxParty={biz.max_party_size}
-            windowDays={biz.booking_window_days}
-            theme={{
-              accent: t.accent,
-              accentHover: t.accentHover,
-              text: t.text,
-              textMuted: t.textMuted,
-              textLight: t.textLight,
-              bg: t.bg,
-              surface: t.surface,
-              border: t.border,
-              radius: rBtn,
-              displayFont,
-            }}
-          />
+          {biz.is_live === false ? (
+            <>
+              <h1 style={{ fontFamily: displayFont, color: t.text }} className="text-3xl md:text-4xl mb-4">
+                Coming Soon
+              </h1>
+              <p className="text-base mb-6" style={{ color: t.textMuted }}>
+                Online reservations aren't open yet. Check back soon or contact us directly.
+              </p>
+              {biz.phone && (
+                <a href={`tel:${biz.phone}`} className="inline-block text-base font-bold px-6 py-3 rounded-lg transition-colors"
+                  style={{ background: t.accent, color: "#fff", borderRadius: rBtn }}>
+                  Call {biz.phone}
+                </a>
+              )}
+            </>
+          ) : (
+            <>
+              <h1 style={{ fontFamily: displayFont, color: t.text }} className="text-3xl md:text-4xl mb-2">
+                Reserve a Table
+              </h1>
+              <p className="text-sm mb-10" style={{ color: t.textMuted }}>
+                {biz.min_party_size}–{biz.max_party_size} guests · Book up to {biz.booking_window_days} days ahead
+              </p>
+              <BookingForm
+                businessId={biz.id}
+                slug={slug}
+                minParty={biz.min_party_size}
+                maxParty={biz.max_party_size}
+                windowDays={biz.booking_window_days}
+                theme={{
+                  accent: t.accent,
+                  accentHover: t.accentHover,
+                  text: t.text,
+                  textMuted: t.textMuted,
+                  textLight: t.textLight,
+                  bg: t.bg,
+                  surface: t.surface,
+                  border: t.border,
+                  radius: rBtn,
+                  displayFont,
+                }}
+              />
+            </>
+          )}
         </div>
       </main>
 

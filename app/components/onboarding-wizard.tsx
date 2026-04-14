@@ -4,13 +4,14 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   updateBusinessSettings, updateBusinessHours,
-  addTable, addMenuItem,
+  addTable, addMenuItem, setBusinessLive,
 } from "@/lib/restaurant-actions";
 import { themes, type ThemeId } from "@/lib/themes";
 
 type Business = {
   id: string; name: string; slug: string; theme: string;
   about: string; cuisine: string; address: string; phone: string;
+  is_live: boolean;
 };
 
 type Hour = {
@@ -91,7 +92,7 @@ export function OnboardingWizard({ business, slug, existingHours, existingTables
       {step === "hours" && <HoursStep businessId={business.id} existing={existingHours} onDone={next} />}
       {step === "tables" && <TablesStep businessId={business.id} existing={existingTables} onDone={next} />}
       {step === "menu" && <MenuStep businessId={business.id} existing={existingMenu} onDone={next} />}
-      {step === "done" && <DoneStep slug={slug} businessName={business.name} />}
+      {step === "done" && <DoneStep slug={slug} business={business} />}
     </div>
   );
 }
@@ -505,54 +506,96 @@ function MenuStep({ businessId, existing, onDone }: { businessId: string; existi
 
 // ── Done ──
 
-function DoneStep({ slug, businessName }: { slug: string; businessName: string }) {
+function DoneStep({ slug, business }: { slug: string; business: Business }) {
   const router = useRouter();
+  const [live, setLive] = useState(business.is_live ?? false);
+  const [launching, setLaunching] = useState(false);
+
+  async function handleGoLive() {
+    setLaunching(true);
+    await setBusinessLive(business.id, true);
+    setLive(true);
+    setLaunching(false);
+  }
 
   return (
     <div className="text-center py-12">
-      <div className="w-20 h-20 rounded-full bg-emerald-100 flex items-center justify-center mx-auto mb-6">
-        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#059669" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-          <polyline points="20 6 9 17 4 12" />
-        </svg>
-      </div>
+      {!live ? (
+        <>
+          <h2 className="text-3xl font-bold text-neutral-900 mb-3">Ready to go live?</h2>
+          <p className="text-base text-neutral-500 mb-4 max-w-md mx-auto">
+            Your site is set up. When you go live, guests can book reservations at{" "}
+            <a href={`/r/${slug}/book`} target="_blank" className="font-medium text-neutral-900 underline">
+              itsremi.app/r/{slug}
+            </a>.
+          </p>
+          <p className="text-sm text-neutral-400 mb-10 max-w-md mx-auto">
+            You can preview your site first, or go live now and keep editing — everything saves instantly.
+          </p>
 
-      <h2 className="text-3xl font-bold text-neutral-900 mb-3">{businessName} is live</h2>
-      <p className="text-base text-neutral-500 mb-10 max-w-md mx-auto">
-        Your restaurant website is ready. Share it with your team, customize the floor plan, and start taking reservations.
-      </p>
+          <div className="flex flex-col sm:flex-row gap-3 justify-center mb-10">
+            <a href={`/r/${slug}`} target="_blank"
+              className="px-8 py-4 border-2 border-neutral-200 text-neutral-900 text-base font-bold rounded-lg hover:border-neutral-400 transition-colors">
+              Preview Site
+            </a>
+            <button onClick={handleGoLive} disabled={launching}
+              className="px-10 py-4 bg-emerald-600 text-white text-lg font-bold rounded-lg hover:bg-emerald-700 disabled:opacity-50 transition-colors">
+              {launching ? "Going live..." : "Go Live"}
+            </button>
+          </div>
 
-      <div className="flex flex-col sm:flex-row gap-3 justify-center mb-10">
-        <a href={`/r/${slug}`} target="_blank"
-          className="px-8 py-4 border-2 border-neutral-200 text-neutral-900 text-base font-bold rounded-lg hover:border-neutral-400 transition-colors">
-          View Your Site
-        </a>
-        <button onClick={() => router.push(`/r/${slug}/admin`)}
-          className="px-8 py-4 bg-neutral-900 text-white text-base font-bold rounded-lg hover:bg-neutral-700 transition-colors">
-          Go to Dashboard
-        </button>
-      </div>
+          <button onClick={() => router.push(`/r/${slug}/admin`)}
+            className="text-sm text-neutral-400 hover:text-neutral-700 transition-colors">
+            Skip — go to dashboard without going live
+          </button>
+        </>
+      ) : (
+        <>
+          <div className="w-20 h-20 rounded-full bg-emerald-100 flex items-center justify-center mx-auto mb-6">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#059669" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="20 6 9 17 4 12" />
+            </svg>
+          </div>
 
-      <div className="max-w-sm mx-auto text-left border border-neutral-200 rounded-xl p-5">
-        <h3 className="text-sm font-bold text-neutral-900 mb-3">Next up</h3>
-        <div className="space-y-2 text-sm text-neutral-600">
-          <div className="flex gap-3 items-start">
-            <span className="w-5 h-5 rounded bg-neutral-100 flex items-center justify-center text-xs text-neutral-400 shrink-0 mt-0.5">1</span>
-            <span>Drag tables on the <strong>Floor Plan</strong> to match your room layout</span>
+          <h2 className="text-3xl font-bold text-neutral-900 mb-3">{business.name} is live</h2>
+          <p className="text-base text-neutral-500 mb-10 max-w-md mx-auto">
+            Guests can now book reservations. Share your link and start filling tables.
+          </p>
+
+          <div className="flex flex-col sm:flex-row gap-3 justify-center mb-10">
+            <a href={`/r/${slug}`} target="_blank"
+              className="px-8 py-4 border-2 border-neutral-200 text-neutral-900 text-base font-bold rounded-lg hover:border-neutral-400 transition-colors">
+              View Your Site
+            </a>
+            <button onClick={() => router.push(`/r/${slug}/admin`)}
+              className="px-8 py-4 bg-neutral-900 text-white text-base font-bold rounded-lg hover:bg-neutral-700 transition-colors">
+              Go to Dashboard
+            </button>
           </div>
-          <div className="flex gap-3 items-start">
-            <span className="w-5 h-5 rounded bg-neutral-100 flex items-center justify-center text-xs text-neutral-400 shrink-0 mt-0.5">2</span>
-            <span>Upload photos in the <strong>Photos</strong> tab</span>
+
+          <div className="max-w-sm mx-auto text-left border border-neutral-200 rounded-xl p-5">
+            <h3 className="text-sm font-bold text-neutral-900 mb-3">Next up</h3>
+            <div className="space-y-2 text-sm text-neutral-600">
+              <div className="flex gap-3 items-start">
+                <span className="w-5 h-5 rounded bg-neutral-100 flex items-center justify-center text-xs text-neutral-400 shrink-0 mt-0.5">1</span>
+                <span>Drag tables on the <strong>Floor Plan</strong> to match your room layout</span>
+              </div>
+              <div className="flex gap-3 items-start">
+                <span className="w-5 h-5 rounded bg-neutral-100 flex items-center justify-center text-xs text-neutral-400 shrink-0 mt-0.5">2</span>
+                <span>Upload photos in the <strong>Photos</strong> tab</span>
+              </div>
+              <div className="flex gap-3 items-start">
+                <span className="w-5 h-5 rounded bg-neutral-100 flex items-center justify-center text-xs text-neutral-400 shrink-0 mt-0.5">3</span>
+                <span>Set up your <strong>custom domain</strong> in the Domain tab</span>
+              </div>
+              <div className="flex gap-3 items-start">
+                <span className="w-5 h-5 rounded bg-neutral-100 flex items-center justify-center text-xs text-neutral-400 shrink-0 mt-0.5">4</span>
+                <span>Share the <strong>staff PIN</strong> with your host team for floor view</span>
+              </div>
+            </div>
           </div>
-          <div className="flex gap-3 items-start">
-            <span className="w-5 h-5 rounded bg-neutral-100 flex items-center justify-center text-xs text-neutral-400 shrink-0 mt-0.5">3</span>
-            <span>Set up your <strong>custom domain</strong> in the Domain tab</span>
-          </div>
-          <div className="flex gap-3 items-start">
-            <span className="w-5 h-5 rounded bg-neutral-100 flex items-center justify-center text-xs text-neutral-400 shrink-0 mt-0.5">4</span>
-            <span>Share the <strong>staff PIN</strong> with your host team for floor view</span>
-          </div>
-        </div>
-      </div>
+        </>
+      )}
     </div>
   );
 }

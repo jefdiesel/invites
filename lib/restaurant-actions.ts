@@ -496,6 +496,13 @@ export async function createWalkIn(businessId: string, data: {
   return { bookingId };
 }
 
+// ── Go Live ──
+
+export async function setBusinessLive(businessId: string, isLive: boolean) {
+  await supabase.from("businesses").update({ is_live: isLive }).eq("id", businessId);
+  revalidatePath(`/r/[slug]`, "layout");
+}
+
 // ── Custom Domain ──
 
 export async function updateCustomDomain(businessId: string, domain: string) {

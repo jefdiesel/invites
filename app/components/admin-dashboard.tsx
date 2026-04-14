@@ -7,6 +7,7 @@ import {
   updateBusinessSettings, updateBusinessHours,
   addPhoto, deletePhoto,
   updateCustomDomain,
+  setBusinessLive,
 } from "@/lib/restaurant-actions";
 import type { Theme } from "@/lib/themes";
 import { FloorEditor } from "./floor-editor";
@@ -73,14 +74,37 @@ export function AdminDashboard({
   hours: Hour[]; menu: MenuItem[]; photos: Photo[]; stats: BookingStat[];
 }) {
   const [tab, setTab] = useState<Tab>("reservations");
+  const [isLive, setIsLive] = useState((business as Record<string, unknown>).is_live as boolean ?? false);
+  const [togglingLive, setTogglingLive] = useState(false);
 
   const today = new Date().toISOString().split("T")[0];
   const todaysBookings = bookings.filter((b) => b.booking_date === today);
   const upcomingBookings = bookings.filter((b) => b.booking_date > today);
   const todayCovers = todaysBookings.reduce((s, b) => s + b.party_size, 0);
 
+  async function handleToggleLive() {
+    setTogglingLive(true);
+    await setBusinessLive(business.id, !isLive);
+    setIsLive(!isLive);
+    setTogglingLive(false);
+  }
+
   return (
     <div>
+      {/* Live status banner */}
+      {!isLive && (
+        <div className="flex items-center justify-between bg-amber-50 border border-amber-200 rounded-lg px-5 py-3 mb-6">
+          <div className="flex items-center gap-3">
+            <span className="w-2.5 h-2.5 rounded-full bg-amber-400" />
+            <span className="text-sm font-semibold text-amber-800">Your site is not live — reservations are disabled for guests.</span>
+          </div>
+          <button onClick={handleToggleLive} disabled={togglingLive}
+            className="px-4 py-2 bg-emerald-600 text-white text-sm font-bold rounded-lg hover:bg-emerald-700 disabled:opacity-50 transition-colors">
+            {togglingLive ? "..." : "Go Live"}
+          </button>
+        </div>
+      )}
+
       {/* Stats row */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
         <StatCard label="Today" value={todaysBookings.length} sub={`${todayCovers} covers`} />
@@ -112,7 +136,7 @@ export function AdminDashboard({
         <MenuTab menu={menu} businessId={business.id} />
       )}
       {tab === "site" && (
-        <SiteTab business={business} hours={hours} />
+        <SiteTab business={business} hours={hours} isLive={isLive} onToggleLive={handleToggleLive} togglingLive={togglingLive} />
       )}
       {tab === "photos" && (
         <PhotosTab photos={photos} businessId={business.id} />
@@ -445,7 +469,9 @@ function MenuTab({ menu, businessId }: { menu: MenuItem[]; businessId: string })
 
 // ── Site Settings Tab ──
 
-function SiteTab({ business, hours }: { business: Business; hours: Hour[] }) {
+function SiteTab({ business, hours, isLive, onToggleLive, togglingLive }: {
+  business: Business; hours: Hour[]; isLive: boolean; onToggleLive: () => void; togglingLive: boolean;
+}) {
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({
     name: business.name, about: business.about, about_story: business.about_story || "",
@@ -469,6 +495,25 @@ function SiteTab({ business, hours }: { business: Business; hours: Hour[] }) {
   return (
     <div className="max-w-2xl">
       <div className="space-y-6">
+        {/* Live status */}
+        <section className="flex items-center justify-between border border-neutral-200 rounded-lg px-5 py-4">
+          <div>
+            <div className="flex items-center gap-2 mb-0.5">
+              <span className={`w-2.5 h-2.5 rounded-full ${isLive ? "bg-emerald-500" : "bg-neutral-300"}`} />
+              <span className="text-sm font-bold text-neutral-900">{isLive ? "Live" : "Not live"}</span>
+            </div>
+            <p className="text-xs text-neutral-500">
+              {isLive ? "Guests can book reservations on your site." : "Your site is visible but reservations are disabled."}
+            </p>
+          </div>
+          <button onClick={onToggleLive} disabled={togglingLive}
+            className={`px-5 py-2.5 text-sm font-bold rounded-lg transition-colors disabled:opacity-50 ${
+              isLive ? "bg-neutral-100 text-neutral-700 hover:bg-neutral-200" : "bg-emerald-600 text-white hover:bg-emerald-700"
+            }`}>
+            {togglingLive ? "..." : isLive ? "Take Offline" : "Go Live"}
+          </button>
+        </section>
+
         {/* Basic info */}
         <section>
           <h3 className="text-sm font-bold text-neutral-600 uppercase tracking-wider mb-4">Basic Info</h3>

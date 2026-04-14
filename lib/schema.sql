@@ -47,6 +47,8 @@ CREATE TABLE IF NOT EXISTS businesses (
   admin_password TEXT DEFAULT '',   -- password for testing, magic link for production
   -- Magic link tokens
   -- (stored in business_magic_links table below)
+  -- Go live
+  is_live BOOLEAN DEFAULT false, -- false = site visible but bookings disabled
   -- Operating config
   booking_window_days INT DEFAULT 30, -- how far ahead can you book
   min_party_size INT DEFAULT 1,
