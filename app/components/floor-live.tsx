@@ -88,14 +88,22 @@ const STATUS_COLORS = {
   turning: { bg: "#d97706", border: "#d97706", text: "#ffffff" },     // amber — nearly done
 };
 
-export function FloorLive({ tables, bookings: initialBookings, businessId }: {
+type WaitlistEntry = {
+  id: string; name: string; phone: string; party_size: number;
+  notes: string; quoted_wait_minutes: number; created_at: string;
+};
+
+export function FloorLive({ tables, bookings: initialBookings, businessId, waitlist }: {
   tables: Table[]; bookings: Booking[]; businessId: string;
+  waitlist?: WaitlistEntry[];
 }) {
   const [bookings, setBookings] = useState(initialBookings);
   const [zones] = useState(() => [...new Set(tables.map((t) => t.zone))]);
   const [activeZone, setActiveZone] = useState(zones[0] ?? "Main Dining");
   const [selectedTableId, setSelectedTableId] = useState<string | null>(null);
   const [acting, setActing] = useState(false);
+  const [sidebarWidth, setSidebarWidth] = useState(320);
+  const [dragging, setDragging] = useState(false);
   const router = useRouter();
 
   // Auto-refresh bookings
@@ -130,12 +138,80 @@ export function FloorLive({ tables, bookings: initialBookings, businessId }: {
     router.refresh();
   }
 
-  // Sort bookings for the sidebar
+  // Build unified service list: reservations + waitlist, reservations first within same time
   const todayStr = new Date().toISOString().split("T")[0];
   const todayBookings = bookings.filter(b => b.booking_date === todayStr);
-  const sidebarConfirmed = todayBookings.filter(b => b.status === "confirmed").sort((a, b) => a.booking_time.localeCompare(b.booking_time));
-  const sidebarSeated = todayBookings.filter(b => b.status === "seated").sort((a, b) => a.booking_time.localeCompare(b.booking_time));
-  const sidebarDone = todayBookings.filter(b => b.status === "completed" || b.status === "no_show");
+
+  type ServiceItem = {
+    type: "reservation" | "waitlist";
+    id: string;
+    name: string;
+    partySize: number;
+    time: string; // booking_time or created_at time
+    status: string;
+    tableId: string | null;
+    phone?: string;
+    notes?: string;
+    source?: string;
+    durationMins?: number | null;
+    quotedWait?: number;
+    createdAt?: string;
+  };
+
+  const serviceItems: ServiceItem[] = [];
+
+  // Add active bookings
+  for (const b of todayBookings.filter(b => b.status === "confirmed" || b.status === "seated")) {
+    serviceItems.push({
+      type: "reservation", id: b.id, name: b.clients?.name ?? "Guest",
+      partySize: b.party_size, time: b.booking_time, status: b.status,
+      tableId: b.table_id, phone: b.clients?.phone, notes: b.notes,
+      source: b.source, durationMins: b.duration_minutes,
+    });
+  }
+
+  // Add waitlist entries
+  for (const w of (waitlist ?? [])) {
+    const created = new Date(w.created_at);
+    const wTime = `${created.getHours().toString().padStart(2, "0")}:${created.getMinutes().toString().padStart(2, "0")}`;
+    serviceItems.push({
+      type: "waitlist", id: w.id, name: w.name, partySize: w.party_size,
+      time: wTime, status: "waiting", tableId: null, phone: w.phone,
+      notes: w.notes, quotedWait: w.quoted_wait_minutes, createdAt: w.created_at,
+    });
+  }
+
+  // Sort: by time, reservations before waitlist at same time
+  serviceItems.sort((a, b) => {
+    const timeCmp = a.time.localeCompare(b.time);
+    if (timeCmp !== 0) return timeCmp;
+    if (a.type === "reservation" && b.type === "waitlist") return -1;
+    if (a.type === "waitlist" && b.type === "reservation") return 1;
+    return 0;
+  });
+
+  const doneBookings = todayBookings.filter(b => b.status === "completed" || b.status === "no_show");
+  const activeCount = serviceItems.length;
+  const totalCovers = serviceItems.reduce((s, i) => s + i.partySize, 0);
+
+  // Drag handler for resizable sidebar
+  function handleMouseDown(e: React.MouseEvent) {
+    e.preventDefault();
+    setDragging(true);
+    const startX = e.clientX;
+    const startW = sidebarWidth;
+    function onMove(ev: MouseEvent) {
+      const diff = startX - ev.clientX;
+      setSidebarWidth(Math.max(240, Math.min(500, startW + diff)));
+    }
+    function onUp() {
+      setDragging(false);
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mouseup", onUp);
+    }
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onUp);
+  }
 
   return (
     <div>
@@ -144,9 +220,9 @@ export function FloorLive({ tables, bookings: initialBookings, businessId }: {
         Rotate to landscape or use a larger screen for the floor map.
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-6">
+      <div className="flex gap-0" style={{ userSelect: dragging ? "none" : "auto" }}>
       {/* Left: Floor map */}
-      <div>
+      <div className="flex-1 min-w-0 pr-2">
       {/* Zone tabs */}
       {zones.length > 1 && (
         <div className="flex items-center gap-1 mb-4 border-b border-neutral-200">
@@ -295,69 +371,86 @@ export function FloorLive({ tables, bookings: initialBookings, businessId }: {
       )}
       </div>
 
-      {/* Right: Today's service list */}
-      <div className="border border-neutral-200 rounded-xl bg-white overflow-hidden hidden lg:block">
-        <div className="px-4 py-3 bg-neutral-50 border-b border-neutral-200">
-          <span className="text-sm font-bold text-neutral-900">Today's Service</span>
-          <span className="text-xs text-neutral-400 ml-2">
-            {todayBookings.filter(b => b.status !== "cancelled").length} reservations · {todayBookings.filter(b => b.status !== "cancelled").reduce((s, b) => s + b.party_size, 0)} covers
-          </span>
-        </div>
-        <div className="overflow-y-auto" style={{ maxHeight: "calc(100vh - 220px)" }}>
-          {/* Arriving */}
-          {sidebarConfirmed.length > 0 && (
-            <div>
-              <div className="px-4 py-2 text-[10px] font-bold text-neutral-400 uppercase tracking-wider bg-neutral-50/50">
-                Arriving ({sidebarConfirmed.length})
-              </div>
-              {sidebarConfirmed.map(b => {
-                const tbl = tables.find(t => t.id === b.table_id);
-                return (
-                  <div key={b.id}
-                    className={`px-4 py-2.5 border-b border-neutral-100 cursor-pointer hover:bg-neutral-50 transition-colors ${
-                      selectedTableId === b.table_id ? "bg-blue-50" : ""
-                    }`}
-                    onClick={() => { if (b.table_id) setSelectedTableId(b.table_id); }}>
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm font-semibold text-neutral-900">{b.clients?.name ?? "Guest"}</span>
-                      <span className="text-xs tabular-nums text-neutral-500">{formatTime(b.booking_time)}</span>
-                    </div>
-                    <div className="text-xs text-neutral-400 mt-0.5">
-                      {b.party_size}p{tbl ? ` · ${tbl.name}` : " · no table"}{b.source === "walk_in" ? " · walk-in" : b.source === "waitlist" ? " · waitlist" : ""}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
+      {/* Drag handle */}
+      <div onMouseDown={handleMouseDown}
+        className="w-2 cursor-col-resize flex items-center justify-center shrink-0 hidden lg:flex hover:bg-neutral-200 rounded transition-colors"
+        style={{ background: dragging ? "#e5e5e5" : "transparent" }}>
+        <div className="w-0.5 h-8 bg-neutral-300 rounded-full" />
+      </div>
 
-          {/* Seated */}
-          {sidebarSeated.length > 0 && (
+      {/* Right: Service list */}
+      <div className="border border-neutral-200 rounded-xl bg-white overflow-hidden hidden lg:flex flex-col shrink-0"
+        style={{ width: sidebarWidth }}>
+        <div className="px-4 py-3 bg-neutral-50 border-b border-neutral-200">
+          <div className="text-sm font-bold text-neutral-900">Service</div>
+          <div className="text-xs text-neutral-400">
+            {activeCount > 0 ? `${activeCount} active · ${totalCovers} covers` : "No activity"}
+          </div>
+        </div>
+        <div className="overflow-y-auto flex-1" style={{ maxHeight: "calc(100vh - 220px)" }}>
+          {/* Unified list: reservations + waitlist ordered by time */}
+          {serviceItems.length > 0 && (
             <div>
-              <div className="px-4 py-2 text-[10px] font-bold text-blue-600 uppercase tracking-wider bg-blue-50/50">
-                Seated ({sidebarSeated.length})
-              </div>
-              {sidebarSeated.map(b => {
-                const tbl = tables.find(t => t.id === b.table_id);
-                const bMins = timeToMins(b.booking_time);
-                const bEnd = bMins + (b.duration_minutes || 90);
-                const now2 = new Date();
-                const nowM = now2.getHours() * 60 + now2.getMinutes();
-                const left = bEnd - nowM;
+              {serviceItems.map(item => {
+                const tbl = item.tableId ? tables.find(t => t.id === item.tableId) : null;
+                const isRes = item.type === "reservation";
+                const isSeated = item.status === "seated";
+                const nowMins2 = new Date().getHours() * 60 + new Date().getMinutes();
+
+                // Time left for seated
+                let timeLeft = 0;
+                if (isSeated) {
+                  const end = timeToMins(item.time) + (item.durationMins || 90);
+                  timeLeft = end - nowMins2;
+                }
+                const turning = isSeated && timeLeft <= 15;
+
+                // Waitlist: minutes waiting
+                let waitingMins = 0;
+                if (!isRes && item.createdAt) {
+                  waitingMins = Math.floor((Date.now() - new Date(item.createdAt).getTime()) / 60000);
+                }
+
                 return (
-                  <div key={b.id}
-                    className={`px-4 py-2.5 border-b border-neutral-100 cursor-pointer hover:bg-neutral-50 transition-colors ${
-                      selectedTableId === b.table_id ? "bg-blue-50" : ""
-                    } ${left <= 15 ? "bg-amber-50" : ""}`}
-                    onClick={() => { if (b.table_id) setSelectedTableId(b.table_id); }}>
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm font-semibold text-neutral-900">{b.clients?.name ?? "Guest"}</span>
-                      <span className={`text-xs tabular-nums font-bold ${left <= 15 ? "text-amber-700" : "text-blue-600"}`}>
-                        {left > 0 ? `${left}m` : "Over"}
-                      </span>
-                    </div>
-                    <div className="text-xs text-neutral-400 mt-0.5">
-                      {b.party_size}p{tbl ? ` · ${tbl.name}` : ""} · seated {formatTime(b.booking_time)}
+                  <div key={`${item.type}-${item.id}`}
+                    className={`px-4 py-2.5 border-b border-neutral-100 cursor-pointer transition-colors ${
+                      selectedTableId && selectedTableId === item.tableId ? "bg-blue-50" : ""
+                    } ${turning ? "bg-amber-50" : "hover:bg-neutral-50"}`}
+                    onClick={() => { if (item.tableId) setSelectedTableId(item.tableId); }}>
+                    <div className="flex items-center gap-2">
+                      {/* Type indicator */}
+                      {isRes ? (
+                        <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${
+                          isSeated ? "bg-blue-500" : "bg-emerald-500"
+                        }`} />
+                      ) : (
+                        <span className="text-[10px] font-bold text-blue-500 shrink-0 w-1.5">W</span>
+                      )}
+
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between">
+                          <span className={`text-sm truncate ${isRes ? "font-bold text-neutral-900" : "font-medium text-neutral-600"}`}>
+                            {item.name}
+                          </span>
+                          <span className={`text-xs tabular-nums shrink-0 ml-2 ${
+                            turning ? "font-bold text-amber-700" :
+                            isSeated ? "font-bold text-blue-600" :
+                            "text-neutral-400"
+                          }`}>
+                            {isSeated ? (timeLeft > 0 ? `${timeLeft}m` : "Over") :
+                             !isRes ? `${waitingMins}m wait` :
+                             formatTime(item.time)}
+                          </span>
+                        </div>
+                        <div className="text-xs text-neutral-400 mt-0.5 flex items-center gap-1">
+                          <span>{item.partySize}p</span>
+                          {tbl && <span>· {tbl.name}</span>}
+                          {!isRes && <span className="text-blue-400 font-medium">· waitlist</span>}
+                          {isRes && item.source === "walk_in" && <span>· walk-in</span>}
+                          {isRes && !isSeated && <span>· {formatTime(item.time)}</span>}
+                          {isSeated && <span>· seated {formatTime(item.time)}</span>}
+                        </div>
+                      </div>
                     </div>
                   </div>
                 );
@@ -366,25 +459,22 @@ export function FloorLive({ tables, bookings: initialBookings, businessId }: {
           )}
 
           {/* Done */}
-          {sidebarDone.length > 0 && (
+          {doneBookings.length > 0 && (
             <div>
-              <div className="px-4 py-2 text-[10px] font-bold text-neutral-300 uppercase tracking-wider">
-                Done ({sidebarDone.length})
+              <div className="px-4 py-2 text-[10px] font-bold text-neutral-300 uppercase tracking-wider border-t border-neutral-100">
+                Done ({doneBookings.length})
               </div>
-              {sidebarDone.map(b => (
-                <div key={b.id} className="px-4 py-2 border-b border-neutral-50 text-neutral-300">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs">{b.clients?.name ?? "Guest"}</span>
-                    <span className="text-xs tabular-nums">{formatTime(b.booking_time)}</span>
-                  </div>
+              {doneBookings.map(b => (
+                <div key={b.id} className="px-4 py-1.5 border-b border-neutral-50 text-neutral-300">
+                  <span className="text-xs">{b.clients?.name ?? "Guest"} · {formatTime(b.booking_time)} · {b.party_size}p</span>
                 </div>
               ))}
             </div>
           )}
 
-          {todayBookings.length === 0 && (
+          {serviceItems.length === 0 && doneBookings.length === 0 && (
             <div className="px-4 py-8 text-center text-sm text-neutral-400">
-              No reservations today.
+              No reservations or waitlist today.
             </div>
           )}
         </div>

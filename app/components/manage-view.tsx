@@ -174,6 +174,7 @@ export function ManageView({ businessId, businessName, slug, bookings, tables, s
           }))}
           bookings={todaysBookings.map(b => ({ ...b, source: (b as Record<string, unknown>).source as string ?? "website" }))}
           businessId={businessId}
+          waitlist={initialWaitlist}
         />
       ) : (
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_280px] gap-6">
