@@ -202,7 +202,9 @@ export function FloorLive({ tables, bookings: initialBookings, businessId, waitl
     const startW = sidebarWidth;
     function onMove(ev: MouseEvent) {
       const diff = startX - ev.clientX;
-      setSidebarWidth(Math.max(240, Math.min(500, startW + diff)));
+      const container = document.querySelector("[data-floor-container]");
+      const maxW = (container?.clientWidth ?? 1200) - 40;
+      setSidebarWidth(Math.max(40, Math.min(maxW, startW + diff)));
     }
     function onUp() {
       setDragging(false);
@@ -220,9 +222,9 @@ export function FloorLive({ tables, bookings: initialBookings, businessId, waitl
         Rotate to landscape or use a larger screen for the floor map.
       </div>
 
-      <div className="flex gap-0" style={{ userSelect: dragging ? "none" : "auto" }}>
+      <div className="flex gap-0" data-floor-container style={{ userSelect: dragging ? "none" : "auto" }}>
       {/* Left: Floor map */}
-      <div className="flex-1 min-w-0 pr-2">
+      <div className="flex-1 min-w-0 pr-2 overflow-hidden">
       {/* Zone tabs */}
       {zones.length > 1 && (
         <div className="flex items-center gap-1 mb-4 border-b border-neutral-200">
@@ -379,7 +381,7 @@ export function FloorLive({ tables, bookings: initialBookings, businessId, waitl
       </div>
 
       {/* Right: Service list */}
-      <div className="border border-neutral-200 rounded-xl bg-white overflow-hidden hidden lg:flex flex-col shrink-0"
+      <div className="border border-neutral-200 rounded-xl bg-white overflow-hidden flex flex-col shrink-0"
         style={{ width: sidebarWidth }}>
         <div className="px-4 py-3 bg-neutral-50 border-b border-neutral-200">
           <div className="text-sm font-bold text-neutral-900">Service</div>
