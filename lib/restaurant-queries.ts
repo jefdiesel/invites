@@ -158,12 +158,12 @@ export async function getAvailableSlots(businessId: string, date: string, partyS
 
   const slotDuration = biz?.slot_duration_minutes ?? 90;
 
-  // Get services (tables) that fit party size
+  // Get physical tables that fit party size
   const { data: tables } = await supabase
-    .from("services")
+    .from("restaurant_tables")
     .select("*")
     .eq("business_id", businessId)
-    .eq("active", true)
+    .eq("is_active", true)
     .gte("capacity", partySize)
     .order("capacity"); // prefer smallest table that fits
 
@@ -182,18 +182,16 @@ export async function getAvailableSlots(businessId: string, date: string, partyS
 
   for (let mins = openMinutes; mins <= lastSeating; mins += 30) {
     const timeStr = minutesToTime(mins);
-    // Check if any table is available at this time
+    // Check if any physical table is free at this time
     const available = tables.some((table) => {
-      const conflicting = existingBookings.filter((b) => {
-        if (b.service_id && b.service_id !== table.id) return false;
+      const conflict = existingBookings.some((b) => {
+        if (b.table_id !== table.id) return false;
         const bMins = timeToMinutes(b.booking_time);
         const bEnd = bMins + (b.duration_minutes || slotDuration);
         const slotEnd = mins + slotDuration;
-        return mins < bEnd && slotEnd > bMins; // overlap check
+        return mins < bEnd && slotEnd > bMins;
       });
-      // Count bookings for this specific table at this time
-      const tableBookings = conflicting.filter((b) => b.service_id === table.id).length;
-      return tableBookings < table.quantity;
+      return !conflict;
     });
 
     slots.push({ time: timeStr, available });
