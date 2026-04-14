@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import { useRouter } from "next/navigation";
 import {
   updateBookingStatus, cancelBooking, seatBooking, completeBooking, noShowBooking, assignTable,
   addMenuItem, updateMenuItem, deleteMenuItem,
@@ -87,6 +88,7 @@ export function AdminDashboard({
   inventory: InventoryRow[];
   allBookings: Booking[];
 }) {
+  const router = useRouter();
   const [tab, setTab] = useState<Tab>("reservations");
   const [isLive, setIsLive] = useState((business as Record<string, unknown>).is_live as boolean ?? false);
   const [togglingLive, setTogglingLive] = useState(false);
@@ -182,6 +184,7 @@ function ReservationsTab({ bookings, tables, today, slotDuration, businessId, ho
     const d = new Date(today + "T12:00:00");
     return { year: d.getFullYear(), month: d.getMonth() };
   });
+  const router = useRouter();
   const [cancelId, setCancelId] = useState<string | null>(null);
   const [cancelNote, setCancelNote] = useState("");
   const [cancelling, setCancelling] = useState(false);
@@ -265,7 +268,7 @@ function ReservationsTab({ bookings, tables, today, slotDuration, businessId, ho
     setCancelling(false);
     setCancelId(null);
     setCancelNote("");
-    location.reload();
+    router.refresh();
   }
 
   async function handleCancelAll() {
@@ -275,7 +278,7 @@ function ReservationsTab({ bookings, tables, today, slotDuration, businessId, ho
     setCancellingAll(false);
     setCancelAllDate(null);
     setCancelAllNote("");
-    location.reload();
+    router.refresh();
   }
 
   // Selected day's bookings
@@ -574,8 +577,8 @@ function ReservationsTab({ bookings, tables, today, slotDuration, businessId, ho
                               <td className="px-4 py-2.5 text-neutral-500 max-w-[180px] truncate">{b.notes || "—"}</td>
                               <td className="px-4 py-2.5 text-right">
                                 <div className="flex items-center justify-end gap-1">
-                                  {isToday && <ActionBtn label="Seat" onClick={() => seatBooking(b.id).then(() => location.reload())} color="emerald" />}
-                                  {isToday && <ActionBtn label="No-show" onClick={() => noShowBooking(b.id).then(() => location.reload())} color="amber" />}
+                                  {isToday && <ActionBtn label="Seat" onClick={() => seatBooking(b.id).then(() => router.refresh())} color="emerald" />}
+                                  {isToday && <ActionBtn label="No-show" onClick={() => noShowBooking(b.id).then(() => router.refresh())} color="amber" />}
                                   <ActionBtn label="Cancel" onClick={() => setCancelId(b.id)} color="rose" />
                                 </div>
                               </td>
@@ -624,8 +627,8 @@ function ReservationsTab({ bookings, tables, today, slotDuration, businessId, ho
                               <td className="px-4 py-2.5 text-neutral-500 max-w-[180px] truncate">{b.notes || "—"}</td>
                               <td className="px-4 py-2.5 text-right">
                                 <div className="flex items-center justify-end gap-1">
-                                  <ActionBtn label="Done" onClick={() => completeBooking(b.id).then(() => location.reload())} color="blue" />
-                                  <ActionBtn label="No-show" onClick={() => noShowBooking(b.id).then(() => location.reload())} color="amber" />
+                                  <ActionBtn label="Done" onClick={() => completeBooking(b.id).then(() => router.refresh())} color="blue" />
+                                  <ActionBtn label="No-show" onClick={() => noShowBooking(b.id).then(() => router.refresh())} color="amber" />
                                 </div>
                               </td>
                             </tr>
@@ -698,6 +701,7 @@ function downloadCSV(csv: string, filename: string) {
 // ── Menu Tab ──
 
 function MenuTab({ menu, businessId }: { menu: MenuItem[]; businessId: string }) {
+  const router = useRouter();
   const [adding, setAdding] = useState(false);
   const [newItem, setNewItem] = useState({ category: "", name: "", description: "", price: "", flags: "" });
 
@@ -715,18 +719,18 @@ function MenuTab({ menu, businessId }: { menu: MenuItem[]; businessId: string })
     });
     setNewItem({ category: "", name: "", description: "", price: "", flags: "" });
     setAdding(false);
-    location.reload();
+    router.refresh();
   }
 
   async function handleDelete(id: string, name: string) {
     if (!confirm(`Delete "${name}"?`)) return;
     await deleteMenuItem(id);
-    location.reload();
+    router.refresh();
   }
 
   async function handleToggle(id: string, available: boolean) {
     await updateMenuItem(id, { available: !available });
-    location.reload();
+    router.refresh();
   }
 
   const inputClass = "border border-neutral-200 rounded-lg px-3 py-2 text-sm bg-white text-neutral-900 focus:outline-none focus:ring-2 focus:ring-neutral-900/10";
@@ -798,6 +802,7 @@ function MenuTab({ menu, businessId }: { menu: MenuItem[]; businessId: string })
 function SiteTab({ business, slug, hours, isLive, onToggleLive, togglingLive }: {
   business: Business; slug: string; hours: Hour[]; isLive: boolean; onToggleLive: () => void; togglingLive: boolean;
 }) {
+  const router = useRouter();
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({
     name: business.name, about: business.about, about_story: business.about_story || "",
@@ -812,7 +817,7 @@ function SiteTab({ business, slug, hours, isLive, onToggleLive, togglingLive }: 
     setSaving(true);
     await updateBusinessSettings(business.id, form);
     setSaving(false);
-    location.reload();
+    router.refresh();
   }
 
   const inputClass = "w-full border border-neutral-200 rounded-lg px-3 py-2 text-sm bg-white text-neutral-900 focus:outline-none focus:ring-2 focus:ring-neutral-900/10";
@@ -941,6 +946,7 @@ function SiteTab({ business, slug, hours, isLive, onToggleLive, togglingLive }: 
 // ── Photos Tab ──
 
 function PhotosTab({ photos, businessId }: { photos: Photo[]; businessId: string }) {
+  const router = useRouter();
   const [adding, setAdding] = useState(false);
   const [newPhoto, setNewPhoto] = useState({ url: "", alt: "", caption: "", category: "gallery" });
 
@@ -954,13 +960,13 @@ function PhotosTab({ photos, businessId }: { photos: Photo[]; businessId: string
     await addPhoto(businessId, newPhoto);
     setNewPhoto({ url: "", alt: "", caption: "", category: "gallery" });
     setAdding(false);
-    location.reload();
+    router.refresh();
   }
 
   async function handleDelete(id: string) {
     if (!confirm("Delete this photo?")) return;
     await deletePhoto(id);
-    location.reload();
+    router.refresh();
   }
 
   const inputClass = "border border-neutral-200 rounded-lg px-3 py-2 text-sm bg-white text-neutral-900 focus:outline-none focus:ring-2 focus:ring-neutral-900/10";
@@ -1021,6 +1027,7 @@ function PhotosTab({ photos, businessId }: { photos: Photo[]; businessId: string
 // ── Guests Tab ──
 
 function GuestsTab({ clients, businessId, bookings }: { clients: BizClient[]; businessId: string; bookings: Booking[] }) {
+  const router = useRouter();
   const [search, setSearch] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editNotes, setEditNotes] = useState("");
@@ -1061,7 +1068,7 @@ function GuestsTab({ clients, businessId, bookings }: { clients: BizClient[]; bu
     });
     setEditingId(null);
     setSavingGuest(false);
-    location.reload();
+    router.refresh();
   }
 
   const inputClass = "w-full border border-neutral-200 rounded-lg px-3 py-1.5 text-sm bg-white text-neutral-900 focus:outline-none focus:ring-2 focus:ring-neutral-900/10";
@@ -1145,19 +1152,19 @@ function GuestsTab({ clients, businessId, bookings }: { clients: BizClient[]; bu
                   <div className="grid grid-cols-2 gap-3 mb-3">
                     <div>
                       <label className="text-xs font-semibold text-neutral-500 mb-1 block">Notes</label>
-                      <textarea value={editNotes} onChange={e => setEditNotes(e.target.value)} rows={2} className={inputClass} placeholder="Window seat preference, birthday June 4..." />
+                      <textarea value={editNotes} onChange={e => setEditNotes(e.target.value)} rows={2} className={inputClass} />
                     </div>
                     <div>
                       <label className="text-xs font-semibold text-neutral-500 mb-1 block">Preferences</label>
-                      <textarea value={editPrefs} onChange={e => setEditPrefs(e.target.value)} rows={2} className={inputClass} placeholder="Quiet table, no shellfish..." />
+                      <textarea value={editPrefs} onChange={e => setEditPrefs(e.target.value)} rows={2} className={inputClass} />
                     </div>
                     <div>
                       <label className="text-xs font-semibold text-neutral-500 mb-1 block">Dietary</label>
-                      <input value={editDietary} onChange={e => setEditDietary(e.target.value)} className={inputClass} placeholder="Vegetarian, gluten-free, nut allergy..." />
+                      <input value={editDietary} onChange={e => setEditDietary(e.target.value)} className={inputClass} />
                     </div>
                     <div>
                       <label className="text-xs font-semibold text-neutral-500 mb-1 block">Tags (comma separated)</label>
-                      <input value={editTags} onChange={e => setEditTags(e.target.value)} className={inputClass} placeholder="VIP, Regular, Industry..." />
+                      <input value={editTags} onChange={e => setEditTags(e.target.value)} className={inputClass} />
                     </div>
                   </div>
                   <div className="flex gap-2">
@@ -1620,6 +1627,7 @@ function ActionBtn({ label, onClick, color }: { label: string; onClick: () => vo
 const DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
 function HoursEditor({ hours: initialHours, businessId }: { hours: Hour[]; businessId: string }) {
+  const router = useRouter();
   const [hours, setHours] = useState<Hour[]>(() => {
     // Ensure all 7 days exist
     const existing = new Map(initialHours.map(h => [h.day_of_week, h]));
