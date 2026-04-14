@@ -145,7 +145,7 @@ export function BookingForm({
           className="inline-block px-5 py-3 text-sm mb-8"
           style={{ background: `${t.accent}10`, borderRadius: t.radius, color: t.text }}
         >
-          We have your details at <strong>{email}</strong>
+          Booked under <strong>{email}</strong>
         </div>
 
         <div>
