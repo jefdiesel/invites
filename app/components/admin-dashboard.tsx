@@ -129,7 +129,7 @@ export function AdminDashboard({
       </div>
 
       {tab === "reservations" && (
-        <ReservationsTab bookings={bookings} tables={tables} today={today} slotDuration={business.slot_duration_minutes} businessId={business.id} />
+        <ReservationsTab bookings={bookings} tables={tables} today={today} slotDuration={business.slot_duration_minutes} businessId={business.id} hours={hours} />
       )}
       {tab === "floor" && (
         <FloorPlanTab businessId={business.id} tables={tables} />
@@ -156,11 +156,19 @@ export function AdminDashboard({
   );
 }
 
-// ── Reservations Tab ──
+// ── Reservations Tab (Calendar View) ──
 
-function ReservationsTab({ bookings, tables, today, slotDuration, businessId }: {
-  bookings: Booking[]; tables: RestaurantTable[]; today: string; slotDuration: number; businessId: string;
+const MONTH_NAMES = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+function ReservationsTab({ bookings, tables, today, slotDuration, businessId, hours }: {
+  bookings: Booking[]; tables: RestaurantTable[]; today: string; slotDuration: number; businessId: string; hours: Hour[];
 }) {
+  const [selectedDate, setSelectedDate] = useState<string>(today);
+  const [viewMonth, setViewMonth] = useState(() => {
+    const d = new Date(today + "T12:00:00");
+    return { year: d.getFullYear(), month: d.getMonth() };
+  });
   const [cancelId, setCancelId] = useState<string | null>(null);
   const [cancelNote, setCancelNote] = useState("");
   const [cancelling, setCancelling] = useState(false);
@@ -168,16 +176,45 @@ function ReservationsTab({ bookings, tables, today, slotDuration, businessId }: 
   const [cancelAllNote, setCancelAllNote] = useState("");
   const [cancellingAll, setCancellingAll] = useState(false);
 
-  const todaysBookings = bookings.filter(b => b.booking_date === today);
-  const upcomingBookings = bookings.filter(b => b.booking_date > today);
   const activeTables = tables.filter(t => t.is_active).sort((a, b) => a.sort_order - b.sort_order);
-
   const now = new Date();
   const nowMins = now.getHours() * 60 + now.getMinutes();
 
-  const arriving = todaysBookings.filter(b => b.status === "confirmed").sort((a, b) => timeToMins(a.booking_time) - timeToMins(b.booking_time));
-  const seated = todaysBookings.filter(b => b.status === "seated").sort((a, b) => timeToMins(a.booking_time) - timeToMins(b.booking_time));
-  const done = todaysBookings.filter(b => b.status === "completed" || b.status === "no_show");
+  // Open days map (day_of_week -> hours)
+  const openDays = new Map(hours.filter(h => !h.is_closed).map(h => [h.day_of_week, h]));
+
+  // Bookings grouped by date
+  const bookingsByDate = new Map<string, Booking[]>();
+  for (const b of bookings) {
+    const arr = bookingsByDate.get(b.booking_date) || [];
+    arr.push(b);
+    bookingsByDate.set(b.booking_date, arr);
+  }
+
+  // Calendar grid for current month
+  function getCalendarDays() {
+    const first = new Date(viewMonth.year, viewMonth.month, 1);
+    const startDay = first.getDay(); // 0=Sun
+    const daysInMonth = new Date(viewMonth.year, viewMonth.month + 1, 0).getDate();
+    const days: { date: string; day: number; inMonth: boolean }[] = [];
+
+    // Padding before
+    for (let i = 0; i < startDay; i++) {
+      days.push({ date: "", day: 0, inMonth: false });
+    }
+    for (let d = 1; d <= daysInMonth; d++) {
+      const dateStr = `${viewMonth.year}-${(viewMonth.month + 1).toString().padStart(2, "0")}-${d.toString().padStart(2, "0")}`;
+      days.push({ date: dateStr, day: d, inMonth: true });
+    }
+    return days;
+  }
+
+  function prevMonth() {
+    setViewMonth(prev => prev.month === 0 ? { year: prev.year - 1, month: 11 } : { year: prev.year, month: prev.month - 1 });
+  }
+  function nextMonth() {
+    setViewMonth(prev => prev.month === 11 ? { year: prev.year + 1, month: 0 } : { year: prev.year, month: prev.month + 1 });
+  }
 
   const cancelTarget = cancelId ? bookings.find(b => b.id === cancelId) : null;
 
@@ -201,12 +238,21 @@ function ReservationsTab({ bookings, tables, today, slotDuration, businessId }: 
     location.reload();
   }
 
-  // Get unique upcoming dates for cancel-all
-  const upcomingDates = [...new Set(upcomingBookings.filter(b => b.status === "confirmed").map(b => b.booking_date))].sort();
+  // Selected day's bookings
+  const dayBookings = (bookingsByDate.get(selectedDate) || []).sort((a, b) => timeToMins(a.booking_time) - timeToMins(b.booking_time));
+  const dayConfirmed = dayBookings.filter(b => b.status === "confirmed");
+  const daySeated = dayBookings.filter(b => b.status === "seated");
+  const dayDone = dayBookings.filter(b => b.status === "completed" || b.status === "no_show");
+  const isToday = selectedDate === today;
+  const selectedDow = new Date(selectedDate + "T12:00:00").getDay();
+  const selectedHours = openDays.get(selectedDow);
+  const dayCovers = dayBookings.filter(b => b.status !== "cancelled").reduce((s, b) => s + b.party_size, 0);
+
+  const calDays = getCalendarDays();
 
   return (
     <div>
-      {/* Cancel single booking modal */}
+      {/* Cancel modals */}
       {cancelId && cancelTarget && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={() => { setCancelId(null); setCancelNote(""); }}>
           <div className="bg-white rounded-xl p-6 w-full max-w-md shadow-xl mx-4" onClick={e => e.stopPropagation()}>
@@ -231,8 +277,6 @@ function ReservationsTab({ bookings, tables, today, slotDuration, businessId }: 
           </div>
         </div>
       )}
-
-      {/* Cancel all day modal */}
       {cancelAllDate && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={() => { setCancelAllDate(null); setCancelAllNote(""); }}>
           <div className="bg-white rounded-xl p-6 w-full max-w-md shadow-xl mx-4" onClick={e => e.stopPropagation()}>
@@ -241,7 +285,7 @@ function ReservationsTab({ bookings, tables, today, slotDuration, businessId }: 
               {new Date(cancelAllDate + "T12:00:00").toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}
             </p>
             <p className="text-sm text-neutral-500 mb-4">
-              {bookings.filter(b => b.booking_date === cancelAllDate && b.status === "confirmed").length} reservations will be cancelled. Each guest will receive a separate email.
+              {bookings.filter(b => b.booking_date === cancelAllDate && b.status === "confirmed").length} reservations will be cancelled. Each guest gets a separate email.
             </p>
             <label className="block text-sm font-semibold text-neutral-600 mb-1">Note to all guests</label>
             <textarea value={cancelAllNote} onChange={e => setCancelAllNote(e.target.value)} rows={3}
@@ -261,214 +305,235 @@ function ReservationsTab({ bookings, tables, today, slotDuration, businessId }: 
         </div>
       )}
 
-      {/* Cancel all day button for today */}
-      {arriving.length > 0 && (
-        <div className="flex items-center justify-between mb-4">
-          <div />
-          <button onClick={() => setCancelAllDate(today)}
-            className="text-xs font-medium text-rose-500 hover:text-rose-700 transition-colors">
-            Cancel all today's reservations
-          </button>
-        </div>
-      )}
+      <div className="grid grid-cols-1 lg:grid-cols-[320px_1fr] gap-8">
+        {/* ── Calendar ── */}
+        <div>
+          <div className="border border-neutral-200 rounded-lg overflow-hidden">
+            {/* Month nav */}
+            <div className="flex items-center justify-between px-4 py-3 bg-neutral-50 border-b border-neutral-200">
+              <button onClick={prevMonth} className="text-neutral-400 hover:text-neutral-900 transition-colors px-1">&larr;</button>
+              <span className="text-sm font-bold text-neutral-900">{MONTH_NAMES[viewMonth.month]} {viewMonth.year}</span>
+              <button onClick={nextMonth} className="text-neutral-400 hover:text-neutral-900 transition-colors px-1">&rarr;</button>
+            </div>
+            {/* Day headers */}
+            <div className="grid grid-cols-7 text-center border-b border-neutral-100">
+              {DAY_NAMES.map(d => (
+                <div key={d} className="text-[10px] font-bold text-neutral-400 uppercase py-2">{d}</div>
+              ))}
+            </div>
+            {/* Days grid */}
+            <div className="grid grid-cols-7">
+              {calDays.map((d, i) => {
+                if (!d.inMonth) return <div key={i} className="h-12" />;
+                const dow = new Date(d.date + "T12:00:00").getDay();
+                const isOpen = openDays.has(dow);
+                const dayB = bookingsByDate.get(d.date) || [];
+                const activeB = dayB.filter(b => b.status !== "cancelled");
+                const covers = activeB.reduce((s, b) => s + b.party_size, 0);
+                const isSelected = d.date === selectedDate;
+                const isPast = d.date < today;
+                const isTodayDate = d.date === today;
 
-      {/* Arriving */}
-      {arriving.length > 0 && (
-        <div className="mb-8">
-          <h3 className="text-sm font-bold text-neutral-600 uppercase tracking-wider mb-3">Arriving ({arriving.length})</h3>
-          <div className="border border-neutral-200 rounded-lg overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="bg-neutral-50 border-b border-neutral-200">
-                  <th className="px-4 py-2.5 text-left font-semibold text-neutral-600">Time</th>
-                  <th className="px-4 py-2.5 text-left font-semibold text-neutral-600">Guest</th>
-                  <th className="px-4 py-2.5 text-right font-semibold text-neutral-600">Party</th>
-                  <th className="px-4 py-2.5 text-left font-semibold text-neutral-600">Table</th>
-                  <th className="px-4 py-2.5 text-left font-semibold text-neutral-600">Notes</th>
-                  <th className="px-4 py-2.5 text-right font-semibold text-neutral-600"></th>
-                </tr>
-              </thead>
-              <tbody>
-                {arriving.map(b => {
-                  const tableName = activeTables.find(t => t.id === b.table_id)?.name;
-                  return (
-                    <tr key={b.id} className="border-b border-neutral-100 hover:bg-neutral-50">
-                      <td className="px-4 py-3 tabular-nums font-bold text-neutral-900">{formatTime(b.booking_time)}</td>
-                      <td className="px-4 py-3">
-                        <div className="font-semibold text-neutral-900">{b.clients?.name ?? "—"}</div>
-                        <div className="text-xs text-neutral-400">{b.clients?.email}</div>
-                      </td>
-                      <td className="px-4 py-3 text-right tabular-nums font-medium">{b.party_size}</td>
-                      <td className="px-4 py-3 text-neutral-600">{tableName ?? "—"}</td>
-                      <td className="px-4 py-3 text-neutral-500 max-w-[200px] truncate">{b.notes || "—"}</td>
-                      <td className="px-4 py-3 text-right">
-                        <div className="flex items-center justify-end gap-1">
-                          <ActionBtn label="Seat" onClick={() => seatBooking(b.id).then(() => location.reload())} color="emerald" />
-                          <ActionBtn label="No-show" onClick={() => noShowBooking(b.id).then(() => location.reload())} color="amber" />
-                          <ActionBtn label="Cancel" onClick={() => setCancelId(b.id)} color="rose" />
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
-
-      {/* Seated */}
-      {seated.length > 0 && (
-        <div className="mb-8">
-          <h3 className="text-sm font-bold text-neutral-600 uppercase tracking-wider mb-3">Seated ({seated.length})</h3>
-          <div className="border border-neutral-200 rounded-lg overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="bg-neutral-50 border-b border-neutral-200">
-                  <th className="px-4 py-2.5 text-left font-semibold text-neutral-600">Time Left</th>
-                  <th className="px-4 py-2.5 text-left font-semibold text-neutral-600">Guest</th>
-                  <th className="px-4 py-2.5 text-right font-semibold text-neutral-600">Party</th>
-                  <th className="px-4 py-2.5 text-left font-semibold text-neutral-600">Table</th>
-                  <th className="px-4 py-2.5 text-left font-semibold text-neutral-600">Seated</th>
-                  <th className="px-4 py-2.5 text-left font-semibold text-neutral-600">Notes</th>
-                  <th className="px-4 py-2.5 text-right font-semibold text-neutral-600"></th>
-                </tr>
-              </thead>
-              <tbody>
-                {seated.map(b => {
-                  const end = timeToMins(b.booking_time) + (b.duration_minutes || slotDuration);
-                  const minsLeft = end - nowMins;
-                  const tableName = activeTables.find(t => t.id === b.table_id)?.name;
-                  const turning = minsLeft <= 15;
-                  return (
-                    <tr key={b.id} className={`border-b border-neutral-100 ${turning ? "bg-amber-50" : "hover:bg-neutral-50"}`}>
-                      <td className={`px-4 py-3 tabular-nums font-bold ${turning ? "text-amber-700" : "text-neutral-900"}`}>
-                        {minsLeft > 0 ? `${minsLeft}m` : "Over"}
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="font-semibold text-neutral-900">{b.clients?.name ?? "—"}</div>
-                        <div className="text-xs text-neutral-400">{b.clients?.email}</div>
-                      </td>
-                      <td className="px-4 py-3 text-right tabular-nums font-medium">{b.party_size}</td>
-                      <td className="px-4 py-3 text-neutral-600">{tableName ?? "—"}</td>
-                      <td className="px-4 py-3 tabular-nums text-neutral-500">{formatTime(b.booking_time)}</td>
-                      <td className="px-4 py-3 text-neutral-500 max-w-[200px] truncate">{b.notes || "—"}</td>
-                      <td className="px-4 py-3 text-right">
-                        <div className="flex items-center justify-end gap-1">
-                          <ActionBtn label="Done" onClick={() => completeBooking(b.id).then(() => location.reload())} color="blue" />
-                          <ActionBtn label="No-show" onClick={() => noShowBooking(b.id).then(() => location.reload())} color="amber" />
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
-
-      {/* Done today */}
-      {done.length > 0 && (
-        <div className="mb-8">
-          <h3 className="text-sm font-bold text-neutral-600 uppercase tracking-wider mb-3">Done ({done.length})</h3>
-          <div className="border border-neutral-100 rounded-lg overflow-x-auto">
-            <table className="w-full text-sm text-neutral-400">
-              <tbody>
-                {done.map(b => {
-                  const tableName = activeTables.find(t => t.id === b.table_id)?.name;
-                  return (
-                    <tr key={b.id} className="border-b border-neutral-50">
-                      <td className="px-4 py-2 tabular-nums">{formatTime(b.booking_time)}</td>
-                      <td className="px-4 py-2">{b.clients?.name ?? "—"}</td>
-                      <td className="px-4 py-2 text-right tabular-nums">{b.party_size}</td>
-                      <td className="px-4 py-2">{tableName ?? "—"}</td>
-                      <td className="px-4 py-2">
-                        <span className={b.status === "no_show" ? "text-amber-500 font-medium" : ""}>
-                          {b.status === "no_show" ? "no-show" : "done"}
-                        </span>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
-
-      {/* Upcoming (future days) */}
-      {upcomingBookings.length > 0 && (
-        <div className="mb-8">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-sm font-bold text-neutral-600 uppercase tracking-wider">Upcoming ({upcomingBookings.length})</h3>
-            {upcomingDates.length > 0 && (
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-neutral-400">Cancel all for:</span>
-                {upcomingDates.slice(0, 5).map(d => (
-                  <button key={d} onClick={() => setCancelAllDate(d)}
-                    className="text-xs font-medium text-rose-500 hover:text-rose-700 px-2 py-1 rounded bg-rose-50 hover:bg-rose-100 transition-colors">
-                    {new Date(d + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                return (
+                  <button key={d.date} onClick={() => setSelectedDate(d.date)}
+                    className={`h-12 flex flex-col items-center justify-center text-xs transition-colors relative ${
+                      isSelected ? "bg-neutral-900 text-white" :
+                      isTodayDate ? "bg-blue-50" :
+                      !isOpen ? "bg-neutral-50 text-neutral-300" :
+                      isPast ? "text-neutral-300" :
+                      "hover:bg-neutral-50 text-neutral-700"
+                    }`}>
+                    <span className={`font-semibold ${isSelected ? "text-white" : isTodayDate ? "text-blue-700" : ""}`}>{d.day}</span>
+                    {activeB.length > 0 && (
+                      <span className={`text-[9px] tabular-nums leading-none mt-0.5 ${
+                        isSelected ? "text-white/70" : "text-neutral-400"
+                      }`}>
+                        {activeB.length}r · {covers}c
+                      </span>
+                    )}
+                    {!isOpen && !isSelected && (
+                      <span className="text-[8px] text-neutral-300">closed</span>
+                    )}
                   </button>
-                ))}
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Export */}
+          {bookings.length > 0 && (
+            <button onClick={() => exportBookingsCSV(bookings, activeTables)}
+              className="text-xs font-medium text-neutral-400 hover:text-neutral-700 transition-colors mt-3">
+              Export all reservations (CSV)
+            </button>
+          )}
+        </div>
+
+        {/* ── Day Detail ── */}
+        <div>
+          {/* Day header */}
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h3 className="text-lg font-bold text-neutral-900">
+                {new Date(selectedDate + "T12:00:00").toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}
+                {isToday && <span className="ml-2 text-xs font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">Today</span>}
+              </h3>
+              <div className="text-sm text-neutral-500 mt-0.5">
+                {selectedHours ? (
+                  <>{formatTime(selectedHours.open_time)}–{formatTime(selectedHours.close_time)}
+                    {selectedHours.last_seating && <span className="text-neutral-400"> · last seating {formatTime(selectedHours.last_seating)}</span>}
+                    {dayBookings.length > 0 && <span className="text-neutral-400"> · {dayBookings.filter(b => b.status !== "cancelled").length} reservations · {dayCovers} covers</span>}
+                  </>
+                ) : (
+                  <span className="text-neutral-400">Closed</span>
+                )}
               </div>
+            </div>
+            {dayConfirmed.length > 0 && (
+              <button onClick={() => setCancelAllDate(selectedDate)}
+                className="text-xs font-medium text-rose-500 hover:text-rose-700 px-3 py-1.5 rounded bg-rose-50 hover:bg-rose-100 transition-colors">
+                Cancel all ({dayConfirmed.length})
+              </button>
             )}
           </div>
-          <div className="border border-neutral-200 rounded-lg overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="bg-neutral-50 border-b border-neutral-200">
-                  <th className="px-4 py-2.5 text-left font-semibold text-neutral-600">Date</th>
-                  <th className="px-4 py-2.5 text-left font-semibold text-neutral-600">Time</th>
-                  <th className="px-4 py-2.5 text-left font-semibold text-neutral-600">Guest</th>
-                  <th className="px-4 py-2.5 text-right font-semibold text-neutral-600">Party</th>
-                  <th className="px-4 py-2.5 text-left font-semibold text-neutral-600">Table</th>
-                  <th className="px-4 py-2.5 text-left font-semibold text-neutral-600">Notes</th>
-                  <th className="px-4 py-2.5 text-right font-semibold text-neutral-600"></th>
-                </tr>
-              </thead>
-              <tbody>
-                {upcomingBookings.map(b => {
-                  const tableName = activeTables.find(t => t.id === b.table_id)?.name;
-                  return (
-                    <tr key={b.id} className="border-b border-neutral-100 hover:bg-neutral-50">
-                      <td className="px-4 py-3 tabular-nums text-neutral-700">
-                        {new Date(b.booking_date + "T12:00:00").toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}
-                      </td>
-                      <td className="px-4 py-3 tabular-nums font-medium text-neutral-900">{formatTime(b.booking_time)}</td>
-                      <td className="px-4 py-3">
-                        <div className="font-semibold text-neutral-900">{b.clients?.name ?? "—"}</div>
-                        <div className="text-xs text-neutral-400">{b.clients?.email}</div>
-                      </td>
-                      <td className="px-4 py-3 text-right tabular-nums font-medium">{b.party_size}</td>
-                      <td className="px-4 py-3 text-neutral-600">{tableName ?? "—"}</td>
-                      <td className="px-4 py-3 text-neutral-500 max-w-[200px] truncate">{b.notes || "—"}</td>
-                      <td className="px-4 py-3 text-right">
-                        {b.status === "confirmed" && (
-                          <ActionBtn label="Cancel" onClick={() => setCancelId(b.id)} color="rose" />
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
 
-      {arriving.length === 0 && seated.length === 0 && upcomingBookings.length === 0 && (
-        <p className="text-sm text-neutral-400 py-8 text-center">No bookings yet.</p>
-      )}
+          {!selectedHours && dayBookings.length === 0 ? (
+            <div className="text-center py-12 text-neutral-300">
+              <p className="text-base font-medium">Closed</p>
+              <p className="text-sm mt-1">No reservations on this day.</p>
+            </div>
+          ) : dayBookings.length === 0 ? (
+            <div className="text-center py-12 text-neutral-400">
+              <p className="text-base font-medium">No reservations yet</p>
+            </div>
+          ) : (
+            <>
+              {/* Confirmed / Arriving */}
+              {dayConfirmed.length > 0 && (
+                <div className="mb-6">
+                  <h4 className="text-xs font-bold text-neutral-500 uppercase tracking-wider mb-2">{isToday ? "Arriving" : "Confirmed"} ({dayConfirmed.length})</h4>
+                  <div className="border border-neutral-200 rounded-lg overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="bg-neutral-50 border-b border-neutral-200">
+                          <th className="px-4 py-2 text-left font-semibold text-neutral-600">Time</th>
+                          <th className="px-4 py-2 text-left font-semibold text-neutral-600">Guest</th>
+                          <th className="px-4 py-2 text-right font-semibold text-neutral-600">Party</th>
+                          <th className="px-4 py-2 text-left font-semibold text-neutral-600">Table</th>
+                          <th className="px-4 py-2 text-left font-semibold text-neutral-600">Notes</th>
+                          <th className="px-4 py-2 text-right font-semibold text-neutral-600"></th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {dayConfirmed.map(b => {
+                          const tableName = activeTables.find(t => t.id === b.table_id)?.name;
+                          return (
+                            <tr key={b.id} className="border-b border-neutral-100 hover:bg-neutral-50">
+                              <td className="px-4 py-2.5 tabular-nums font-bold text-neutral-900">{formatTime(b.booking_time)}</td>
+                              <td className="px-4 py-2.5">
+                                <div className="font-semibold text-neutral-900">{b.clients?.name ?? "—"}</div>
+                                <div className="text-xs text-neutral-400">{b.clients?.email}</div>
+                              </td>
+                              <td className="px-4 py-2.5 text-right tabular-nums font-medium">{b.party_size}</td>
+                              <td className="px-4 py-2.5 text-neutral-600">{tableName ?? "—"}</td>
+                              <td className="px-4 py-2.5 text-neutral-500 max-w-[180px] truncate">{b.notes || "—"}</td>
+                              <td className="px-4 py-2.5 text-right">
+                                <div className="flex items-center justify-end gap-1">
+                                  {isToday && <ActionBtn label="Seat" onClick={() => seatBooking(b.id).then(() => location.reload())} color="emerald" />}
+                                  {isToday && <ActionBtn label="No-show" onClick={() => noShowBooking(b.id).then(() => location.reload())} color="amber" />}
+                                  <ActionBtn label="Cancel" onClick={() => setCancelId(b.id)} color="rose" />
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
 
-      {bookings.length > 0 && (
-        <div className="mt-6 pt-6 border-t border-neutral-100">
-          <button onClick={() => exportBookingsCSV(bookings, activeTables)}
-            className="text-sm font-medium text-neutral-500 hover:text-neutral-900 transition-colors">
-            Export Reservations (CSV)
-          </button>
+              {/* Seated (today only) */}
+              {isToday && daySeated.length > 0 && (
+                <div className="mb-6">
+                  <h4 className="text-xs font-bold text-neutral-500 uppercase tracking-wider mb-2">Seated ({daySeated.length})</h4>
+                  <div className="border border-neutral-200 rounded-lg overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="bg-neutral-50 border-b border-neutral-200">
+                          <th className="px-4 py-2 text-left font-semibold text-neutral-600">Time Left</th>
+                          <th className="px-4 py-2 text-left font-semibold text-neutral-600">Guest</th>
+                          <th className="px-4 py-2 text-right font-semibold text-neutral-600">Party</th>
+                          <th className="px-4 py-2 text-left font-semibold text-neutral-600">Table</th>
+                          <th className="px-4 py-2 text-left font-semibold text-neutral-600">Notes</th>
+                          <th className="px-4 py-2 text-right font-semibold text-neutral-600"></th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {daySeated.map(b => {
+                          const end = timeToMins(b.booking_time) + (b.duration_minutes || slotDuration);
+                          const minsLeft = end - nowMins;
+                          const tableName = activeTables.find(t => t.id === b.table_id)?.name;
+                          const turning = minsLeft <= 15;
+                          return (
+                            <tr key={b.id} className={`border-b border-neutral-100 ${turning ? "bg-amber-50" : "hover:bg-neutral-50"}`}>
+                              <td className={`px-4 py-2.5 tabular-nums font-bold ${turning ? "text-amber-700" : "text-neutral-900"}`}>
+                                {minsLeft > 0 ? `${minsLeft}m` : "Over"}
+                              </td>
+                              <td className="px-4 py-2.5">
+                                <div className="font-semibold text-neutral-900">{b.clients?.name ?? "—"}</div>
+                                <div className="text-xs text-neutral-400">{b.clients?.email}</div>
+                              </td>
+                              <td className="px-4 py-2.5 text-right tabular-nums font-medium">{b.party_size}</td>
+                              <td className="px-4 py-2.5 text-neutral-600">{tableName ?? "—"}</td>
+                              <td className="px-4 py-2.5 text-neutral-500 max-w-[180px] truncate">{b.notes || "—"}</td>
+                              <td className="px-4 py-2.5 text-right">
+                                <div className="flex items-center justify-end gap-1">
+                                  <ActionBtn label="Done" onClick={() => completeBooking(b.id).then(() => location.reload())} color="blue" />
+                                  <ActionBtn label="No-show" onClick={() => noShowBooking(b.id).then(() => location.reload())} color="amber" />
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
+              {/* Done */}
+              {dayDone.length > 0 && (
+                <div className="mb-6">
+                  <h4 className="text-xs font-bold text-neutral-500 uppercase tracking-wider mb-2">Done ({dayDone.length})</h4>
+                  <div className="border border-neutral-100 rounded-lg overflow-x-auto">
+                    <table className="w-full text-sm text-neutral-400">
+                      <tbody>
+                        {dayDone.map(b => {
+                          const tableName = activeTables.find(t => t.id === b.table_id)?.name;
+                          return (
+                            <tr key={b.id} className="border-b border-neutral-50">
+                              <td className="px-4 py-2 tabular-nums">{formatTime(b.booking_time)}</td>
+                              <td className="px-4 py-2">{b.clients?.name ?? "—"}</td>
+                              <td className="px-4 py-2 text-right tabular-nums">{b.party_size}</td>
+                              <td className="px-4 py-2">{tableName ?? "—"}</td>
+                              <td className="px-4 py-2">
+                                <span className={b.status === "no_show" ? "text-amber-500 font-medium" : ""}>
+                                  {b.status === "no_show" ? "no-show" : "done"}
+                                </span>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
         </div>
-      )}
+      </div>
     </div>
   );
 }

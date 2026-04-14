@@ -92,6 +92,19 @@ export async function getTodaysBookings(businessId: string) {
   return getBookingsForDate(businessId, today);
 }
 
+export async function getBookingsForRange(businessId: string, startDate: string, endDate: string) {
+  const { data } = await supabase
+    .from("bookings")
+    .select("*, clients(name, email, phone)")
+    .eq("business_id", businessId)
+    .gte("booking_date", startDate)
+    .lte("booking_date", endDate)
+    .neq("status", "cancelled")
+    .order("booking_date")
+    .order("booking_time");
+  return data ?? [];
+}
+
 export async function getUpcomingBookings(businessId: string, days = 7) {
   const today = new Date().toISOString().split("T")[0];
   const end = new Date(Date.now() + days * 86400000).toISOString().split("T")[0];

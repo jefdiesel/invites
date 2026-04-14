@@ -15,7 +15,7 @@ export default async function AdminPage({ params }: { params: Promise<{ slug: st
 
   const theme = getTheme(biz.theme);
   const [bookings, clients, tables, hours, menu, photos, stats] = await Promise.all([
-    getUpcomingBookings(biz.id, 14),
+    getUpcomingBookings(biz.id, 30),
     getBusinessClients(biz.id),
     getTables(biz.id),
     getBusinessHours(biz.id),
