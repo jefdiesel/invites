@@ -39,6 +39,7 @@ export async function GET(request: Request) {
       time: b.booking_time,
       partySize: b.party_size,
       slug: biz.slug,
+      bookingId: b.id,
     });
     sent++;
   }

@@ -141,6 +141,7 @@ export async function createBooking(
       time: data.time,
       partySize: data.partySize,
       slug: bizInfo.slug,
+      bookingId,
     }).catch(() => {}); // fire and forget
   }
 
