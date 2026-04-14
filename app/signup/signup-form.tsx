@@ -39,13 +39,21 @@ export function SignupForm() {
         email: form.email.trim(),
       });
 
+      const pin = Math.floor(1000 + Math.random() * 9000).toString();
       await setupBusiness(id, form.slug.trim(), {
         adminEmail: form.email.trim(),
-        staffPin: Math.floor(1000 + Math.random() * 9000).toString(),
+        staffPin: pin,
         adminPassword: form.password,
       });
 
-      router.push(`/r/${form.slug}/admin`);
+      // Auto-login so the onboarding page doesn't bounce to /login
+      await fetch(`/api/r/${form.slug}/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password: form.password }),
+      });
+
+      router.push(`/r/${form.slug}/onboarding`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong. The slug may already be taken.");
       setLoading(false);
