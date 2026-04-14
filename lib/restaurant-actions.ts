@@ -440,12 +440,12 @@ export async function deletePhoto(photoId: string) {
 
 // ── Booking Status Management ──
 
-export async function seatBooking(bookingId: string, tableId?: string) {
+export async function seatBooking(bookingId: string, tableLabel?: string) {
   const update: Record<string, unknown> = {
     status: "seated",
     updated_at: new Date().toISOString(),
   };
-  if (tableId) update.table_id = tableId;
+  if (tableLabel) update.table_label = tableLabel;
   await supabase.from("bookings").update(update).eq("id", bookingId);
 }
 
@@ -547,7 +547,7 @@ export async function addToWaitlist(businessId: string, data: {
   return { id };
 }
 
-export async function seatFromWaitlist(entryId: string, tableId?: string) {
+export async function seatFromWaitlist(entryId: string, tableLabel?: string) {
   const { data: entry } = await supabase.from("waitlist_entries").select("*").eq("id", entryId).single();
   if (!entry) return;
 
@@ -574,7 +574,7 @@ export async function seatFromWaitlist(entryId: string, tableId?: string) {
     notes: entry.notes,
     status: "seated",
     source: "waitlist",
-    table_id: tableId || null,
+    table_label: tableLabel || "",
   });
 
   // SMS: table ready

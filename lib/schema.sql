@@ -123,6 +123,7 @@ CREATE TABLE IF NOT EXISTS bookings (
   status TEXT NOT NULL DEFAULT 'confirmed', -- confirmed, seated, completed, cancelled, no_show
   -- Details
   notes TEXT DEFAULT '', -- "birthday dinner", "bringing own wine"
+  table_label TEXT DEFAULT '', -- host-assigned table reference ("T3", "Bar 2", etc.)
   source TEXT DEFAULT 'website', -- website, phone, walk_in, event
   -- Financials (for paid bookings / deposits)
   deposit_cents INT DEFAULT 0,

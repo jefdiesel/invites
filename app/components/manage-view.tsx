@@ -4,11 +4,13 @@ import { useState } from "react";
 import {
   seatBooking, completeBooking, noShowBooking, cancelBooking,
   addToWaitlist, seatFromWaitlist, removeFromWaitlist, createWalkIn,
+  checkinBooking,
 } from "@/lib/restaurant-actions";
 
 type Booking = {
   id: string; booking_date: string; booking_time: string; party_size: number;
-  status: string; notes: string; table_id: string | null; duration_minutes: number | null;
+  status: string; notes: string; table_id: string | null; table_label: string;
+  duration_minutes: number | null;
   clients?: { name: string; email: string; phone: string };
 };
 
@@ -42,12 +44,27 @@ export function ManageView({ businessId, businessName, slug, bookings, tables, s
   // Add form
   const [showAdd, setShowAdd] = useState<"waitlist" | "walkin" | null>(null);
   const [form, setForm] = useState({ name: "", phone: "", party_size: "2", notes: "", wait: "30" });
+  // Seat prompt — asks for table number
+  const [seatPrompt, setSeatPrompt] = useState<{ type: "booking" | "waitlist"; id: string; name: string } | null>(null);
+  const [seatTableNum, setSeatTableNum] = useState("");
 
   async function handleAction(action: string, bookingId: string) {
-    if (action === "seat") await seatBooking(bookingId);
-    else if (action === "complete") await completeBooking(bookingId);
+    if (action === "complete") await completeBooking(bookingId);
     else if (action === "noshow") await noShowBooking(bookingId);
     else if (action === "cancel") await cancelBooking(bookingId);
+    else if (action === "checkin") await checkinBooking(bookingId);
+    location.reload();
+  }
+
+  async function handleSeatWithTable() {
+    if (!seatPrompt) return;
+    if (seatPrompt.type === "booking") {
+      await seatBooking(seatPrompt.id, seatTableNum.trim() || undefined);
+    } else {
+      await seatFromWaitlist(seatPrompt.id, seatTableNum.trim() || undefined);
+    }
+    setSeatPrompt(null);
+    setSeatTableNum("");
     location.reload();
   }
 
@@ -123,6 +140,31 @@ export function ManageView({ businessId, businessName, slug, bookings, tables, s
         </div>
       </div>
 
+      {/* Seat prompt — table number */}
+      {seatPrompt && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={() => { setSeatPrompt(null); setSeatTableNum(""); }}>
+          <div className="bg-white rounded-xl p-6 w-full max-w-sm shadow-xl mx-4" onClick={e => e.stopPropagation()}>
+            <h3 className="text-base font-bold text-neutral-900 mb-1">Seat {seatPrompt.name}</h3>
+            <p className="text-sm text-neutral-500 mb-4">What table?</p>
+            <input value={seatTableNum} onChange={e => setSeatTableNum(e.target.value)}
+              placeholder="Table # (e.g. T3, Bar 1)"
+              autoFocus
+              onKeyDown={e => { if (e.key === "Enter") handleSeatWithTable(); }}
+              className="w-full border border-neutral-200 rounded-lg px-4 py-3 text-base bg-white text-neutral-900 focus:outline-none focus:ring-2 focus:ring-neutral-900/10 mb-4" />
+            <div className="flex gap-2">
+              <button onClick={handleSeatWithTable}
+                className="flex-1 py-2.5 text-sm font-bold text-white bg-emerald-600 rounded-lg hover:bg-emerald-700 transition-colors">
+                {seatTableNum.trim() ? `Seat at ${seatTableNum.trim()}` : "Seat (no table)"}
+              </button>
+              <button onClick={() => { setSeatPrompt(null); setSeatTableNum(""); }}
+                className="px-4 py-2.5 text-sm font-medium text-neutral-600 bg-neutral-100 rounded-lg hover:bg-neutral-200 transition-colors">
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_280px] gap-6">
       <div>
       {/* Add buttons */}
@@ -195,7 +237,7 @@ export function ManageView({ businessId, businessName, slug, bookings, tables, s
                     <td className="px-4 py-3 text-neutral-500 max-w-[200px] truncate">{entry.notes || "—"}</td>
                     <td className="px-4 py-3 text-right">
                       <div className="flex items-center justify-end gap-1">
-                        <button onClick={() => handleSeatWaitlist(entry.id)}
+                        <button onClick={() => setSeatPrompt({ type: "waitlist", id: entry.id, name: entry.name })}
                           className="px-3 py-1.5 text-xs font-bold text-emerald-700 bg-emerald-50 rounded hover:bg-emerald-100 transition-colors">
                           Seat
                         </button>
@@ -250,7 +292,13 @@ export function ManageView({ businessId, businessName, slug, bookings, tables, s
                     <td className="px-4 py-3 text-neutral-500 max-w-[200px] truncate">{b.notes || "—"}</td>
                     <td className="px-4 py-3 text-right">
                       <div className="flex items-center justify-end gap-1">
-                        <button onClick={() => handleAction("seat", b.id)}
+                        {b.status === "confirmed" && (
+                          <button onClick={() => handleAction("checkin", b.id)}
+                            className="px-3 py-1.5 text-xs font-bold text-blue-700 bg-blue-50 rounded hover:bg-blue-100 transition-colors">
+                            Check in
+                          </button>
+                        )}
+                        <button onClick={() => setSeatPrompt({ type: "booking", id: b.id, name: b.clients?.name ?? "Guest" })}
                           className="px-3 py-1.5 text-xs font-bold text-emerald-700 bg-emerald-50 rounded hover:bg-emerald-100 transition-colors">
                           Seat
                         </button>
@@ -281,6 +329,7 @@ export function ManageView({ businessId, businessName, slug, bookings, tables, s
                   <th className="px-4 py-2.5 text-left font-semibold text-neutral-600">Time Left</th>
                   <th className="px-4 py-2.5 text-left font-semibold text-neutral-600">Guest</th>
                   <th className="px-4 py-2.5 text-right font-semibold text-neutral-600">Party</th>
+                  <th className="px-4 py-2.5 text-left font-semibold text-neutral-600">Table</th>
                   <th className="px-4 py-2.5 text-left font-semibold text-neutral-600">Seated</th>
                   <th className="px-4 py-2.5 text-left font-semibold text-neutral-600">Notes</th>
                   <th className="px-4 py-2.5 text-right font-semibold text-neutral-600"></th>
@@ -301,6 +350,7 @@ export function ManageView({ businessId, businessName, slug, bookings, tables, s
                         {b.clients?.phone && <div className="text-xs text-neutral-400">{b.clients.phone}</div>}
                       </td>
                       <td className="px-4 py-3 text-right tabular-nums font-medium">{b.party_size}</td>
+                      <td className="px-4 py-3 font-medium text-neutral-700">{b.table_label || "—"}</td>
                       <td className="px-4 py-3 tabular-nums text-neutral-500">{fmtTime(b.booking_time)}</td>
                       <td className="px-4 py-3 text-neutral-500 max-w-[200px] truncate">{b.notes || "—"}</td>
                       <td className="px-4 py-3 text-right">
