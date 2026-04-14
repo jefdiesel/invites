@@ -1,4 +1,4 @@
-import { getBusiness, getBusinessHours, getTables, getMenuItems } from "@/lib/restaurant-queries";
+import { getBusiness, getBusinessHours, getMenuItems, getTableInventory } from "@/lib/restaurant-queries";
 import { requireAuth } from "@/lib/auth";
 import { notFound } from "next/navigation";
 import { OnboardingWizard } from "@/app/components/onboarding-wizard";
@@ -12,9 +12,9 @@ export default async function OnboardingPage({ params }: { params: Promise<{ slu
   const biz = await getBusiness(slug);
   if (!biz) return notFound();
 
-  const [hours, tables, menu] = await Promise.all([
+  const [hours, inventory, menu] = await Promise.all([
     getBusinessHours(biz.id),
-    getTables(biz.id),
+    getTableInventory(biz.id),
     getMenuItems(biz.id, true),
   ]);
 
@@ -33,7 +33,7 @@ export default async function OnboardingPage({ params }: { params: Promise<{ slu
           business={biz}
           slug={slug}
           existingHours={hours}
-          existingTables={tables}
+          existingInventory={inventory}
           existingMenu={menu}
         />
       </main>

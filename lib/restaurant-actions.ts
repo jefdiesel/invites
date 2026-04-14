@@ -73,58 +73,28 @@ export async function createBooking(
     }).eq("id", bizClient.id);
   }
 
-  // Find best available physical table
-  const { data: allTables } = await supabase
-    .from("restaurant_tables")
-    .select("*")
+  // Get turn time for this party size from inventory
+  const neededSize = data.partySize <= 2 ? 2 : data.partySize <= 4 ? 4 : Math.ceil(data.partySize / 2) * 2;
+  const { data: inventory } = await supabase
+    .from("table_inventory")
+    .select("turn_time_minutes")
     .eq("business_id", businessId)
-    .eq("is_active", true)
-    .gte("capacity", data.partySize)
-    .order("capacity"); // smallest table that fits
-
-  // Get existing bookings that overlap this time
-  const { data: existingBookings } = await supabase
-    .from("bookings")
-    .select("table_id, booking_time, duration_minutes")
-    .eq("business_id", businessId)
-    .eq("booking_date", data.date)
-    .neq("status", "cancelled");
-
-  const { data: bizConfig } = await supabase
-    .from("businesses")
-    .select("slot_duration_minutes")
-    .eq("id", businessId)
+    .eq("size", neededSize)
     .single();
-  const slotDuration = bizConfig?.slot_duration_minutes ?? 90;
 
-  // Find first table not booked at this time
-  let assignedTableId: string | null = null;
-  const requestMins = timeToMinutes(data.time);
-  const requestEnd = requestMins + slotDuration;
+  const turnTime = inventory?.turn_time_minutes ?? 90;
 
-  for (const table of (allTables ?? [])) {
-    const conflict = (existingBookings ?? []).some((b) => {
-      if (b.table_id !== table.id) return false;
-      const bMins = timeToMinutes(b.booking_time);
-      const bEnd = bMins + (b.duration_minutes || slotDuration);
-      return requestMins < bEnd && requestEnd > bMins;
-    });
-    if (!conflict) {
-      assignedTableId = table.id;
-      break;
-    }
-  }
-
-  // Create booking
+  // Create booking — no table assignment, inventory-based
   const bookingId = randomUUID();
   await supabase.from("bookings").insert({
     id: bookingId,
     business_id: businessId,
     client_id: clientId,
     service_id: null,
-    table_id: assignedTableId,
+    table_id: null,
     booking_date: data.date,
     booking_time: data.time,
+    duration_minutes: turnTime,
     party_size: data.partySize,
     notes: data.notes,
     status: "confirmed",
@@ -655,6 +625,27 @@ export async function createWalkIn(businessId: string, data: {
   });
   revalidatePath(`/r/[slug]`, "layout");
   return { bookingId };
+}
+
+// ── Table Inventory ──
+
+export async function updateTableInventory(businessId: string, inventory: {
+  size: number; count: number; turn_time_minutes: number;
+}[]) {
+  // Delete existing and replace
+  await supabase.from("table_inventory").delete().eq("business_id", businessId);
+  for (const item of inventory) {
+    if (item.count > 0) {
+      await supabase.from("table_inventory").insert({
+        id: randomUUID(),
+        business_id: businessId,
+        size: item.size,
+        count: item.count,
+        turn_time_minutes: item.turn_time_minutes,
+      });
+    }
+  }
+  revalidatePath(`/r/[slug]`, "layout");
 }
 
 // ── Check-in ──

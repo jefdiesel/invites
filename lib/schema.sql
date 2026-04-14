@@ -56,7 +56,8 @@ CREATE TABLE IF NOT EXISTS businesses (
   booking_window_days INT DEFAULT 30, -- how far ahead can you book
   min_party_size INT DEFAULT 1,
   max_party_size INT DEFAULT 12,
-  slot_duration_minutes INT DEFAULT 90, -- how long a booking holds the table
+  slot_duration_minutes INT DEFAULT 90, -- how long a booking holds the table (legacy, use table_inventory.turn_time_minutes)
+  min_advance_minutes INT DEFAULT 120, -- can't book less than 2 hours ahead
   created_at TIMESTAMPTZ DEFAULT now()
 );
 
@@ -229,6 +230,19 @@ CREATE TABLE IF NOT EXISTS waitlist_entries (
 
 ALTER TABLE waitlist_entries ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Allow all waitlist_entries" ON waitlist_entries FOR ALL USING (true) WITH CHECK (true);
+
+-- Table inventory (abstract — no positions, admin-only)
+CREATE TABLE IF NOT EXISTS table_inventory (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  business_id UUID NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
+  size INT NOT NULL,                  -- seats: 2, 4, 6, 8, etc.
+  count INT NOT NULL DEFAULT 1,       -- how many of this size
+  turn_time_minutes INT NOT NULL DEFAULT 90,
+  UNIQUE(business_id, size)
+);
+
+ALTER TABLE table_inventory ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Allow all table_inventory" ON table_inventory FOR ALL USING (true) WITH CHECK (true);
 
 -- Guest magic links (for /my portal login)
 CREATE TABLE IF NOT EXISTS guest_magic_links (

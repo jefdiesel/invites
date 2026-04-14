@@ -10,9 +10,9 @@ import {
   setBusinessLive,
   adminCancelBooking,
   adminCancelAllDay,
+  updateTableInventory,
 } from "@/lib/restaurant-actions";
 import type { Theme } from "@/lib/themes";
-import { FloorEditor } from "./floor-editor";
 
 // ── Types ──
 
@@ -64,7 +64,7 @@ type BookingStat = {
   status: string; source: string;
 };
 
-type Tab = "reservations" | "floor" | "menu" | "site" | "photos" | "guests" | "analytics" | "domain";
+type Tab = "reservations" | "tables" | "menu" | "site" | "photos" | "guests" | "analytics" | "domain";
 
 // ── Main Component ──
 
@@ -73,13 +73,16 @@ type WaitlistEntry = {
   notes: string; status: string; quoted_wait_minutes: number; created_at: string;
 };
 
+type InventoryRow = { id: string; size: number; count: number; turn_time_minutes: number };
+
 export function AdminDashboard({
-  business, slug, theme, bookings, clients, tables, hours, menu, photos, stats, waitlist,
+  business, slug, theme, bookings, clients, tables, hours, menu, photos, stats, waitlist, inventory,
 }: {
   business: Business; slug: string; theme: Theme;
   bookings: Booking[]; clients: BizClient[]; tables: RestaurantTable[];
   hours: Hour[]; menu: MenuItem[]; photos: Photo[]; stats: BookingStat[];
   waitlist: WaitlistEntry[];
+  inventory: InventoryRow[];
 }) {
   const [tab, setTab] = useState<Tab>("reservations");
   const [isLive, setIsLive] = useState((business as Record<string, unknown>).is_live as boolean ?? false);
@@ -125,9 +128,9 @@ export function AdminDashboard({
 
       {/* Tabs */}
       <div className="flex items-center gap-1 border-b border-neutral-200 mb-6 overflow-x-auto">
-        {(["reservations", "floor", "menu", "site", "domain", "photos", "guests", "analytics"] as Tab[]).map((t) => {
+        {(["reservations", "tables", "menu", "site", "domain", "photos", "guests", "analytics"] as Tab[]).map((t) => {
           const labels: Record<Tab, string> = {
-            reservations: "Reservations", floor: "Floor Plan", menu: "Menu",
+            reservations: "Reservations", tables: "Tables", menu: "Menu",
             site: "Site Settings", domain: "Domain", photos: "Photos",
             guests: "Guests", analytics: "Analytics",
           };
@@ -138,8 +141,8 @@ export function AdminDashboard({
       {tab === "reservations" && (
         <ReservationsTab bookings={bookings} tables={tables} today={today} slotDuration={business.slot_duration_minutes} businessId={business.id} hours={hours} waitlist={waitlist} />
       )}
-      {tab === "floor" && (
-        <FloorPlanTab businessId={business.id} tables={tables} />
+      {tab === "tables" && (
+        <TablesInventoryTab businessId={business.id} inventory={inventory} />
       )}
       {tab === "menu" && (
         <MenuTab menu={menu} businessId={business.id} />
@@ -1516,18 +1519,112 @@ function HoursEditor({ hours: initialHours, businessId }: { hours: Hour[]; busin
   );
 }
 
-function FloorPlanTab({ businessId, tables }: { businessId: string; tables: RestaurantTable[] }) {
-  // Map RestaurantTable to FloorEditor's expected type (add missing positional fields)
-  const editorTables = tables.map((t) => ({
-    ...t,
-    shape: (t as Record<string, unknown>).shape as string ?? "circle",
-    pos_x: (t as Record<string, unknown>).pos_x as number ?? 50,
-    pos_y: (t as Record<string, unknown>).pos_y as number ?? 50,
-    width: (t as Record<string, unknown>).width as number ?? 8,
-    height: (t as Record<string, unknown>).height as number ?? 8,
-  }));
+function TablesInventoryTab({ businessId, inventory: initial }: { businessId: string; inventory: InventoryRow[] }) {
+  const DEFAULT_SIZES = [
+    { size: 2, label: "2-tops", defaultTurn: 60 },
+    { size: 4, label: "4-tops", defaultTurn: 90 },
+    { size: 6, label: "6-tops", defaultTurn: 120 },
+    { size: 8, label: "8-tops", defaultTurn: 120 },
+  ];
 
-  return <FloorEditor businessId={businessId} tables={editorTables} />;
+  const [rows, setRows] = useState(() =>
+    DEFAULT_SIZES.map(d => {
+      const existing = initial.find(i => i.size === d.size);
+      return {
+        size: d.size, label: d.label,
+        count: existing?.count ?? 0,
+        turn: existing?.turn_time_minutes ?? d.defaultTurn,
+      };
+    })
+  );
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+
+  async function handleSave() {
+    setSaving(true);
+    await updateTableInventory(businessId, rows.map(r => ({
+      size: r.size, count: r.count, turn_time_minutes: r.turn,
+    })));
+    setSaving(false);
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2000);
+  }
+
+  const totalTables = rows.reduce((s, r) => s + r.count, 0);
+  const totalSeats = rows.reduce((s, r) => s + r.count * r.size, 0);
+
+  const inputClass = "border border-neutral-200 rounded-lg px-3 py-2 text-sm bg-white text-neutral-900 focus:outline-none focus:ring-2 focus:ring-neutral-900/10 w-20 text-center tabular-nums";
+
+  return (
+    <div className="max-w-xl">
+      <h3 className="text-sm font-bold text-neutral-600 uppercase tracking-wider mb-2">Table Inventory</h3>
+      <p className="text-sm text-neutral-400 mb-6">
+        Set how many tables of each size you have and how long each turn lasts. This controls reservation availability.
+      </p>
+
+      <div className="border border-neutral-200 rounded-lg overflow-hidden mb-4">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="bg-neutral-50 border-b border-neutral-200">
+              <th className="px-4 py-2.5 text-left font-semibold text-neutral-600">Table Size</th>
+              <th className="px-4 py-2.5 text-center font-semibold text-neutral-600">Count</th>
+              <th className="px-4 py-2.5 text-center font-semibold text-neutral-600">Turn Time</th>
+              <th className="px-4 py-2.5 text-left font-semibold text-neutral-600">Party Sizes</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((r, i) => (
+              <tr key={r.size} className="border-b border-neutral-100">
+                <td className="px-4 py-3 font-semibold text-neutral-900">{r.label}</td>
+                <td className="px-4 py-3 text-center">
+                  <input type="number" min={0} max={50} value={r.count}
+                    onChange={e => setRows(prev => prev.map((p, j) => j === i ? { ...p, count: parseInt(e.target.value) || 0 } : p))}
+                    className={inputClass} />
+                </td>
+                <td className="px-4 py-3 text-center">
+                  <select value={r.turn}
+                    onChange={e => setRows(prev => prev.map((p, j) => j === i ? { ...p, turn: parseInt(e.target.value) } : p))}
+                    className="border border-neutral-200 rounded-lg px-2 py-2 text-sm bg-white text-neutral-900 focus:outline-none">
+                    <option value={60}>60 min</option>
+                    <option value={75}>75 min</option>
+                    <option value={90}>90 min</option>
+                    <option value={105}>105 min</option>
+                    <option value={120}>120 min</option>
+                  </select>
+                </td>
+                <td className="px-4 py-3 text-neutral-400 text-xs">
+                  {r.size === 2 ? "1-2 guests" : r.size === 4 ? "3-4 guests" : r.size === 6 ? "5-6 guests" : "7-8 guests"}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <div className="flex items-center justify-between mb-6">
+        <div className="text-sm text-neutral-500">
+          {totalTables} tables · {totalSeats} seats
+        </div>
+        <div className="flex items-center gap-3">
+          {saved && <span className="text-sm font-medium text-emerald-600">Saved</span>}
+          <button onClick={handleSave} disabled={saving}
+            className="px-5 py-2.5 bg-neutral-900 text-white text-sm font-bold rounded-lg hover:bg-neutral-700 disabled:opacity-50 transition-colors">
+            {saving ? "Saving..." : "Save Inventory"}
+          </button>
+        </div>
+      </div>
+
+      <div className="border border-neutral-200 rounded-lg px-5 py-4 bg-neutral-50">
+        <h4 className="text-sm font-bold text-neutral-900 mb-2">How it works</h4>
+        <ul className="text-xs text-neutral-500 space-y-1">
+          <li>Guests are matched to the smallest table that fits: 1-2 guests → 2-top, 3-4 → 4-top, etc.</li>
+          <li>A party of 2 won't be given a 4-top — if 2-tops are full, that time shows as unavailable for parties of 2.</li>
+          <li>Turn time determines how long a table is locked. A 90-min turn at 6 PM blocks that table until 7:30 PM.</li>
+          <li>Guests must book at least 2 hours in advance. Walk-ins and waitlist handle same-day.</li>
+        </ul>
+      </div>
+    </div>
+  );
 }
 
 function timeToMins(time: string): number {

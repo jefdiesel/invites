@@ -165,52 +165,124 @@ export async function getAvailableSlots(businessId: string, date: string, partyS
   // Get business config
   const { data: biz } = await supabase
     .from("businesses")
-    .select("slot_duration_minutes")
+    .select("slot_duration_minutes, min_advance_minutes")
     .eq("id", businessId)
     .single();
 
-  const slotDuration = biz?.slot_duration_minutes ?? 90;
+  const minAdvance = biz?.min_advance_minutes ?? 120;
 
-  // Get physical tables that fit party size
-  const { data: tables } = await supabase
-    .from("restaurant_tables")
+  // Determine which table size this party needs (strict — no upsizing)
+  // 1-2 → 2, 3-4 → 4, 5-6 → 6, 7-8 → 8, etc.
+  const neededSize = partySize <= 2 ? 2 : partySize <= 4 ? 4 : Math.ceil(partySize / 2) * 2;
+
+  // Get inventory for this size
+  const { data: inventory } = await supabase
+    .from("table_inventory")
     .select("*")
     .eq("business_id", businessId)
-    .eq("is_active", true)
-    .gte("capacity", partySize)
-    .order("capacity"); // prefer smallest table that fits
+    .eq("size", neededSize)
+    .single();
 
-  if (!tables || tables.length === 0) return [];
+  // Fallback: try restaurant_tables if no inventory configured yet
+  if (!inventory) {
+    const { data: tables } = await supabase
+      .from("restaurant_tables")
+      .select("*")
+      .eq("business_id", businessId)
+      .eq("is_active", true)
+      .gte("capacity", partySize)
+      .order("capacity");
 
-  // Get existing bookings for this date
+    if (!tables || tables.length === 0) return [];
+
+    // Legacy path — use restaurant_tables
+    const slotDuration = biz?.slot_duration_minutes ?? 90;
+    const existingBookings = await getBookingsForDate(businessId, date);
+    const openMinutes = timeToMinutes(hours.open_time);
+    const lastSeating = hours.last_seating
+      ? timeToMinutes(hours.last_seating)
+      : timeToMinutes(hours.close_time) - slotDuration;
+
+    const now = new Date();
+    const isToday = date === now.toISOString().split("T")[0];
+    const nowMins = now.getHours() * 60 + now.getMinutes();
+    const earliestMins = isToday ? nowMins + minAdvance : 0;
+
+    const slots: { time: string; available: boolean }[] = [];
+    for (let mins = openMinutes; mins <= lastSeating; mins += 30) {
+      if (mins < earliestMins) { slots.push({ time: minutesToTime(mins), available: false }); continue; }
+      const available = tables.some((table) => {
+        const conflict = existingBookings.some((b) => {
+          if (b.table_id !== table.id) return false;
+          const bMins = timeToMinutes(b.booking_time);
+          const bEnd = bMins + (b.duration_minutes || slotDuration);
+          return mins < bEnd && (mins + slotDuration) > bMins;
+        });
+        return !conflict;
+      });
+      slots.push({ time: minutesToTime(mins), available });
+    }
+    return slots;
+  }
+
+  // New inventory-based availability
+  const tableCount = inventory.count;
+  const turnTime = inventory.turn_time_minutes;
+
+  // Get existing bookings for this date that use this table size
   const existingBookings = await getBookingsForDate(businessId, date);
 
-  // Generate time slots from open to last_seating (or close - slotDuration)
+  // Filter to bookings that would use this size
+  const relevantBookings = existingBookings.filter(b => {
+    const ps = b.party_size;
+    const bookedSize = ps <= 2 ? 2 : ps <= 4 ? 4 : Math.ceil(ps / 2) * 2;
+    return bookedSize === neededSize;
+  });
+
   const openMinutes = timeToMinutes(hours.open_time);
   const lastSeating = hours.last_seating
     ? timeToMinutes(hours.last_seating)
-    : timeToMinutes(hours.close_time) - slotDuration;
+    : timeToMinutes(hours.close_time) - turnTime;
+
+  // 2-hour minimum advance
+  const now = new Date();
+  const isToday = date === now.toISOString().split("T")[0];
+  const nowMins = now.getHours() * 60 + now.getMinutes();
+  const earliestMins = isToday ? nowMins + minAdvance : 0;
 
   const slots: { time: string; available: boolean }[] = [];
 
   for (let mins = openMinutes; mins <= lastSeating; mins += 30) {
-    const timeStr = minutesToTime(mins);
-    // Check if any physical table is free at this time
-    const available = tables.some((table) => {
-      const conflict = existingBookings.some((b) => {
-        if (b.table_id !== table.id) return false;
-        const bMins = timeToMinutes(b.booking_time);
-        const bEnd = bMins + (b.duration_minutes || slotDuration);
-        const slotEnd = mins + slotDuration;
-        return mins < bEnd && slotEnd > bMins;
-      });
-      return !conflict;
+    // Enforce minimum advance
+    if (mins < earliestMins) {
+      slots.push({ time: minutesToTime(mins), available: false });
+      continue;
+    }
+
+    // Count how many tables of this size are booked at this time (overlap check)
+    const overlapping = relevantBookings.filter(b => {
+      const bMins = timeToMinutes(b.booking_time);
+      const bEnd = bMins + (b.duration_minutes || turnTime);
+      const slotEnd = mins + turnTime;
+      return mins < bEnd && slotEnd > bMins;
     });
 
-    slots.push({ time: timeStr, available });
+    const available = overlapping.length < tableCount;
+    slots.push({ time: minutesToTime(mins), available });
   }
 
   return slots;
+}
+
+// ── Table Inventory ──
+
+export async function getTableInventory(businessId: string) {
+  const { data } = await supabase
+    .from("table_inventory")
+    .select("*")
+    .eq("business_id", businessId)
+    .order("size");
+  return data ?? [];
 }
 
 // ── Waitlist ──

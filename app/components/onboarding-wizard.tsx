@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   updateBusinessSettings, updateBusinessHours,
-  addTable, addMenuItem, setBusinessLive,
+  updateTableInventory, addMenuItem, setBusinessLive,
 } from "@/lib/restaurant-actions";
 import { themes, type ThemeId } from "@/lib/themes";
 
@@ -19,8 +19,8 @@ type Hour = {
   last_seating: string | null; is_closed: boolean;
 };
 
-type TableRow = {
-  id: string; name: string; zone: string; capacity: number;
+type InventoryRow = {
+  id: string; size: number; count: number; turn_time_minutes: number;
 };
 
 type MenuRow = {
@@ -37,16 +37,16 @@ const STEP_LABELS: Record<Step, string> = {
 const DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 const SHORT_DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
-export function OnboardingWizard({ business, slug, existingHours, existingTables, existingMenu }: {
+export function OnboardingWizard({ business, slug, existingHours, existingInventory, existingMenu }: {
   business: Business; slug: string;
-  existingHours: Hour[]; existingTables: TableRow[]; existingMenu: MenuRow[];
+  existingHours: Hour[]; existingInventory: InventoryRow[]; existingMenu: MenuRow[];
 }) {
   const router = useRouter();
 
   // Figure out starting step based on what's already been filled in
   function getStartStep(): Step {
     if (existingMenu.length > 0) return "done";
-    if (existingTables.length > 0) return "menu";
+    if (existingInventory.length > 0) return "menu";
     if (existingHours.length > 0) return "tables";
     return "theme";
   }
@@ -90,7 +90,7 @@ export function OnboardingWizard({ business, slug, existingHours, existingTables
 
       {step === "theme" && <ThemeStep business={business} onDone={next} />}
       {step === "hours" && <HoursStep businessId={business.id} existing={existingHours} onDone={next} />}
-      {step === "tables" && <TablesStep businessId={business.id} existing={existingTables} onDone={next} />}
+      {step === "tables" && <TablesStep businessId={business.id} existing={existingInventory} onDone={next} />}
       {step === "menu" && <MenuStep businessId={business.id} existing={existingMenu} onDone={next} />}
       {step === "done" && <DoneStep slug={slug} business={business} />}
     </div>
@@ -255,127 +255,113 @@ function HoursStep({ businessId, existing, onDone }: { businessId: string; exist
 
 // ── Step 3: Tables ──
 
-function TablesStep({ businessId, existing, onDone }: { businessId: string; existing: TableRow[]; onDone: () => void }) {
-  const [tables, setTables] = useState<TableRow[]>(existing);
-  const [adding, setAdding] = useState(false);
-  const [form, setForm] = useState({ name: "", zone: "Main", capacity: "4" });
-  const [saving, setSaving] = useState(false);
-
-  // Quick-add presets
-  const presets = [
-    { label: "4 two-tops", tables: [{ name: "T1", cap: 2 }, { name: "T2", cap: 2 }, { name: "T3", cap: 2 }, { name: "T4", cap: 2 }] },
-    { label: "4 four-tops", tables: [{ name: "T5", cap: 4 }, { name: "T6", cap: 4 }, { name: "T7", cap: 4 }, { name: "T8", cap: 4 }] },
-    { label: "2 six-tops", tables: [{ name: "T9", cap: 6 }, { name: "T10", cap: 6 }] },
-    { label: "Bar (8 seats)", tables: [{ name: "Bar", cap: 8 }] },
+function TablesStep({ businessId, existing, onDone }: { businessId: string; existing: InventoryRow[]; onDone: () => void }) {
+  const SIZES = [
+    { size: 2, label: "2-tops (1-2 guests)", defaultTurn: 60 },
+    { size: 4, label: "4-tops (3-4 guests)", defaultTurn: 90 },
+    { size: 6, label: "6-tops (5-6 guests)", defaultTurn: 120 },
+    { size: 8, label: "8-tops (7-8 guests)", defaultTurn: 120 },
   ];
 
-  async function handleAddPreset(preset: typeof presets[0]) {
-    setSaving(true);
-    for (const t of preset.tables) {
-      const result = await addTable(businessId, { name: t.name, zone: "Main", capacity: t.cap, shape: "circle" });
-      setTables(prev => [...prev, { id: result.id, name: t.name, zone: "Main", capacity: t.cap }]);
-    }
-    setSaving(false);
+  const [rows, setRows] = useState(() =>
+    SIZES.map(s => {
+      const ex = existing.find(e => e.size === s.size);
+      return { size: s.size, label: s.label, count: ex?.count ?? 0, turn: ex?.turn_time_minutes ?? s.defaultTurn };
+    })
+  );
+  const [saving, setSaving] = useState(false);
+
+  // Quick presets
+  const presets = [
+    { label: "Small restaurant", inv: [{ size: 2, count: 4 }, { size: 4, count: 3 }, { size: 6, count: 1 }] },
+    { label: "Medium restaurant", inv: [{ size: 2, count: 6 }, { size: 4, count: 5 }, { size: 6, count: 2 }, { size: 8, count: 1 }] },
+    { label: "Large restaurant", inv: [{ size: 2, count: 10 }, { size: 4, count: 8 }, { size: 6, count: 3 }, { size: 8, count: 2 }] },
+  ];
+
+  function applyPreset(p: typeof presets[0]) {
+    setRows(prev => prev.map(r => {
+      const match = p.inv.find(i => i.size === r.size);
+      return { ...r, count: match?.count ?? 0 };
+    }));
   }
 
-  async function handleAddCustom() {
-    if (!form.name.trim()) return;
+  async function handleSave() {
     setSaving(true);
-    const result = await addTable(businessId, {
-      name: form.name, zone: form.zone, capacity: parseInt(form.capacity) || 4, shape: "circle",
-    });
-    setTables(prev => [...prev, { id: result.id, name: form.name, zone: form.zone, capacity: parseInt(form.capacity) || 4 }]);
-    setForm({ name: "", zone: form.zone, capacity: "4" });
+    await updateTableInventory(businessId, rows.map(r => ({
+      size: r.size, count: r.count, turn_time_minutes: r.turn,
+    })));
     setSaving(false);
+    onDone();
   }
 
-  const inputClass = "border border-neutral-200 rounded-lg px-3 py-2.5 text-sm bg-white text-neutral-900 focus:outline-none focus:ring-2 focus:ring-neutral-900/10";
+  const totalTables = rows.reduce((s, r) => s + r.count, 0);
+  const totalSeats = rows.reduce((s, r) => s + r.count * r.size, 0);
+  const inputClass = "border border-neutral-200 rounded-lg px-3 py-2.5 text-sm bg-white text-neutral-900 focus:outline-none focus:ring-2 focus:ring-neutral-900/10 w-20 text-center tabular-nums";
 
   return (
     <div>
-      <h2 className="text-3xl font-bold text-neutral-900 mb-2">Add your tables</h2>
-      <p className="text-base text-neutral-500 mb-8">
-        These are used for reservations and the host stand floor view. You can rearrange them on the floor plan later.
+      <h2 className="text-3xl font-bold text-neutral-900 mb-2">Set up your tables</h2>
+      <p className="text-base text-neutral-500 mb-6">
+        How many tables of each size does your restaurant have? This controls how many reservations you can take per time slot.
       </p>
 
       {/* Quick presets */}
-      {tables.length === 0 && (
-        <div className="mb-8">
-          <p className="text-sm font-semibold text-neutral-600 mb-3">Quick start — add a common layout:</p>
+      {totalTables === 0 && (
+        <div className="mb-6">
+          <p className="text-sm font-semibold text-neutral-600 mb-3">Quick start:</p>
           <div className="flex flex-wrap gap-2">
             {presets.map(p => (
-              <button key={p.label} onClick={() => handleAddPreset(p)} disabled={saving}
-                className="px-4 py-2.5 border-2 border-neutral-200 rounded-lg text-sm font-medium text-neutral-700 hover:border-neutral-900 hover:text-neutral-900 disabled:opacity-50 transition-colors">
-                + {p.label}
+              <button key={p.label} onClick={() => applyPreset(p)}
+                className="px-4 py-2.5 border-2 border-neutral-200 rounded-lg text-sm font-medium text-neutral-700 hover:border-neutral-900 hover:text-neutral-900 transition-colors">
+                {p.label}
               </button>
             ))}
           </div>
         </div>
       )}
 
-      {/* Current tables */}
-      {tables.length > 0 && (
-        <div className="mb-6">
-          <div className="flex flex-wrap gap-2">
-            {tables.map(t => (
-              <div key={t.id} className="flex items-center gap-2 border border-neutral-200 rounded-lg px-3 py-2 bg-white">
-                <span className="text-sm font-bold text-neutral-900">{t.name}</span>
-                <span className="text-xs text-neutral-400">{t.capacity} seats</span>
-                {t.zone !== "Main" && <span className="text-xs text-neutral-400">· {t.zone}</span>}
-              </div>
+      <div className="border border-neutral-200 rounded-lg overflow-hidden mb-4">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="bg-neutral-50 border-b border-neutral-200">
+              <th className="px-4 py-2.5 text-left font-semibold text-neutral-600">Table Size</th>
+              <th className="px-4 py-2.5 text-center font-semibold text-neutral-600">How many?</th>
+              <th className="px-4 py-2.5 text-center font-semibold text-neutral-600">Turn time</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((r, i) => (
+              <tr key={r.size} className="border-b border-neutral-100">
+                <td className="px-4 py-3 font-semibold text-neutral-900">{r.label}</td>
+                <td className="px-4 py-3 text-center">
+                  <input type="number" min={0} max={50} value={r.count}
+                    onChange={e => setRows(prev => prev.map((p, j) => j === i ? { ...p, count: parseInt(e.target.value) || 0 } : p))}
+                    className={inputClass} />
+                </td>
+                <td className="px-4 py-3 text-center">
+                  <select value={r.turn}
+                    onChange={e => setRows(prev => prev.map((p, j) => j === i ? { ...p, turn: parseInt(e.target.value) } : p))}
+                    className="border border-neutral-200 rounded-lg px-2 py-2 text-sm bg-white text-neutral-900">
+                    <option value={60}>60 min</option>
+                    <option value={75}>75 min</option>
+                    <option value={90}>90 min</option>
+                    <option value={120}>120 min</option>
+                  </select>
+                </td>
+              </tr>
             ))}
-          </div>
-          <p className="text-sm text-neutral-400 mt-2">{tables.length} tables · {tables.reduce((s, t) => s + t.capacity, 0)} total seats</p>
-        </div>
-      )}
-
-      {/* Add more */}
-      {tables.length > 0 && !adding && (
-        <button onClick={() => setAdding(true)} className="text-sm font-medium text-neutral-500 hover:text-neutral-900 transition-colors mb-6">
-          + Add more tables
-        </button>
-      )}
-
-      {/* Quick presets after first batch */}
-      {tables.length > 0 && adding && (
-        <div className="mb-6">
-          <div className="flex flex-wrap gap-2 mb-3">
-            {presets.map(p => (
-              <button key={p.label} onClick={() => handleAddPreset(p)} disabled={saving}
-                className="px-3 py-2 border border-neutral-200 rounded-lg text-xs font-medium text-neutral-600 hover:border-neutral-400 disabled:opacity-50 transition-colors">
-                + {p.label}
-              </button>
-            ))}
-          </div>
-          <div className="flex gap-2 items-end">
-            <div>
-              <label className="text-xs font-semibold text-neutral-500 mb-1 block">Name</label>
-              <input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} placeholder="T11" className={inputClass} />
-            </div>
-            <div>
-              <label className="text-xs font-semibold text-neutral-500 mb-1 block">Zone</label>
-              <input value={form.zone} onChange={e => setForm({ ...form, zone: e.target.value })} placeholder="Main" className={inputClass} />
-            </div>
-            <div>
-              <label className="text-xs font-semibold text-neutral-500 mb-1 block">Seats</label>
-              <select value={form.capacity} onChange={e => setForm({ ...form, capacity: e.target.value })} className={inputClass}>
-                {[2, 4, 6, 8, 10, 12].map(n => <option key={n} value={n}>{n}</option>)}
-              </select>
-            </div>
-            <button onClick={handleAddCustom} disabled={saving || !form.name.trim()}
-              className="px-4 py-2.5 bg-neutral-900 text-white text-sm font-bold rounded-lg hover:bg-neutral-700 disabled:opacity-50 transition-colors">
-              Add
-            </button>
-          </div>
-        </div>
-      )}
-
-      <div className="mt-8">
-        <button onClick={onDone} disabled={tables.length === 0}
-          className="w-full sm:w-auto px-8 py-4 bg-neutral-900 text-white text-base font-bold rounded-lg hover:bg-neutral-700 disabled:opacity-30 transition-colors">
-          {tables.length === 0 ? "Add at least one table" : "Next — Add Menu"}
-        </button>
+          </tbody>
+        </table>
       </div>
+
+      {totalTables > 0 && (
+        <p className="text-sm text-neutral-400 mb-6">{totalTables} tables · {totalSeats} seats</p>
+      )}
+
+      <button onClick={handleSave} disabled={totalTables === 0 || saving}
+        className="w-full sm:w-auto px-8 py-4 bg-neutral-900 text-white text-base font-bold rounded-lg hover:bg-neutral-700 disabled:opacity-30 transition-colors">
+        {saving ? "Saving..." : totalTables === 0 ? "Add at least one table" : "Next — Add Menu"}
+      </button>
     </div>
   );
 }
