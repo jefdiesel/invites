@@ -4,6 +4,7 @@ import { supabase } from "./db";
 import { randomUUID } from "crypto";
 import { revalidatePath } from "next/cache";
 import { takeSnapshot } from "./snapshots";
+import { sendBookingConfirmation } from "./email";
 
 function timeToMinutes(time: string): number {
   const [h, m] = time.split(":").map(Number);
@@ -128,6 +129,20 @@ export async function createBooking(
     status: "confirmed",
     source: "website",
   });
+
+  // Send confirmation email (don't block the response)
+  const { data: bizInfo } = await supabase.from("businesses").select("name, slug").eq("id", businessId).single();
+  if (bizInfo && data.email) {
+    sendBookingConfirmation({
+      guestEmail: data.email,
+      guestName: data.name,
+      restaurantName: bizInfo.name,
+      date: data.date,
+      time: data.time,
+      partySize: data.partySize,
+      slug: bizInfo.slug,
+    }).catch(() => {}); // fire and forget
+  }
 
   revalidatePath(`/r/[slug]`, "layout");
   return { bookingId, clientId };
