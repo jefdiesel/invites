@@ -4,7 +4,9 @@ import { useState } from "react";
 import {
   seatBooking, completeBooking, noShowBooking, cancelBooking,
   addToWaitlist, seatFromWaitlist, removeFromWaitlist, createWalkIn,
+  assignTable,
 } from "@/lib/restaurant-actions";
+import { TablePicker } from "./table-picker";
 
 type Booking = {
   id: string; booking_date: string; booking_time: string; party_size: number;
@@ -42,13 +44,32 @@ export function ManageView({ businessId, businessName, slug, bookings, tables, s
 
   // Waitlist add form
   const [showAdd, setShowAdd] = useState<"waitlist" | "walkin" | null>(null);
-  const [form, setForm] = useState({ name: "", phone: "", party_size: "2", notes: "", wait: "30" });
+  const [form, setForm] = useState({ name: "", phone: "", party_size: "2", notes: "", wait: "30", tableId: "" });
+  // Seating flow — pick table before seating
+  const [seatPickId, setSeatPickId] = useState<string | null>(null); // booking id needing table pick
+  const [seatPickTable, setSeatPickTable] = useState("");
+  const [seatWaitlistId, setSeatWaitlistId] = useState<string | null>(null);
+  const [seatWaitlistTable, setSeatWaitlistTable] = useState("");
 
-  async function handleAction(action: string, bookingId: string) {
-    if (action === "seat") await seatBooking(bookingId);
+  async function handleAction(action: string, bookingId: string, tableId?: string) {
+    if (action === "seat") await seatBooking(bookingId, tableId);
     else if (action === "complete") await completeBooking(bookingId);
     else if (action === "noshow") await noShowBooking(bookingId);
     else if (action === "cancel") await cancelBooking(bookingId);
+    location.reload();
+  }
+
+  async function handleSeatWithTable(bookingId: string) {
+    await seatBooking(bookingId, seatPickTable || undefined);
+    setSeatPickId(null);
+    setSeatPickTable("");
+    location.reload();
+  }
+
+  async function handleSeatWaitlistWithTable(entryId: string) {
+    await seatFromWaitlist(entryId, seatWaitlistTable || undefined);
+    setSeatWaitlistId(null);
+    setSeatWaitlistTable("");
     location.reload();
   }
 
@@ -69,7 +90,7 @@ export function ManageView({ businessId, businessName, slug, bookings, tables, s
     await createWalkIn(businessId, {
       name: form.name, phone: form.phone,
       party_size: parseInt(form.party_size) || 2,
-      notes: form.notes, tableId: null,
+      notes: form.notes, tableId: form.tableId || null,
     });
     resetForm();
     location.reload();
@@ -86,7 +107,7 @@ export function ManageView({ businessId, businessName, slug, bookings, tables, s
   }
 
   function resetForm() {
-    setForm({ name: "", phone: "", party_size: "2", notes: "", wait: "30" });
+    setForm({ name: "", phone: "", party_size: "2", notes: "", wait: "30", tableId: "" });
     setShowAdd(null);
   }
 
@@ -156,6 +177,11 @@ export function ManageView({ businessId, businessName, slug, bookings, tables, s
           </div>
           <div className="flex gap-2">
             <input placeholder="Notes" value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })} className={`${inputClass} flex-1`} />
+            {showAdd === "walkin" && (
+              <TablePicker tables={activeTables} bookings={todaysBookings}
+                partySize={parseInt(form.party_size) || 2} currentTableId={form.tableId || null}
+                onSelect={tid => setForm({ ...form, tableId: tid })} compact />
+            )}
             <button onClick={showAdd === "walkin" ? handleWalkIn : handleAddWaitlist}
               className="px-5 py-2.5 bg-neutral-900 text-white text-sm font-bold rounded-lg hover:bg-neutral-700 transition-colors whitespace-nowrap">
               {showAdd === "walkin" ? "Seat Now" : "Add"}
@@ -196,16 +222,29 @@ export function ManageView({ businessId, businessName, slug, bookings, tables, s
                     <td className="px-4 py-3 tabular-nums text-neutral-500">{minutesAgo(entry.created_at)}</td>
                     <td className="px-4 py-3 text-neutral-500 max-w-[200px] truncate">{entry.notes || "—"}</td>
                     <td className="px-4 py-3 text-right">
-                      <div className="flex items-center justify-end gap-1">
-                        <button onClick={() => handleSeatWaitlist(entry.id)}
-                          className="px-3 py-1.5 text-xs font-bold text-emerald-700 bg-emerald-50 rounded hover:bg-emerald-100 transition-colors">
-                          Seat
-                        </button>
-                        <button onClick={() => handleRemoveWaitlist(entry.id)}
-                          className="px-2 py-1.5 text-xs font-medium text-neutral-400 hover:text-rose-600 transition-colors">
-                          Remove
-                        </button>
-                      </div>
+                      {seatWaitlistId === entry.id ? (
+                        <div className="flex items-center gap-1">
+                          <TablePicker tables={activeTables} bookings={todaysBookings}
+                            partySize={entry.party_size} currentTableId={null}
+                            onSelect={tid => setSeatWaitlistTable(tid)} compact />
+                          <button onClick={() => handleSeatWaitlistWithTable(entry.id)}
+                            className="px-2 py-1.5 text-xs font-bold text-white bg-emerald-600 rounded hover:bg-emerald-700 transition-colors">
+                            Go
+                          </button>
+                          <button onClick={() => setSeatWaitlistId(null)} className="text-xs text-neutral-400">x</button>
+                        </div>
+                      ) : (
+                        <div className="flex items-center justify-end gap-1">
+                          <button onClick={() => setSeatWaitlistId(entry.id)}
+                            className="px-3 py-1.5 text-xs font-bold text-emerald-700 bg-emerald-50 rounded hover:bg-emerald-100 transition-colors">
+                            Seat
+                          </button>
+                          <button onClick={() => handleRemoveWaitlist(entry.id)}
+                            className="px-2 py-1.5 text-xs font-medium text-neutral-400 hover:text-rose-600 transition-colors">
+                            Remove
+                          </button>
+                        </div>
+                      )}
                     </td>
                   </tr>
                 ))}
@@ -244,19 +283,36 @@ export function ManageView({ businessId, businessName, slug, bookings, tables, s
                         {b.clients?.phone && <div className="text-xs text-neutral-400">{b.clients.phone}</div>}
                       </td>
                       <td className="px-4 py-3 text-right tabular-nums font-medium">{b.party_size}</td>
-                      <td className="px-4 py-3 text-neutral-600">{tableName ?? "—"}</td>
+                      <td className="px-4 py-3">
+                        <TablePicker tables={activeTables} bookings={todaysBookings}
+                          partySize={b.party_size} currentTableId={b.table_id}
+                          onSelect={async (tid) => { await assignTable(b.id, tid); location.reload(); }} compact />
+                      </td>
                       <td className="px-4 py-3 text-neutral-500 max-w-[200px] truncate">{b.notes || "—"}</td>
                       <td className="px-4 py-3 text-right">
-                        <div className="flex items-center justify-end gap-1">
-                          <button onClick={() => handleAction("seat", b.id)}
-                            className="px-3 py-1.5 text-xs font-bold text-emerald-700 bg-emerald-50 rounded hover:bg-emerald-100 transition-colors">
-                            Seat
-                          </button>
-                          <button onClick={() => handleAction("noshow", b.id)}
-                            className="px-2 py-1.5 text-xs font-medium text-neutral-400 hover:text-amber-600 transition-colors">
-                            No-show
-                          </button>
-                        </div>
+                        {seatPickId === b.id ? (
+                          <div className="flex items-center gap-1">
+                            <TablePicker tables={activeTables} bookings={todaysBookings}
+                              partySize={b.party_size} currentTableId={b.table_id}
+                              onSelect={tid => setSeatPickTable(tid)} compact />
+                            <button onClick={() => handleSeatWithTable(b.id)}
+                              className="px-2 py-1.5 text-xs font-bold text-white bg-emerald-600 rounded hover:bg-emerald-700 transition-colors">
+                              Go
+                            </button>
+                            <button onClick={() => setSeatPickId(null)} className="text-xs text-neutral-400">x</button>
+                          </div>
+                        ) : (
+                          <div className="flex items-center justify-end gap-1">
+                            <button onClick={() => b.table_id ? handleAction("seat", b.id, b.table_id) : setSeatPickId(b.id)}
+                              className="px-3 py-1.5 text-xs font-bold text-emerald-700 bg-emerald-50 rounded hover:bg-emerald-100 transition-colors">
+                              Seat
+                            </button>
+                            <button onClick={() => handleAction("noshow", b.id)}
+                              className="px-2 py-1.5 text-xs font-medium text-neutral-400 hover:text-amber-600 transition-colors">
+                              No-show
+                            </button>
+                          </div>
+                        )}
                       </td>
                     </tr>
                   );

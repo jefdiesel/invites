@@ -29,7 +29,7 @@ type Booking = {
 };
 
 function getTableStatus(table: Table, bookings: Booking[]): {
-  status: "open" | "occupied" | "turning" | "upcoming";
+  status: "open" | "occupied" | "turning" | "reserved";
   booking: Booking | null;
   nextBooking: Booking | null;
   minutesLeft: number | null;
@@ -41,14 +41,11 @@ function getTableStatus(table: Table, bookings: Booking[]): {
     .filter((b) => b.table_id === table.id)
     .sort((a, b) => a.booking_time.localeCompare(b.booking_time));
 
-  // Find current booking (seated or confirmed and within time window)
-  const current = tableBookings.find((b) => {
-    const bMins = timeToMins(b.booking_time);
-    const bEnd = bMins + (b.duration_minutes || 90);
-    if (b.status === "seated") return true;
-    if (b.status === "confirmed" && nowMins >= bMins - 15 && nowMins < bEnd) return true;
-    return false;
-  });
+  // Find current seated booking
+  const seated = tableBookings.find((b) => b.status === "seated");
+
+  // Find confirmed booking assigned to this table (reserved)
+  const confirmed = tableBookings.find((b) => b.status === "confirmed");
 
   // Find next upcoming
   const next = tableBookings.find((b) => {
@@ -56,16 +53,16 @@ function getTableStatus(table: Table, bookings: Booking[]): {
     return b.status === "confirmed" && bMins > nowMins;
   });
 
-  if (current?.status === "seated") {
-    const bMins = timeToMins(current.booking_time);
-    const bEnd = bMins + (current.duration_minutes || 90);
+  if (seated) {
+    const bMins = timeToMins(seated.booking_time);
+    const bEnd = bMins + (seated.duration_minutes || 90);
     const left = bEnd - nowMins;
-    if (left <= 15) return { status: "turning", booking: current, nextBooking: next ?? null, minutesLeft: left };
-    return { status: "occupied", booking: current, nextBooking: next ?? null, minutesLeft: left };
+    if (left <= 15) return { status: "turning", booking: seated, nextBooking: next ?? null, minutesLeft: left };
+    return { status: "occupied", booking: seated, nextBooking: next ?? null, minutesLeft: left };
   }
 
-  if (current) {
-    return { status: "upcoming", booking: current, nextBooking: next ?? null, minutesLeft: null };
+  if (confirmed) {
+    return { status: "reserved", booking: confirmed, nextBooking: next ?? null, minutesLeft: null };
   }
 
   return { status: "open", booking: null, nextBooking: next ?? null, minutesLeft: null };
@@ -84,10 +81,10 @@ function formatTime(time: string): string {
 }
 
 const STATUS_COLORS = {
-  open: { bg: "#059669", border: "#059669" },       // green
-  occupied: { bg: "#2563eb", border: "#2563eb" },    // blue
-  turning: { bg: "#d97706", border: "#d97706" },     // amber
-  upcoming: { bg: "#7c3aed", border: "#7c3aed" },    // purple
+  open: { bg: "#f5f5f5", border: "#d4d4d4", text: "#737373" },       // white/grey — empty
+  reserved: { bg: "#16a34a", border: "#16a34a", text: "#ffffff" },    // green — confirmed, not seated
+  occupied: { bg: "#2563eb", border: "#2563eb", text: "#ffffff" },    // blue — seated
+  turning: { bg: "#d97706", border: "#d97706", text: "#ffffff" },     // amber — nearly done
 };
 
 export function FloorLive({ tables, bookings: initialBookings, businessId }: {
@@ -124,7 +121,7 @@ export function FloorLive({ tables, bookings: initialBookings, businessId }: {
   async function handleAction(action: "seat" | "complete" | "no_show") {
     if (!selectedStatus?.booking) return;
     setActing(true);
-    if (action === "seat") await seatBooking(selectedStatus.booking.id);
+    if (action === "seat") await seatBooking(selectedStatus.booking.id, selectedTable?.id);
     if (action === "complete") await completeBooking(selectedStatus.booking.id);
     if (action === "no_show") await noShowBooking(selectedStatus.booking.id);
     await refresh();
@@ -192,7 +189,7 @@ export function FloorLive({ tables, bookings: initialBookings, businessId }: {
               }}
               onClick={(e) => { e.stopPropagation(); setSelectedTableId(table.id); }}
             >
-              <div className="absolute inset-0 flex flex-col items-center justify-center text-white pointer-events-none">
+              <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none" style={{ color: colors.text }}>
                 <span className="text-xs font-bold leading-none">{table.name}</span>
                 {status === "occupied" && booking?.clients && (
                   <span className="text-[8px] opacity-80 leading-none mt-0.5 truncate max-w-full px-1">
@@ -202,7 +199,7 @@ export function FloorLive({ tables, bookings: initialBookings, businessId }: {
                 {status === "turning" && minutesLeft != null && (
                   <span className="text-[8px] font-bold leading-none mt-0.5">{minutesLeft}m</span>
                 )}
-                {status === "upcoming" && booking && (
+                {status === "reserved" && booking && (
                   <span className="text-[8px] opacity-80 leading-none mt-0.5">{formatTime(booking.booking_time)}</span>
                 )}
               </div>
@@ -220,10 +217,10 @@ export function FloorLive({ tables, bookings: initialBookings, businessId }: {
 
       {/* Legend */}
       <div className="flex items-center gap-4 mt-3 text-xs text-neutral-500">
-        <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full" style={{ background: STATUS_COLORS.open.bg }} /> Open</span>
-        <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full" style={{ background: STATUS_COLORS.occupied.bg }} /> Occupied</span>
+        <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full border border-neutral-300" style={{ background: STATUS_COLORS.open.bg }} /> Open</span>
+        <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full" style={{ background: STATUS_COLORS.reserved.bg }} /> Reserved</span>
+        <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full" style={{ background: STATUS_COLORS.occupied.bg }} /> Seated</span>
         <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full" style={{ background: STATUS_COLORS.turning.bg }} /> Turning</span>
-        <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full" style={{ background: STATUS_COLORS.upcoming.bg }} /> Upcoming</span>
       </div>
 
       {/* Selected table detail */}
@@ -234,8 +231,12 @@ export function FloorLive({ tables, bookings: initialBookings, businessId }: {
               <span className="text-base font-bold text-neutral-900">Table {selectedTable.name}</span>
               <span className="text-sm text-neutral-400 ml-2">{selectedTable.capacity} seats · {selectedTable.zone}</span>
             </div>
-            <span className="px-2.5 py-0.5 rounded-full text-xs font-bold text-white" style={{ background: STATUS_COLORS[selectedStatus.status].bg }}>
-              {selectedStatus.status}
+            <span className="px-2.5 py-0.5 rounded-full text-xs font-bold" style={{
+              background: STATUS_COLORS[selectedStatus.status].bg,
+              color: STATUS_COLORS[selectedStatus.status].text,
+              border: selectedStatus.status === "open" ? "1px solid #d4d4d4" : "none",
+            }}>
+              {selectedStatus.status === "reserved" ? "reserved" : selectedStatus.status}
             </span>
           </div>
 

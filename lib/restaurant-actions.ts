@@ -457,11 +457,13 @@ export async function deletePhoto(photoId: string) {
 
 // ── Booking Status Management ──
 
-export async function seatBooking(bookingId: string) {
-  await supabase.from("bookings").update({
+export async function seatBooking(bookingId: string, tableId?: string) {
+  const update: Record<string, unknown> = {
     status: "seated",
     updated_at: new Date().toISOString(),
-  }).eq("id", bookingId);
+  };
+  if (tableId) update.table_id = tableId;
+  await supabase.from("bookings").update(update).eq("id", bookingId);
 }
 
 export async function completeBooking(bookingId: string) {
@@ -548,11 +550,36 @@ export async function addToWaitlist(businessId: string, data: {
   return { id };
 }
 
-export async function seatFromWaitlist(entryId: string) {
+export async function seatFromWaitlist(entryId: string, tableId?: string) {
+  const { data: entry } = await supabase.from("waitlist_entries").select("*").eq("id", entryId).single();
+  if (!entry) return;
+
   await supabase.from("waitlist_entries").update({
     status: "seated",
     seated_at: new Date().toISOString(),
   }).eq("id", entryId);
+
+  // Create a booking so the guest shows on the floor map
+  const now = new Date();
+  const clientId = randomUUID();
+  await supabase.from("clients").insert({
+    id: clientId, name: entry.name,
+    email: `waitlist-${randomUUID().slice(0, 8)}@walkin.local`,
+    phone: entry.phone,
+  });
+  await supabase.from("bookings").insert({
+    id: randomUUID(),
+    business_id: entry.business_id,
+    client_id: clientId,
+    booking_date: now.toISOString().split("T")[0],
+    booking_time: `${now.getHours().toString().padStart(2, "0")}:${now.getMinutes().toString().padStart(2, "0")}`,
+    party_size: entry.party_size,
+    notes: entry.notes,
+    status: "seated",
+    source: "waitlist",
+    table_id: tableId || null,
+  });
+
   revalidatePath(`/r/[slug]`, "layout");
 }
 
