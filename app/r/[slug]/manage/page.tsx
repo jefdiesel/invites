@@ -12,8 +12,9 @@ export default async function ManagePage({ params }: { params: Promise<{ slug: s
   const biz = await getBusiness(slug);
   if (!biz) return notFound();
 
-  const [bookings, tables, waitlist] = await Promise.all([
+  const [bookings, upcomingBookings, tables, waitlist] = await Promise.all([
     getUpcomingBookings(biz.id, 1),
+    getUpcomingBookings(biz.id, 7),
     getTables(biz.id),
     getWaitlist(biz.id),
   ]);
@@ -49,6 +50,7 @@ export default async function ManagePage({ params }: { params: Promise<{ slug: s
           tables={tables}
           slotDuration={biz.slot_duration_minutes}
           waitlist={waitlist}
+          upcomingBookings={upcomingBookings}
         />
       </main>
     </div>

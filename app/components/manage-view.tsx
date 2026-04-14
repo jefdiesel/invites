@@ -24,10 +24,11 @@ type WaitlistEntry = {
   notes: string; status: string; quoted_wait_minutes: number; created_at: string;
 };
 
-export function ManageView({ businessId, businessName, slug, bookings, tables, slotDuration, waitlist: initialWaitlist }: {
+export function ManageView({ businessId, businessName, slug, bookings, tables, slotDuration, waitlist: initialWaitlist, upcomingBookings }: {
   businessId: string; businessName: string; slug: string;
   bookings: Booking[]; tables: Table[]; slotDuration: number;
   waitlist: WaitlistEntry[];
+  upcomingBookings: Booking[];
 }) {
   const today = new Date().toISOString().split("T")[0];
   const todaysBookings = bookings.filter(b => b.booking_date === today);
@@ -148,6 +149,8 @@ export function ManageView({ businessId, businessName, slug, bookings, tables, s
         </div>
       </div>
 
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_280px] gap-6">
+      <div>
       {/* Add buttons */}
       <div className="flex gap-2 mb-6">
         <button onClick={() => setShowAdd(showAdd === "waitlist" ? null : "waitlist")}
@@ -410,10 +413,134 @@ export function ManageView({ businessId, businessName, slug, bookings, tables, s
       {arriving.length === 0 && seated.length === 0 && initialWaitlist.length === 0 && (
         <p className="text-neutral-400 text-center py-12">No active reservations or waitlist entries.</p>
       )}
+      </div>
 
-      {/* Legend */}
-      <div className="flex gap-4 text-xs text-neutral-400 mt-6">
-        <span>Amber rows = turning (15m or less)</span>
+      {/* ── Right sidebar: Today's service + upcoming ── */}
+      <div className="border border-neutral-200 rounded-xl bg-white overflow-hidden hidden lg:block">
+        <div className="px-4 py-3 bg-neutral-50 border-b border-neutral-200">
+          <div className="text-sm font-bold text-neutral-900">Today's Service</div>
+          <div className="text-xs text-neutral-400">
+            {new Date().toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" })}
+            {todaysBookings.filter(b => b.status !== "cancelled").length > 0 && (
+              <> · {todaysBookings.filter(b => b.status !== "cancelled").length} res · {todayCovers} covers</>
+            )}
+          </div>
+        </div>
+        <div className="overflow-y-auto" style={{ maxHeight: "calc(100vh - 200px)" }}>
+          {/* Arriving */}
+          {arriving.length > 0 && (
+            <div>
+              <div className="px-4 py-2 text-[10px] font-bold text-emerald-600 uppercase tracking-wider bg-emerald-50/50">
+                Arriving ({arriving.length})
+              </div>
+              {arriving.map(b => {
+                const tbl = activeTables.find(t => t.id === b.table_id);
+                return (
+                  <div key={b.id} className="px-4 py-2.5 border-b border-neutral-100">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-semibold text-neutral-900">{b.clients?.name ?? "Guest"}</span>
+                      <span className="text-xs tabular-nums text-neutral-500">{fmtTime(b.booking_time)}</span>
+                    </div>
+                    <div className="text-xs text-neutral-400 mt-0.5">
+                      {b.party_size}p{tbl ? ` · ${tbl.name}` : " · no table"}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Seated */}
+          {seated.length > 0 && (
+            <div>
+              <div className="px-4 py-2 text-[10px] font-bold text-blue-600 uppercase tracking-wider bg-blue-50/50">
+                Seated ({seated.length})
+              </div>
+              {seated.map(b => {
+                const tbl = activeTables.find(t => t.id === b.table_id);
+                const end = toMins(b.booking_time) + (b.duration_minutes || slotDuration);
+                const left = end - nowMins;
+                return (
+                  <div key={b.id} className={`px-4 py-2.5 border-b border-neutral-100 ${left <= 15 ? "bg-amber-50" : ""}`}>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-semibold text-neutral-900">{b.clients?.name ?? "Guest"}</span>
+                      <span className={`text-xs tabular-nums font-bold ${left <= 15 ? "text-amber-700" : "text-blue-600"}`}>
+                        {left > 0 ? `${left}m` : "Over"}
+                      </span>
+                    </div>
+                    <div className="text-xs text-neutral-400 mt-0.5">
+                      {b.party_size}p{tbl ? ` · ${tbl.name}` : ""} · seated {fmtTime(b.booking_time)}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Done */}
+          {completed.length > 0 && (
+            <div>
+              <div className="px-4 py-2 text-[10px] font-bold text-neutral-300 uppercase tracking-wider">
+                Done ({completed.length})
+              </div>
+              {completed.map(b => (
+                <div key={b.id} className="px-4 py-1.5 border-b border-neutral-50 text-neutral-300">
+                  <span className="text-xs">{b.clients?.name ?? "Guest"} · {fmtTime(b.booking_time)} · {b.party_size}p</span>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Empty today — show upcoming */}
+          {arriving.length === 0 && seated.length === 0 && completed.length === 0 && (
+            <div className="px-4 py-6 text-center">
+              <p className="text-sm text-neutral-400 mb-1">No reservations today.</p>
+            </div>
+          )}
+
+          {/* Upcoming reservations (next days) */}
+          {(() => {
+            const futureBookings = upcomingBookings
+              .filter(b => b.booking_date > today && b.status === "confirmed")
+              .sort((a, b) => a.booking_date.localeCompare(b.booking_date) || a.booking_time.localeCompare(b.booking_time));
+
+            if (futureBookings.length === 0) return null;
+
+            // Group by date
+            const byDate = new Map<string, Booking[]>();
+            for (const b of futureBookings) {
+              const arr = byDate.get(b.booking_date) || [];
+              arr.push(b);
+              byDate.set(b.booking_date, arr);
+            }
+
+            return (
+              <div>
+                <div className="px-4 py-2 text-[10px] font-bold text-neutral-500 uppercase tracking-wider bg-neutral-50 border-t border-neutral-200">
+                  Coming Up
+                </div>
+                {[...byDate.entries()].map(([date, dBookings]) => (
+                  <div key={date}>
+                    <div className="px-4 py-1.5 text-xs font-bold text-neutral-500 bg-neutral-50/50 border-b border-neutral-100">
+                      {new Date(date + "T12:00:00").toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}
+                      <span className="text-neutral-300 font-normal ml-1">· {dBookings.length} res · {dBookings.reduce((s, b) => s + b.party_size, 0)} covers</span>
+                    </div>
+                    {dBookings.map(b => (
+                      <div key={b.id} className="px-4 py-2 border-b border-neutral-50">
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm text-neutral-700">{b.clients?.name ?? "Guest"}</span>
+                          <span className="text-xs tabular-nums text-neutral-400">{fmtTime(b.booking_time)}</span>
+                        </div>
+                        <div className="text-xs text-neutral-300">{b.party_size}p</div>
+                      </div>
+                    ))}
+                  </div>
+                ))}
+              </div>
+            );
+          })()}
+        </div>
+      </div>
       </div>
     </div>
   );
