@@ -19,6 +19,39 @@ function formatTime(time: string): string {
   return m === 0 ? `${hour} ${ampm}` : `${hour}:${m.toString().padStart(2, "0")} ${ampm}`;
 }
 
+export async function sendGuestMagicLink(data: { email: string; token: string }) {
+  try {
+    await getResend().emails.send({
+      from: "Remi <reservations@itsremi.app>",
+      to: data.email,
+      subject: "Your Remi login link",
+      html: `
+        <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; max-width: 480px; margin: 0 auto; padding: 32px 24px;">
+          <h1 style="font-size: 24px; font-weight: 700; color: #171717; margin: 0 0 8px;">View your reservations</h1>
+          <p style="font-size: 16px; color: #525252; margin: 0 0 24px;">
+            Click below to log in and manage your reservations across all Remi restaurants.
+          </p>
+
+          <a href="https://itsremi.app/my/verify?token=${data.token}" style="${btnStyle}">
+            Log In
+          </a>
+
+          <p style="font-size: 13px; color: #a3a3a3; margin: 24px 0 0;">
+            This link expires in 15 minutes. If you didn't request this, you can ignore it.
+          </p>
+
+          <hr style="border: none; border-top: 1px solid #e5e5e5; margin: 32px 0 16px;" />
+          <p style="font-size: 12px; color: #a3a3a3; margin: 0;">
+            <a href="https://itsremi.app" style="color: #a3a3a3;">Remi</a> — Restaurant reservations
+          </p>
+        </div>
+      `,
+    });
+  } catch (err) {
+    console.error("Failed to send guest magic link:", err);
+  }
+}
+
 function cancelUrl(slug: string, bookingId: string): string {
   return `https://itsremi.app/r/${slug}/cancel/${bookingId}`;
 }
@@ -64,8 +97,14 @@ export async function sendBookingConfirmation(data: {
             </a>
           </div>
 
-          <a href="${cancelUrl(slug, bookingId)}" style="${cancelBtnStyle}">
-            Cancel Reservation
+          <div style="margin: 0 0 16px;">
+            <a href="${cancelUrl(slug, bookingId)}" style="${cancelBtnStyle}">
+              Cancel Reservation
+            </a>
+          </div>
+
+          <a href="https://itsremi.app/my" style="font-size: 13px; color: #525252; text-decoration: underline;">
+            View all your reservations
           </a>
 
           <hr style="border: none; border-top: 1px solid #e5e5e5; margin: 32px 0 16px;" />

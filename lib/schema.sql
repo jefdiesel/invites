@@ -227,6 +227,19 @@ CREATE TABLE IF NOT EXISTS waitlist_entries (
 ALTER TABLE waitlist_entries ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Allow all waitlist_entries" ON waitlist_entries FOR ALL USING (true) WITH CHECK (true);
 
+-- Guest magic links (for /my portal login)
+CREATE TABLE IF NOT EXISTS guest_magic_links (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  email TEXT NOT NULL,
+  token TEXT UNIQUE NOT NULL,
+  expires_at TIMESTAMPTZ NOT NULL,
+  used_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+ALTER TABLE guest_magic_links ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Allow all guest_magic_links" ON guest_magic_links FOR ALL USING (true) WITH CHECK (true);
+
 -- Client-sensitive data (isolated for HIPAA/SOC2 readiness)
 -- This table can be encrypted at rest, moved to isolated storage,
 -- or omitted entirely for non-healthcare verticals.

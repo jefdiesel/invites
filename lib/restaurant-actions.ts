@@ -5,6 +5,7 @@ import { randomUUID } from "crypto";
 import { revalidatePath } from "next/cache";
 import { takeSnapshot } from "./snapshots";
 import { sendBookingConfirmation, sendCancellationEmail } from "./email";
+import { sendBookingConfirmationSMS, sendWaitlistAddedSMS, sendTableReadySMS, sendCancellationSMS } from "./sms";
 
 function timeToMinutes(time: string): number {
   const [h, m] = time.split(":").map(Number);
@@ -147,6 +148,14 @@ export async function createBooking(
     } catch (err) {
       console.error("Email send failed:", err);
     }
+
+    // SMS confirmation
+    if (data.phone) {
+      await sendBookingConfirmationSMS({
+        phone: data.phone, guestName: data.name, restaurantName: bizInfo.name,
+        date: data.date, time: data.time, partySize: data.partySize,
+      });
+    }
   }
 
   return { bookingId, clientId };
@@ -166,10 +175,9 @@ export async function cancelBooking(bookingId: string) {
 // ── Admin Cancel (with email) ──
 
 export async function adminCancelBooking(bookingId: string, note: string) {
-  // Get booking + client + business info for the email
   const { data: booking } = await supabase
     .from("bookings")
-    .select("*, clients(name, email), businesses(name, slug)")
+    .select("*, clients(name, email, phone), businesses(name, slug)")
     .eq("id", bookingId)
     .single();
 
@@ -180,23 +188,26 @@ export async function adminCancelBooking(bookingId: string, note: string) {
     updated_at: new Date().toISOString(),
   }).eq("id", bookingId);
 
-  const client = booking.clients as unknown as { name: string; email: string } | null;
+  const client = booking.clients as unknown as { name: string; email: string; phone: string } | null;
   const biz = booking.businesses as unknown as { name: string; slug: string } | null;
 
-  if (client?.email && biz) {
-    try {
-      await sendCancellationEmail({
-        guestEmail: client.email,
-        guestName: client.name,
-        restaurantName: biz.name,
-        date: booking.booking_date,
-        time: booking.booking_time,
-        partySize: booking.party_size,
-        slug: biz.slug,
-        note: note || undefined,
+  if (biz) {
+    if (client?.email) {
+      try {
+        await sendCancellationEmail({
+          guestEmail: client.email, guestName: client.name, restaurantName: biz.name,
+          date: booking.booking_date, time: booking.booking_time,
+          partySize: booking.party_size, slug: biz.slug, note: note || undefined,
+        });
+      } catch (err) {
+        console.error("Cancel email failed:", err);
+      }
+    }
+    if (client?.phone) {
+      await sendCancellationSMS({
+        phone: client.phone, restaurantName: biz.name,
+        date: booking.booking_date, time: booking.booking_time, slug: biz.slug,
       });
-    } catch (err) {
-      console.error("Cancel email failed:", err);
     }
   }
 
@@ -546,6 +557,20 @@ export async function addToWaitlist(businessId: string, data: {
 }) {
   const id = randomUUID();
   await supabase.from("waitlist_entries").insert({ id, business_id: businessId, ...data });
+
+  // SMS notification
+  if (data.phone) {
+    const { data: biz } = await supabase.from("businesses").select("name").eq("id", businessId).single();
+    const { count } = await supabase.from("waitlist_entries").select("*", { count: "exact", head: true })
+      .eq("business_id", businessId).eq("status", "waiting");
+    if (biz) {
+      await sendWaitlistAddedSMS({
+        phone: data.phone, restaurantName: biz.name,
+        quotedWaitMinutes: data.quoted_wait_minutes, position: count ?? 1,
+      });
+    }
+  }
+
   revalidatePath(`/r/[slug]`, "layout");
   return { id };
 }
@@ -579,6 +604,12 @@ export async function seatFromWaitlist(entryId: string, tableId?: string) {
     source: "waitlist",
     table_id: tableId || null,
   });
+
+  // SMS: table ready
+  if (entry.phone) {
+    const { data: biz } = await supabase.from("businesses").select("name").eq("id", entry.business_id).single();
+    if (biz) await sendTableReadySMS({ phone: entry.phone, restaurantName: biz.name });
+  }
 
   revalidatePath(`/r/[slug]`, "layout");
 }
