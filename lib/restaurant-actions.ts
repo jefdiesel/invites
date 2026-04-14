@@ -145,7 +145,6 @@ export async function createBooking(
     }).catch(() => {}); // fire and forget
   }
 
-  revalidatePath(`/r/[slug]`, "layout");
   return { bookingId, clientId };
 }
 
