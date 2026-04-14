@@ -4,7 +4,7 @@ import { supabase } from "./db";
 import { randomUUID } from "crypto";
 import { revalidatePath } from "next/cache";
 import { takeSnapshot } from "./snapshots";
-import { sendBookingConfirmation } from "./email";
+import { sendBookingConfirmation, sendCancellationEmail } from "./email";
 
 function timeToMinutes(time: string): number {
   const [h, m] = time.split(":").map(Number);
@@ -161,6 +161,89 @@ export async function updateBookingStatus(bookingId: string, status: string) {
 
 export async function cancelBooking(bookingId: string) {
   await updateBookingStatus(bookingId, "cancelled");
+}
+
+// ── Admin Cancel (with email) ──
+
+export async function adminCancelBooking(bookingId: string, note: string) {
+  // Get booking + client + business info for the email
+  const { data: booking } = await supabase
+    .from("bookings")
+    .select("*, clients(name, email), businesses(name, slug)")
+    .eq("id", bookingId)
+    .single();
+
+  if (!booking) return;
+
+  await supabase.from("bookings").update({
+    status: "cancelled",
+    updated_at: new Date().toISOString(),
+  }).eq("id", bookingId);
+
+  const client = booking.clients as unknown as { name: string; email: string } | null;
+  const biz = booking.businesses as unknown as { name: string; slug: string } | null;
+
+  if (client?.email && biz) {
+    try {
+      await sendCancellationEmail({
+        guestEmail: client.email,
+        guestName: client.name,
+        restaurantName: biz.name,
+        date: booking.booking_date,
+        time: booking.booking_time,
+        partySize: booking.party_size,
+        slug: biz.slug,
+        note: note || undefined,
+      });
+    } catch (err) {
+      console.error("Cancel email failed:", err);
+    }
+  }
+
+  revalidatePath(`/r/[slug]`, "layout");
+}
+
+export async function adminCancelAllDay(businessId: string, date: string, note: string) {
+  // Get all confirmed bookings for this date
+  const { data: bookings } = await supabase
+    .from("bookings")
+    .select("id, booking_date, booking_time, party_size, clients(name, email), businesses(name, slug)")
+    .eq("business_id", businessId)
+    .eq("booking_date", date)
+    .eq("status", "confirmed");
+
+  if (!bookings || bookings.length === 0) return { cancelled: 0 };
+
+  // Cancel all
+  for (const b of bookings) {
+    await supabase.from("bookings").update({
+      status: "cancelled",
+      updated_at: new Date().toISOString(),
+    }).eq("id", b.id);
+
+    const client = b.clients as unknown as { name: string; email: string } | null;
+    const biz = b.businesses as unknown as { name: string; slug: string } | null;
+
+    if (client?.email && biz) {
+      try {
+        await sendCancellationEmail({
+          guestEmail: client.email,
+          guestName: client.name,
+          restaurantName: biz.name,
+          date: b.booking_date,
+          time: b.booking_time,
+          partySize: b.party_size,
+          slug: biz.slug,
+          note: note || undefined,
+        });
+      } catch (err) {
+        console.error("Cancel email failed for", client.email, err);
+      }
+    }
+  }
+
+  revalidatePath(`/r/[slug]`, "layout");
+  return { cancelled: bookings.length };
 }
 
 export async function updateBusinessClientNotes(

@@ -8,6 +8,8 @@ import {
   addPhoto, deletePhoto,
   updateCustomDomain,
   setBusinessLive,
+  adminCancelBooking,
+  adminCancelAllDay,
 } from "@/lib/restaurant-actions";
 import type { Theme } from "@/lib/themes";
 import { FloorEditor } from "./floor-editor";
@@ -127,7 +129,7 @@ export function AdminDashboard({
       </div>
 
       {tab === "reservations" && (
-        <ReservationsTab bookings={bookings} tables={tables} today={today} slotDuration={business.slot_duration_minutes} />
+        <ReservationsTab bookings={bookings} tables={tables} today={today} slotDuration={business.slot_duration_minutes} businessId={business.id} />
       )}
       {tab === "floor" && (
         <FloorPlanTab businessId={business.id} tables={tables} />
@@ -156,9 +158,16 @@ export function AdminDashboard({
 
 // ── Reservations Tab ──
 
-function ReservationsTab({ bookings, tables, today, slotDuration }: {
-  bookings: Booking[]; tables: RestaurantTable[]; today: string; slotDuration: number;
+function ReservationsTab({ bookings, tables, today, slotDuration, businessId }: {
+  bookings: Booking[]; tables: RestaurantTable[]; today: string; slotDuration: number; businessId: string;
 }) {
+  const [cancelId, setCancelId] = useState<string | null>(null);
+  const [cancelNote, setCancelNote] = useState("");
+  const [cancelling, setCancelling] = useState(false);
+  const [cancelAllDate, setCancelAllDate] = useState<string | null>(null);
+  const [cancelAllNote, setCancelAllNote] = useState("");
+  const [cancellingAll, setCancellingAll] = useState(false);
+
   const todaysBookings = bookings.filter(b => b.booking_date === today);
   const upcomingBookings = bookings.filter(b => b.booking_date > today);
   const activeTables = tables.filter(t => t.is_active).sort((a, b) => a.sort_order - b.sort_order);
@@ -170,8 +179,99 @@ function ReservationsTab({ bookings, tables, today, slotDuration }: {
   const seated = todaysBookings.filter(b => b.status === "seated").sort((a, b) => timeToMins(a.booking_time) - timeToMins(b.booking_time));
   const done = todaysBookings.filter(b => b.status === "completed" || b.status === "no_show");
 
+  const cancelTarget = cancelId ? bookings.find(b => b.id === cancelId) : null;
+
+  async function handleCancel() {
+    if (!cancelId) return;
+    setCancelling(true);
+    await adminCancelBooking(cancelId, cancelNote);
+    setCancelling(false);
+    setCancelId(null);
+    setCancelNote("");
+    location.reload();
+  }
+
+  async function handleCancelAll() {
+    if (!cancelAllDate) return;
+    setCancellingAll(true);
+    await adminCancelAllDay(businessId, cancelAllDate, cancelAllNote);
+    setCancellingAll(false);
+    setCancelAllDate(null);
+    setCancelAllNote("");
+    location.reload();
+  }
+
+  // Get unique upcoming dates for cancel-all
+  const upcomingDates = [...new Set(upcomingBookings.filter(b => b.status === "confirmed").map(b => b.booking_date))].sort();
+
   return (
     <div>
+      {/* Cancel single booking modal */}
+      {cancelId && cancelTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={() => { setCancelId(null); setCancelNote(""); }}>
+          <div className="bg-white rounded-xl p-6 w-full max-w-md shadow-xl mx-4" onClick={e => e.stopPropagation()}>
+            <h3 className="text-base font-bold text-neutral-900 mb-1">Cancel reservation</h3>
+            <p className="text-sm text-neutral-500 mb-4">
+              {cancelTarget.clients?.name} · {formatTime(cancelTarget.booking_time)} · {cancelTarget.party_size}p
+            </p>
+            <label className="block text-sm font-semibold text-neutral-600 mb-1">Note to guest (optional)</label>
+            <textarea value={cancelNote} onChange={e => setCancelNote(e.target.value)} rows={3}
+              placeholder="Sorry, we're closed for a private event..."
+              className="w-full border border-neutral-200 rounded-lg px-3 py-2 text-sm bg-white text-neutral-900 focus:outline-none focus:ring-2 focus:ring-neutral-900/10 mb-4" />
+            <div className="flex gap-2">
+              <button onClick={handleCancel} disabled={cancelling}
+                className="flex-1 py-2.5 text-sm font-bold text-white bg-rose-600 rounded-lg hover:bg-rose-700 disabled:opacity-50 transition-colors">
+                {cancelling ? "Cancelling..." : "Cancel & Notify Guest"}
+              </button>
+              <button onClick={() => { setCancelId(null); setCancelNote(""); }}
+                className="px-4 py-2.5 text-sm font-medium text-neutral-600 bg-neutral-100 rounded-lg hover:bg-neutral-200 transition-colors">
+                Back
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Cancel all day modal */}
+      {cancelAllDate && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={() => { setCancelAllDate(null); setCancelAllNote(""); }}>
+          <div className="bg-white rounded-xl p-6 w-full max-w-md shadow-xl mx-4" onClick={e => e.stopPropagation()}>
+            <h3 className="text-base font-bold text-rose-700 mb-1">Cancel all reservations</h3>
+            <p className="text-sm text-neutral-500 mb-1">
+              {new Date(cancelAllDate + "T12:00:00").toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}
+            </p>
+            <p className="text-sm text-neutral-500 mb-4">
+              {bookings.filter(b => b.booking_date === cancelAllDate && b.status === "confirmed").length} reservations will be cancelled. Each guest will receive a separate email.
+            </p>
+            <label className="block text-sm font-semibold text-neutral-600 mb-1">Note to all guests</label>
+            <textarea value={cancelAllNote} onChange={e => setCancelAllNote(e.target.value)} rows={3}
+              placeholder="We're closed due to a private event / weather / emergency..."
+              className="w-full border border-neutral-200 rounded-lg px-3 py-2 text-sm bg-white text-neutral-900 focus:outline-none focus:ring-2 focus:ring-neutral-900/10 mb-4" />
+            <div className="flex gap-2">
+              <button onClick={handleCancelAll} disabled={cancellingAll}
+                className="flex-1 py-2.5 text-sm font-bold text-white bg-rose-600 rounded-lg hover:bg-rose-700 disabled:opacity-50 transition-colors">
+                {cancellingAll ? "Cancelling all..." : "Cancel All & Notify Guests"}
+              </button>
+              <button onClick={() => { setCancelAllDate(null); setCancelAllNote(""); }}
+                className="px-4 py-2.5 text-sm font-medium text-neutral-600 bg-neutral-100 rounded-lg hover:bg-neutral-200 transition-colors">
+                Back
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Cancel all day button for today */}
+      {arriving.length > 0 && (
+        <div className="flex items-center justify-between mb-4">
+          <div />
+          <button onClick={() => setCancelAllDate(today)}
+            className="text-xs font-medium text-rose-500 hover:text-rose-700 transition-colors">
+            Cancel all today's reservations
+          </button>
+        </div>
+      )}
+
       {/* Arriving */}
       {arriving.length > 0 && (
         <div className="mb-8">
@@ -205,7 +305,7 @@ function ReservationsTab({ bookings, tables, today, slotDuration }: {
                         <div className="flex items-center justify-end gap-1">
                           <ActionBtn label="Seat" onClick={() => seatBooking(b.id).then(() => location.reload())} color="emerald" />
                           <ActionBtn label="No-show" onClick={() => noShowBooking(b.id).then(() => location.reload())} color="amber" />
-                          <ActionBtn label="Cancel" onClick={() => cancelBooking(b.id).then(() => location.reload())} color="rose" />
+                          <ActionBtn label="Cancel" onClick={() => setCancelId(b.id)} color="rose" />
                         </div>
                       </td>
                     </tr>
@@ -300,7 +400,20 @@ function ReservationsTab({ bookings, tables, today, slotDuration }: {
       {/* Upcoming (future days) */}
       {upcomingBookings.length > 0 && (
         <div className="mb-8">
-          <h3 className="text-sm font-bold text-neutral-600 uppercase tracking-wider mb-3">Upcoming ({upcomingBookings.length})</h3>
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-bold text-neutral-600 uppercase tracking-wider">Upcoming ({upcomingBookings.length})</h3>
+            {upcomingDates.length > 0 && (
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-neutral-400">Cancel all for:</span>
+                {upcomingDates.slice(0, 5).map(d => (
+                  <button key={d} onClick={() => setCancelAllDate(d)}
+                    className="text-xs font-medium text-rose-500 hover:text-rose-700 px-2 py-1 rounded bg-rose-50 hover:bg-rose-100 transition-colors">
+                    {new Date(d + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
           <div className="border border-neutral-200 rounded-lg overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
@@ -310,8 +423,8 @@ function ReservationsTab({ bookings, tables, today, slotDuration }: {
                   <th className="px-4 py-2.5 text-left font-semibold text-neutral-600">Guest</th>
                   <th className="px-4 py-2.5 text-right font-semibold text-neutral-600">Party</th>
                   <th className="px-4 py-2.5 text-left font-semibold text-neutral-600">Table</th>
-                  <th className="px-4 py-2.5 text-left font-semibold text-neutral-600">Status</th>
                   <th className="px-4 py-2.5 text-left font-semibold text-neutral-600">Notes</th>
+                  <th className="px-4 py-2.5 text-right font-semibold text-neutral-600"></th>
                 </tr>
               </thead>
               <tbody>
@@ -329,8 +442,12 @@ function ReservationsTab({ bookings, tables, today, slotDuration }: {
                       </td>
                       <td className="px-4 py-3 text-right tabular-nums font-medium">{b.party_size}</td>
                       <td className="px-4 py-3 text-neutral-600">{tableName ?? "—"}</td>
-                      <td className="px-4 py-3"><StatusBadge status={b.status} /></td>
                       <td className="px-4 py-3 text-neutral-500 max-w-[200px] truncate">{b.notes || "—"}</td>
+                      <td className="px-4 py-3 text-right">
+                        {b.status === "confirmed" && (
+                          <ActionBtn label="Cancel" onClick={() => setCancelId(b.id)} color="rose" />
+                        )}
+                      </td>
                     </tr>
                   );
                 })}
