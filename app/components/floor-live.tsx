@@ -23,6 +23,7 @@ type Booking = {
   party_size: number;
   status: string;
   notes: string;
+  source: string;
   table_id: string | null;
   duration_minutes: number | null;
   clients?: { name: string; email: string; phone: string };
@@ -129,6 +130,13 @@ export function FloorLive({ tables, bookings: initialBookings, businessId }: {
     router.refresh();
   }
 
+  // Sort bookings for the sidebar
+  const todayStr = new Date().toISOString().split("T")[0];
+  const todayBookings = bookings.filter(b => b.booking_date === todayStr);
+  const sidebarConfirmed = todayBookings.filter(b => b.status === "confirmed").sort((a, b) => a.booking_time.localeCompare(b.booking_time));
+  const sidebarSeated = todayBookings.filter(b => b.status === "seated").sort((a, b) => a.booking_time.localeCompare(b.booking_time));
+  const sidebarDone = todayBookings.filter(b => b.status === "completed" || b.status === "no_show");
+
   return (
     <div>
       {/* Mobile: show list instead of map */}
@@ -136,6 +144,9 @@ export function FloorLive({ tables, bookings: initialBookings, businessId }: {
         Rotate to landscape or use a larger screen for the floor map.
       </div>
 
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-6">
+      {/* Left: Floor map */}
+      <div>
       {/* Zone tabs */}
       {zones.length > 1 && (
         <div className="flex items-center gap-1 mb-4 border-b border-neutral-200">
@@ -282,6 +293,103 @@ export function FloorLive({ tables, bookings: initialBookings, businessId }: {
           </div>
         </div>
       )}
+      </div>
+
+      {/* Right: Today's service list */}
+      <div className="border border-neutral-200 rounded-xl bg-white overflow-hidden hidden lg:block">
+        <div className="px-4 py-3 bg-neutral-50 border-b border-neutral-200">
+          <span className="text-sm font-bold text-neutral-900">Today's Service</span>
+          <span className="text-xs text-neutral-400 ml-2">
+            {todayBookings.filter(b => b.status !== "cancelled").length} reservations · {todayBookings.filter(b => b.status !== "cancelled").reduce((s, b) => s + b.party_size, 0)} covers
+          </span>
+        </div>
+        <div className="overflow-y-auto" style={{ maxHeight: "calc(100vh - 220px)" }}>
+          {/* Arriving */}
+          {sidebarConfirmed.length > 0 && (
+            <div>
+              <div className="px-4 py-2 text-[10px] font-bold text-neutral-400 uppercase tracking-wider bg-neutral-50/50">
+                Arriving ({sidebarConfirmed.length})
+              </div>
+              {sidebarConfirmed.map(b => {
+                const tbl = tables.find(t => t.id === b.table_id);
+                return (
+                  <div key={b.id}
+                    className={`px-4 py-2.5 border-b border-neutral-100 cursor-pointer hover:bg-neutral-50 transition-colors ${
+                      selectedTableId === b.table_id ? "bg-blue-50" : ""
+                    }`}
+                    onClick={() => { if (b.table_id) setSelectedTableId(b.table_id); }}>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-semibold text-neutral-900">{b.clients?.name ?? "Guest"}</span>
+                      <span className="text-xs tabular-nums text-neutral-500">{formatTime(b.booking_time)}</span>
+                    </div>
+                    <div className="text-xs text-neutral-400 mt-0.5">
+                      {b.party_size}p{tbl ? ` · ${tbl.name}` : " · no table"}{b.source === "walk_in" ? " · walk-in" : b.source === "waitlist" ? " · waitlist" : ""}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Seated */}
+          {sidebarSeated.length > 0 && (
+            <div>
+              <div className="px-4 py-2 text-[10px] font-bold text-blue-600 uppercase tracking-wider bg-blue-50/50">
+                Seated ({sidebarSeated.length})
+              </div>
+              {sidebarSeated.map(b => {
+                const tbl = tables.find(t => t.id === b.table_id);
+                const bMins = timeToMins(b.booking_time);
+                const bEnd = bMins + (b.duration_minutes || 90);
+                const now2 = new Date();
+                const nowM = now2.getHours() * 60 + now2.getMinutes();
+                const left = bEnd - nowM;
+                return (
+                  <div key={b.id}
+                    className={`px-4 py-2.5 border-b border-neutral-100 cursor-pointer hover:bg-neutral-50 transition-colors ${
+                      selectedTableId === b.table_id ? "bg-blue-50" : ""
+                    } ${left <= 15 ? "bg-amber-50" : ""}`}
+                    onClick={() => { if (b.table_id) setSelectedTableId(b.table_id); }}>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-semibold text-neutral-900">{b.clients?.name ?? "Guest"}</span>
+                      <span className={`text-xs tabular-nums font-bold ${left <= 15 ? "text-amber-700" : "text-blue-600"}`}>
+                        {left > 0 ? `${left}m` : "Over"}
+                      </span>
+                    </div>
+                    <div className="text-xs text-neutral-400 mt-0.5">
+                      {b.party_size}p{tbl ? ` · ${tbl.name}` : ""} · seated {formatTime(b.booking_time)}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Done */}
+          {sidebarDone.length > 0 && (
+            <div>
+              <div className="px-4 py-2 text-[10px] font-bold text-neutral-300 uppercase tracking-wider">
+                Done ({sidebarDone.length})
+              </div>
+              {sidebarDone.map(b => (
+                <div key={b.id} className="px-4 py-2 border-b border-neutral-50 text-neutral-300">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs">{b.clients?.name ?? "Guest"}</span>
+                    <span className="text-xs tabular-nums">{formatTime(b.booking_time)}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {todayBookings.length === 0 && (
+            <div className="px-4 py-8 text-center text-sm text-neutral-400">
+              No reservations today.
+            </div>
+          )}
+        </div>
+      </div>
+      </div>
     </div>
   );
 }
