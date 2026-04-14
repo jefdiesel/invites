@@ -68,12 +68,18 @@ type Tab = "reservations" | "floor" | "menu" | "site" | "photos" | "guests" | "a
 
 // ── Main Component ──
 
+type WaitlistEntry = {
+  id: string; name: string; phone: string; party_size: number;
+  notes: string; status: string; quoted_wait_minutes: number; created_at: string;
+};
+
 export function AdminDashboard({
-  business, slug, theme, bookings, clients, tables, hours, menu, photos, stats,
+  business, slug, theme, bookings, clients, tables, hours, menu, photos, stats, waitlist,
 }: {
   business: Business; slug: string; theme: Theme;
   bookings: Booking[]; clients: BizClient[]; tables: RestaurantTable[];
   hours: Hour[]; menu: MenuItem[]; photos: Photo[]; stats: BookingStat[];
+  waitlist: WaitlistEntry[];
 }) {
   const [tab, setTab] = useState<Tab>("reservations");
   const [isLive, setIsLive] = useState((business as Record<string, unknown>).is_live as boolean ?? false);
@@ -114,6 +120,7 @@ export function AdminDashboard({
         <StatCard label="Tables" value={tables.filter(t => t.is_active).length} sub={`${tables.reduce((s, t) => s + (t.is_active ? t.capacity : 0), 0)} seats`} />
         <StatCard label="Menu Items" value={menu.length} sub={`${new Set(menu.map(m => m.category)).size} categories`} />
         <StatCard label="Guests" value={clients.length} sub={`${clients.filter(c => c.visit_count > 1).length} repeat`} />
+        {waitlist.length > 0 && <StatCard label="Waitlist" value={waitlist.length} sub="right now" />}
       </div>
 
       {/* Tabs */}
@@ -129,7 +136,7 @@ export function AdminDashboard({
       </div>
 
       {tab === "reservations" && (
-        <ReservationsTab bookings={bookings} tables={tables} today={today} slotDuration={business.slot_duration_minutes} businessId={business.id} hours={hours} />
+        <ReservationsTab bookings={bookings} tables={tables} today={today} slotDuration={business.slot_duration_minutes} businessId={business.id} hours={hours} waitlist={waitlist} />
       )}
       {tab === "floor" && (
         <FloorPlanTab businessId={business.id} tables={tables} />
@@ -161,8 +168,8 @@ export function AdminDashboard({
 const MONTH_NAMES = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
-function ReservationsTab({ bookings, tables, today, slotDuration, businessId, hours }: {
-  bookings: Booking[]; tables: RestaurantTable[]; today: string; slotDuration: number; businessId: string; hours: Hour[];
+function ReservationsTab({ bookings, tables, today, slotDuration, businessId, hours, waitlist }: {
+  bookings: Booking[]; tables: RestaurantTable[]; today: string; slotDuration: number; businessId: string; hours: Hour[]; waitlist: WaitlistEntry[];
 }) {
   const [selectedDate, setSelectedDate] = useState<string>(today);
   const [viewMonth, setViewMonth] = useState(() => {
@@ -402,12 +409,50 @@ function ReservationsTab({ bookings, tables, today, slotDuration, businessId, ho
               <p className="text-base font-medium">Closed</p>
               <p className="text-sm mt-1">No reservations on this day.</p>
             </div>
-          ) : dayBookings.length === 0 ? (
+          ) : dayBookings.length === 0 && waitlist.length === 0 ? (
             <div className="text-center py-12 text-neutral-400">
               <p className="text-base font-medium">No reservations yet</p>
             </div>
           ) : (
             <>
+              {/* Waitlist (today only) */}
+              {isToday && waitlist.length > 0 && (
+                <div className="mb-6">
+                  <h4 className="text-xs font-bold text-blue-600 uppercase tracking-wider mb-2">Waitlist ({waitlist.length})</h4>
+                  <div className="border border-blue-200 rounded-lg overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="bg-blue-50 border-b border-blue-200">
+                          <th className="px-4 py-2 text-left font-semibold text-neutral-600 w-8">#</th>
+                          <th className="px-4 py-2 text-left font-semibold text-neutral-600">Name</th>
+                          <th className="px-4 py-2 text-right font-semibold text-neutral-600">Party</th>
+                          <th className="px-4 py-2 text-left font-semibold text-neutral-600">Wait</th>
+                          <th className="px-4 py-2 text-left font-semibold text-neutral-600">Added</th>
+                          <th className="px-4 py-2 text-left font-semibold text-neutral-600">Phone</th>
+                          <th className="px-4 py-2 text-left font-semibold text-neutral-600">Notes</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {waitlist.map((entry, i) => {
+                          const mins = Math.floor((Date.now() - new Date(entry.created_at).getTime()) / 60000);
+                          return (
+                            <tr key={entry.id} className="border-b border-blue-100 hover:bg-blue-50/50">
+                              <td className="px-4 py-2.5 font-bold text-neutral-300">{i + 1}</td>
+                              <td className="px-4 py-2.5 font-semibold text-neutral-900">{entry.name}</td>
+                              <td className="px-4 py-2.5 text-right tabular-nums font-medium">{entry.party_size}</td>
+                              <td className="px-4 py-2.5 text-neutral-500">~{entry.quoted_wait_minutes}m</td>
+                              <td className="px-4 py-2.5 tabular-nums text-neutral-500">{mins < 1 ? "now" : `${mins}m ago`}</td>
+                              <td className="px-4 py-2.5 text-neutral-400">{entry.phone || "—"}</td>
+                              <td className="px-4 py-2.5 text-neutral-500 max-w-[180px] truncate">{entry.notes || "—"}</td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
               {/* Confirmed / Arriving */}
               {dayConfirmed.length > 0 && (
                 <div className="mb-6">
