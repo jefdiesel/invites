@@ -1105,32 +1105,68 @@ function GuestsTab({ clients, businessId, bookings }: { clients: BizClient[]; bu
 
             {editingId === c.id && (
               <div className="border-t border-neutral-100 px-4 py-3 bg-neutral-50 rounded-b-lg">
-                {/* Guest details */}
-                <div className="grid grid-cols-2 gap-3 mb-3">
-                  <div>
-                    <label className="text-xs font-semibold text-neutral-500 mb-1 block">Notes</label>
-                    <textarea value={editNotes} onChange={e => setEditNotes(e.target.value)} rows={2} className={inputClass} placeholder="Window seat preference, birthday June 4..." />
+                {/* Saved info display */}
+                {(c.notes || c.preferences || c.dietary || (c.tags && c.tags.length > 0)) && (
+                  <div className="grid grid-cols-2 gap-3 mb-3">
+                    {c.notes && (
+                      <div>
+                        <span className="text-xs font-semibold text-neutral-500">Notes</span>
+                        <p className="text-sm text-neutral-900 mt-0.5">{c.notes}</p>
+                      </div>
+                    )}
+                    {c.preferences && (
+                      <div>
+                        <span className="text-xs font-semibold text-neutral-500">Preferences</span>
+                        <p className="text-sm text-neutral-900 mt-0.5">{c.preferences}</p>
+                      </div>
+                    )}
+                    {c.dietary && (
+                      <div>
+                        <span className="text-xs font-semibold text-neutral-500">Dietary</span>
+                        <p className="text-sm text-neutral-900 mt-0.5">{c.dietary}</p>
+                      </div>
+                    )}
+                    {c.tags && c.tags.length > 0 && (
+                      <div>
+                        <span className="text-xs font-semibold text-neutral-500">Tags</span>
+                        <div className="flex gap-1 mt-0.5 flex-wrap">
+                          {c.tags.map(t => <span key={t} className="px-1.5 py-0.5 rounded text-xs font-medium bg-neutral-200 text-neutral-700">{t}</span>)}
+                        </div>
+                      </div>
+                    )}
                   </div>
-                  <div>
-                    <label className="text-xs font-semibold text-neutral-500 mb-1 block">Preferences</label>
-                    <textarea value={editPrefs} onChange={e => setEditPrefs(e.target.value)} rows={2} className={inputClass} placeholder="Quiet table, no shellfish..." />
+                )}
+
+                {/* Edit fields */}
+                <details className="mb-3">
+                  <summary className="text-xs font-medium text-neutral-500 cursor-pointer hover:text-neutral-700 mb-2">
+                    {(c.notes || c.preferences || c.dietary || (c.tags && c.tags.length > 0)) ? "Edit details" : "Add notes, preferences, dietary, tags"}
+                  </summary>
+                  <div className="grid grid-cols-2 gap-3 mb-3">
+                    <div>
+                      <label className="text-xs font-semibold text-neutral-500 mb-1 block">Notes</label>
+                      <textarea value={editNotes} onChange={e => setEditNotes(e.target.value)} rows={2} className={inputClass} placeholder="Window seat preference, birthday June 4..." />
+                    </div>
+                    <div>
+                      <label className="text-xs font-semibold text-neutral-500 mb-1 block">Preferences</label>
+                      <textarea value={editPrefs} onChange={e => setEditPrefs(e.target.value)} rows={2} className={inputClass} placeholder="Quiet table, no shellfish..." />
+                    </div>
+                    <div>
+                      <label className="text-xs font-semibold text-neutral-500 mb-1 block">Dietary</label>
+                      <input value={editDietary} onChange={e => setEditDietary(e.target.value)} className={inputClass} placeholder="Vegetarian, gluten-free, nut allergy..." />
+                    </div>
+                    <div>
+                      <label className="text-xs font-semibold text-neutral-500 mb-1 block">Tags (comma separated)</label>
+                      <input value={editTags} onChange={e => setEditTags(e.target.value)} className={inputClass} placeholder="VIP, Regular, Industry..." />
+                    </div>
                   </div>
-                  <div>
-                    <label className="text-xs font-semibold text-neutral-500 mb-1 block">Dietary</label>
-                    <input value={editDietary} onChange={e => setEditDietary(e.target.value)} className={inputClass} placeholder="Vegetarian, gluten-free, nut allergy..." />
+                  <div className="flex gap-2">
+                    <button onClick={() => saveEdit(c.client_id)} disabled={savingGuest}
+                      className="px-3 py-1.5 bg-neutral-900 text-white text-sm font-bold rounded-lg hover:bg-neutral-700 disabled:opacity-50 transition-colors">
+                      {savingGuest ? "Saving..." : "Save"}
+                    </button>
                   </div>
-                  <div>
-                    <label className="text-xs font-semibold text-neutral-500 mb-1 block">Tags (comma separated)</label>
-                    <input value={editTags} onChange={e => setEditTags(e.target.value)} className={inputClass} placeholder="VIP, Regular, Industry..." />
-                  </div>
-                </div>
-                <div className="flex gap-2 mb-4">
-                  <button onClick={() => saveEdit(c.client_id)} disabled={savingGuest}
-                    className="px-3 py-1.5 bg-neutral-900 text-white text-sm font-bold rounded-lg hover:bg-neutral-700 disabled:opacity-50 transition-colors">
-                    {savingGuest ? "Saving..." : "Save"}
-                  </button>
-                  <button onClick={() => setEditingId(null)} className="text-sm text-neutral-400 hover:text-neutral-600 transition-colors px-2">Cancel</button>
-                </div>
+                </details>
 
                 {/* Booking history */}
                 {(() => {
