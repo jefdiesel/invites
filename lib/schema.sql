@@ -245,14 +245,16 @@ ALTER TABLE table_inventory ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Allow all table_inventory" ON table_inventory FOR ALL USING (true) WITH CHECK (true);
 
 -- Blocked slots (manager overrides)
+-- slot_date is used for one-off blocks
+-- For recurring blocks: slot_date is NULL, day_of_week is set (0=Sun..6=Sat), or both NULL = every day
 CREATE TABLE IF NOT EXISTS blocked_slots (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   business_id UUID NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
-  slot_date DATE NOT NULL,
+  slot_date DATE,                   -- NULL = recurring
+  day_of_week INT,                  -- 0-6 for recurring by weekday, NULL = all days (if slot_date also NULL)
   slot_time TIME NOT NULL,
-  table_size INT NOT NULL,          -- which size is blocked (2, 4, 6, etc. or 0 for all sizes)
-  created_at TIMESTAMPTZ DEFAULT now(),
-  UNIQUE(business_id, slot_date, slot_time, table_size)
+  table_size INT NOT NULL DEFAULT 0, -- 0 = all sizes
+  created_at TIMESTAMPTZ DEFAULT now()
 );
 
 ALTER TABLE blocked_slots ENABLE ROW LEVEL SECURITY;

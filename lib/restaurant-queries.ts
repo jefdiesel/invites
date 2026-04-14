@@ -296,11 +296,15 @@ export async function getAvailableSlots(businessId: string, date: string, partyS
 // ── Blocked Slots ──
 
 export async function getBlockedSlots(businessId: string, date: string) {
+  const dow = new Date(date + "T12:00:00").getDay();
+
+  // Get all: exact date match, recurring by weekday, or recurring every day
   const { data } = await supabase
     .from("blocked_slots")
-    .select("slot_time, table_size")
+    .select("slot_time, table_size, slot_date, day_of_week")
     .eq("business_id", businessId)
-    .eq("slot_date", date);
+    .or(`slot_date.eq.${date},and(slot_date.is.null,day_of_week.eq.${dow}),and(slot_date.is.null,day_of_week.is.null)`);
+
   return data ?? [];
 }
 

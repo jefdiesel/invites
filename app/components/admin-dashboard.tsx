@@ -189,6 +189,7 @@ function ReservationsTab({ bookings, tables, today, slotDuration, businessId, ho
   const [showSlots, setShowSlots] = useState(false);
   const [blockedSlots, setBlockedSlots] = useState<Set<string>>(new Set());
   const [loadingSlots, setLoadingSlots] = useState(false);
+  const [blockMode, setBlockMode] = useState<"date" | "weekday" | "all">("date");
 
   async function loadBlockedSlots(date: string) {
     setLoadingSlots(true);
@@ -203,7 +204,6 @@ function ReservationsTab({ bookings, tables, today, slotDuration, businessId, ho
   }
 
   async function handleToggleSlot(time: string) {
-    const key = `${time}:all`;
     const newBlocked = new Set(blockedSlots);
     if (newBlocked.has(time)) {
       newBlocked.delete(time);
@@ -211,7 +211,7 @@ function ReservationsTab({ bookings, tables, today, slotDuration, businessId, ho
       newBlocked.add(time);
     }
     setBlockedSlots(newBlocked);
-    await toggleSlotBlock(businessId, selectedDate, time, 0);
+    await toggleSlotBlock(businessId, time, blockMode, selectedDate);
   }
 
   const activeTables = tables.filter(t => t.is_active).sort((a, b) => a.sort_order - b.sort_order);
@@ -444,7 +444,22 @@ function ReservationsTab({ bookings, tables, today, slotDuration, businessId, ho
               </button>
               {showSlots && (
                 <div className="border border-neutral-200 rounded-lg p-4 bg-neutral-50">
-                  <p className="text-xs text-neutral-400 mb-3">Toggle slots on/off. Blocked slots won't show to guests.</p>
+                  <div className="flex items-center gap-2 mb-3">
+                    <span className="text-xs text-neutral-400">Apply to:</span>
+                    {(["date", "weekday", "all"] as const).map(m => {
+                      const labels = {
+                        date: new Date(selectedDate + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" }),
+                        weekday: `Every ${DAY_NAMES[new Date(selectedDate + "T12:00:00").getDay()]}`,
+                        all: "Every day",
+                      };
+                      return (
+                        <button key={m} onClick={() => setBlockMode(m)}
+                          className={`px-2.5 py-1 text-xs font-medium rounded-full transition-colors ${
+                            blockMode === m ? "bg-neutral-900 text-white" : "bg-white border border-neutral-200 text-neutral-600 hover:border-neutral-400"
+                          }`}>{labels[m]}</button>
+                      );
+                    })}
+                  </div>
                   {loadingSlots ? (
                     <p className="text-xs text-neutral-400">Loading...</p>
                   ) : (

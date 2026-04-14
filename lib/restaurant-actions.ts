@@ -649,55 +649,39 @@ export async function updateTableInventory(businessId: string, inventory: {
 }
 
 // ── Slot Blocking ──
+// mode: "date" = this date only, "weekday" = every same weekday, "all" = every day
 
-export async function toggleSlotBlock(businessId: string, date: string, time: string, tableSize: number) {
-  // Check if already blocked
-  const { data: existing } = await supabase
-    .from("blocked_slots")
-    .select("id")
-    .eq("business_id", businessId)
-    .eq("slot_date", date)
-    .eq("slot_time", time)
-    .eq("table_size", tableSize)
-    .single();
+export async function toggleSlotBlock(
+  businessId: string, time: string, mode: "date" | "weekday" | "all", date: string
+) {
+  const dow = new Date(date + "T12:00:00").getDay();
 
-  if (existing) {
+  // Build the match criteria based on mode
+  let query = supabase.from("blocked_slots").select("id").eq("business_id", businessId).eq("slot_time", time).eq("table_size", 0);
+
+  if (mode === "date") {
+    query = query.eq("slot_date", date);
+  } else if (mode === "weekday") {
+    query = query.is("slot_date", null).eq("day_of_week", dow);
+  } else {
+    query = query.is("slot_date", null).is("day_of_week", null);
+  }
+
+  const { data: existing } = await query;
+
+  if (existing && existing.length > 0) {
     // Unblock
-    await supabase.from("blocked_slots").delete().eq("id", existing.id);
+    for (const row of existing) {
+      await supabase.from("blocked_slots").delete().eq("id", row.id);
+    }
   } else {
     // Block
     await supabase.from("blocked_slots").insert({
       id: randomUUID(),
       business_id: businessId,
-      slot_date: date,
+      slot_date: mode === "date" ? date : null,
+      day_of_week: mode === "weekday" ? dow : null,
       slot_time: time,
-      table_size: tableSize,
-    });
-  }
-}
-
-export async function blockAllSlotsForDate(businessId: string, date: string) {
-  // Block all sizes at all times — use size 0 meaning "all"
-  const { data: existing } = await supabase
-    .from("blocked_slots")
-    .select("id")
-    .eq("business_id", businessId)
-    .eq("slot_date", date)
-    .eq("table_size", 0);
-
-  if (existing && existing.length > 0) {
-    // Already have a block-all for this date, remove it (toggle off)
-    await supabase.from("blocked_slots").delete().eq("business_id", businessId).eq("slot_date", date).eq("table_size", 0);
-  } else {
-    // Also remove individual blocks since we're doing a blanket block
-    await supabase.from("blocked_slots").delete().eq("business_id", businessId).eq("slot_date", date);
-    // Insert one block-all entry for each slot time
-    // Actually simpler: just insert one row with size=0 and a sentinel time
-    await supabase.from("blocked_slots").insert({
-      id: randomUUID(),
-      business_id: businessId,
-      slot_date: date,
-      slot_time: "00:00",
       table_size: 0,
     });
   }
