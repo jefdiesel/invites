@@ -118,6 +118,35 @@ export default function AccessibilityPage() {
             </p>
           </section>
 
+          {/* Photo descriptions */}
+          <section id="photo-descriptions">
+            <h2 className="font-[family-name:var(--font-display)] text-2xl text-neutral-900 mb-4">Why photo descriptions are required</h2>
+            <p className="text-base text-neutral-600 leading-relaxed mb-4">
+              Every photo on your Remi website needs a caption of at least 30 characters. This caption is shown to all visitors and read aloud by screen readers. WCAG Success Criterion 1.1.1 requires meaningful text alternatives for all images — a missing or vague description like "food" or "interior" is a violation.
+            </p>
+            <p className="text-base text-neutral-600 leading-relaxed mb-4">
+              <strong>Describe what a person would see.</strong> Be specific: "A seared salmon fillet on a bed of lentils with herb butter, served on a white plate" — not "food photo." The 30-character minimum ensures every photo is genuinely accessible.
+            </p>
+            <div className="border border-neutral-200 rounded-xl overflow-hidden mb-4">
+              <div className="grid grid-cols-2 text-sm font-bold text-neutral-600 bg-neutral-50 border-b border-neutral-200">
+                <div className="px-4 py-3 border-r border-neutral-200 text-rose-600">Bad</div>
+                <div className="px-4 py-3 text-emerald-700">Good</div>
+              </div>
+              <div className="grid grid-cols-2 text-sm border-b border-neutral-100">
+                <div className="px-4 py-3 border-r border-neutral-100 text-neutral-400">"Food"</div>
+                <div className="px-4 py-3 text-neutral-700">"A seared salmon fillet on a bed of lentils with herb butter"</div>
+              </div>
+              <div className="grid grid-cols-2 text-sm border-b border-neutral-100">
+                <div className="px-4 py-3 border-r border-neutral-100 text-neutral-400">"Interior"</div>
+                <div className="px-4 py-3 text-neutral-700">"The dining room at evening service with candlelit tables and exposed brick"</div>
+              </div>
+              <div className="grid grid-cols-2 text-sm">
+                <div className="px-4 py-3 border-r border-neutral-100 text-neutral-400">"IMG_4392.jpg"</div>
+                <div className="px-4 py-3 text-neutral-700">"A glass of red wine on a white tablecloth with soft candlelight"</div>
+              </div>
+            </div>
+          </section>
+
           {/* Testing */}
           <section>
             <h2 className="font-[family-name:var(--font-display)] text-2xl text-neutral-900 mb-4">How we test</h2>
