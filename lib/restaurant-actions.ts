@@ -367,6 +367,30 @@ export async function updateMenuItem(itemId: string, data: {
   revalidatePath(`/r/[slug]`, "layout");
 }
 
+export async function reorderMenuItems(orderedIds: string[]) {
+  for (let i = 0; i < orderedIds.length; i++) {
+    await supabase.from("menu_items").update({ sort_order: i }).eq("id", orderedIds[i]);
+  }
+  revalidatePath(`/r/[slug]`, "layout");
+}
+
+export async function renameMenuCategory(businessId: string, oldName: string, newName: string) {
+  await takeSnapshot(businessId, "menu", `Before rename category "${oldName}" → "${newName}"`);
+  await supabase.from("menu_items").update({ category: newName }).eq("business_id", businessId).eq("category", oldName);
+  revalidatePath(`/r/[slug]`, "layout");
+}
+
+export async function deleteMenuCategory(businessId: string, categoryName: string) {
+  await takeSnapshot(businessId, "menu", `Before delete category "${categoryName}"`);
+  await supabase.from("menu_items").delete().eq("business_id", businessId).eq("category", categoryName);
+  revalidatePath(`/r/[slug]`, "layout");
+}
+
+export async function moveMenuItem(itemId: string, newCategory: string) {
+  await supabase.from("menu_items").update({ category: newCategory }).eq("id", itemId);
+  revalidatePath(`/r/[slug]`, "layout");
+}
+
 export async function deleteMenuItem(itemId: string) {
   // Get business ID for snapshot
   const { data: item } = await supabase.from("menu_items").select("business_id").eq("id", itemId).single();

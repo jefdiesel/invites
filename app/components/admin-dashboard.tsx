@@ -4,7 +4,7 @@ import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import {
   updateBookingStatus, cancelBooking, seatBooking, completeBooking, noShowBooking, assignTable,
-  addMenuItem, updateMenuItem, deleteMenuItem,
+  addMenuItem, updateMenuItem, deleteMenuItem, reorderMenuItems, renameMenuCategory, deleteMenuCategory, moveMenuItem,
   updateBusinessSettings, updateBusinessHours,
   addPhoto, deletePhoto,
   updateCustomDomain,
@@ -721,10 +721,93 @@ function MenuTab({ menu, businessId }: { menu: MenuItem[]; businessId: string })
   const router = useRouter();
   const [adding, setAdding] = useState(false);
   const [newItem, setNewItem] = useState({ category: "", name: "", description: "", price: "", flags: "" });
+  const [selectedCat, setSelectedCat] = useState<string | null>(null);
+  const [renamingCat, setRenamingCat] = useState<string | null>(null);
+  const [renameValue, setRenameValue] = useState("");
+  const [dragCatIdx, setDragCatIdx] = useState<number | null>(null);
+  const [dragItemIdx, setDragItemIdx] = useState<number | null>(null);
+  const [localMenu, setLocalMenu] = useState(menu);
 
-  const categories = [...new Set(menu.map(m => m.category))];
-  const grouped = categories.map(cat => ({ category: cat, items: menu.filter(m => m.category === cat) }));
+  // Derive sorted categories from items
+  const categories = useMemo(() => {
+    const cats = [...new Set(localMenu.map(m => m.category))];
+    cats.sort((a, b) => {
+      const aMin = Math.min(...localMenu.filter(m => m.category === a).map(m => m.sort_order));
+      const bMin = Math.min(...localMenu.filter(m => m.category === b).map(m => m.sort_order));
+      return aMin - bMin;
+    });
+    return cats;
+  }, [localMenu]);
 
+  const activeCat = selectedCat && categories.includes(selectedCat) ? selectedCat : categories[0] || null;
+  const activeItems = activeCat ? localMenu.filter(m => m.category === activeCat).sort((a, b) => a.sort_order - b.sort_order) : [];
+
+  // ── Category drag ──
+  function onCatDragStart(idx: number) { setDragCatIdx(idx); }
+  function onCatDragOver(e: React.DragEvent, idx: number) {
+    e.preventDefault();
+    if (dragCatIdx === null || dragCatIdx === idx) return;
+    // Reorder categories by reassigning sort_order on items
+    const reordered = [...categories];
+    const [moved] = reordered.splice(dragCatIdx, 1);
+    reordered.splice(idx, 0, moved);
+    // Reassign sort_order: items in first category get 0-N, second get N+1-M, etc.
+    let order = 0;
+    const updated = [...localMenu];
+    for (const cat of reordered) {
+      const items = updated.filter(m => m.category === cat).sort((a, b) => a.sort_order - b.sort_order);
+      for (const item of items) { item.sort_order = order++; }
+    }
+    setLocalMenu(updated);
+    setDragCatIdx(idx);
+  }
+  async function onCatDragEnd() {
+    setDragCatIdx(null);
+    await reorderMenuItems(localMenu.sort((a, b) => a.sort_order - b.sort_order).map(m => m.id));
+  }
+
+  // ── Item drag ──
+  function onItemDragStart(idx: number) { setDragItemIdx(idx); }
+  function onItemDragOver(e: React.DragEvent, idx: number) {
+    e.preventDefault();
+    if (dragItemIdx === null || dragItemIdx === idx) return;
+    const reordered = [...activeItems];
+    const [moved] = reordered.splice(dragItemIdx, 1);
+    reordered.splice(idx, 0, moved);
+    const updated = localMenu.map(m => {
+      const newIdx = reordered.findIndex(r => r.id === m.id);
+      if (newIdx !== -1) return { ...m, sort_order: newIdx };
+      return m;
+    });
+    setLocalMenu(updated);
+    setDragItemIdx(idx);
+  }
+  async function onItemDragEnd() {
+    setDragItemIdx(null);
+    const catItems = localMenu.filter(m => m.category === activeCat).sort((a, b) => a.sort_order - b.sort_order);
+    await reorderMenuItems(catItems.map(m => m.id));
+  }
+
+  // ── Category actions ──
+  async function handleRename() {
+    if (!renamingCat || !renameValue.trim()) return;
+    await renameMenuCategory(businessId, renamingCat, renameValue.trim());
+    setLocalMenu(localMenu.map(m => m.category === renamingCat ? { ...m, category: renameValue.trim() } : m));
+    if (selectedCat === renamingCat) setSelectedCat(renameValue.trim());
+    setRenamingCat(null);
+    router.refresh();
+  }
+
+  async function handleDeleteCat(cat: string) {
+    const count = localMenu.filter(m => m.category === cat).length;
+    if (!confirm(`Delete "${cat}" and all ${count} items in it?`)) return;
+    await deleteMenuCategory(businessId, cat);
+    setLocalMenu(localMenu.filter(m => m.category !== cat));
+    if (selectedCat === cat) setSelectedCat(null);
+    router.refresh();
+  }
+
+  // ── Item actions ──
   async function handleAdd() {
     if (!newItem.name || !newItem.category) return;
     await addMenuItem(businessId, {
@@ -742,11 +825,19 @@ function MenuTab({ menu, businessId }: { menu: MenuItem[]; businessId: string })
   async function handleDelete(id: string, name: string) {
     if (!confirm(`Delete "${name}"?`)) return;
     await deleteMenuItem(id);
+    setLocalMenu(localMenu.filter(m => m.id !== id));
     router.refresh();
   }
 
   async function handleToggle(id: string, available: boolean) {
     await updateMenuItem(id, { available: !available });
+    setLocalMenu(localMenu.map(m => m.id === id ? { ...m, available: !available } : m));
+    router.refresh();
+  }
+
+  async function handleMove(id: string, newCat: string) {
+    await moveMenuItem(id, newCat);
+    setLocalMenu(localMenu.map(m => m.id === id ? { ...m, category: newCat } : m));
     router.refresh();
   }
 
@@ -755,8 +846,9 @@ function MenuTab({ menu, businessId }: { menu: MenuItem[]; businessId: string })
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
-        <h3 className="text-sm font-bold text-neutral-600 uppercase tracking-wider">Menu Items ({menu.length})</h3>
-        <button onClick={() => setAdding(!adding)} className="text-sm font-medium text-neutral-900 hover:text-neutral-600 transition-colors">
+        <h3 className="text-sm font-bold text-neutral-600 uppercase tracking-wider">Menu ({localMenu.length} items, {categories.length} categories)</h3>
+        <button onClick={() => { setAdding(!adding); if (!adding && activeCat) setNewItem(n => ({ ...n, category: activeCat })); }}
+          className="text-sm font-medium text-neutral-900 hover:text-neutral-600 transition-colors">
           {adding ? "Cancel" : "+ Add Item"}
         </button>
       </div>
@@ -779,37 +871,118 @@ function MenuTab({ menu, businessId }: { menu: MenuItem[]; businessId: string })
         </div>
       )}
 
-      {grouped.map(group => (
-        <div key={group.category} className="mb-8">
-          <h4 className="text-xs font-bold text-neutral-400 uppercase tracking-wider mb-3">{group.category}</h4>
+      <div className="grid grid-cols-1 md:grid-cols-[240px_1fr] gap-6">
+        {/* Category sidebar */}
+        <div>
+          <div className="text-xs font-bold text-neutral-400 uppercase tracking-wider mb-3">Categories</div>
           <div className="border border-neutral-200 rounded-lg overflow-hidden">
-            {group.items.map((item, i) => (
-              <div key={item.id} className={`flex items-center justify-between px-4 py-3 ${i > 0 ? "border-t border-neutral-100" : ""} ${!item.available ? "opacity-50" : ""}`}>
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-baseline gap-2">
-                    <span className="text-sm font-semibold text-neutral-900">{item.name}</span>
-                    {item.dietary_flags?.length > 0 && (
-                      <span className="text-xs text-neutral-400">{item.dietary_flags.join(", ")}</span>
-                    )}
-                  </div>
-                  {item.description && <div className="text-xs text-neutral-500 mt-0.5">{item.description}</div>}
+            {categories.map((cat, i) => (
+              <div
+                key={cat}
+                draggable
+                onDragStart={() => onCatDragStart(i)}
+                onDragOver={(e) => onCatDragOver(e, i)}
+                onDragEnd={onCatDragEnd}
+                onClick={() => { setSelectedCat(cat); setRenamingCat(null); }}
+                className={`flex items-center justify-between px-3 py-2.5 cursor-pointer select-none transition-colors ${
+                  i > 0 ? "border-t border-neutral-100" : ""
+                } ${activeCat === cat ? "bg-neutral-900 text-white" : "hover:bg-neutral-50"}`}
+              >
+                <div className="flex items-center gap-2 min-w-0 flex-1">
+                  <span className="text-neutral-300 cursor-grab text-xs">&#9776;</span>
+                  {renamingCat === cat ? (
+                    <input
+                      value={renameValue}
+                      onChange={e => setRenameValue(e.target.value)}
+                      onKeyDown={e => { if (e.key === "Enter") handleRename(); if (e.key === "Escape") setRenamingCat(null); }}
+                      onBlur={handleRename}
+                      className="text-sm font-medium bg-transparent border-b border-white outline-none w-full text-white"
+                      autoFocus
+                      onClick={e => e.stopPropagation()}
+                    />
+                  ) : (
+                    <span className="text-sm font-medium truncate">{cat}</span>
+                  )}
                 </div>
-                <div className="flex items-center gap-3 shrink-0 ml-4">
-                  <span className="text-sm tabular-nums font-medium text-neutral-700">${(item.price_cents / 100).toFixed(0)}</span>
-                  <button onClick={() => handleToggle(item.id, item.available)}
-                    className="text-xs text-neutral-400 hover:text-neutral-700 transition-colors">
-                    {item.available ? "86" : "Un-86"}
-                  </button>
-                  <button onClick={() => handleDelete(item.id, item.name)}
-                    className="text-xs text-rose-400 hover:text-rose-600 transition-colors">
-                    Delete
-                  </button>
+                <div className="flex items-center gap-1.5 shrink-0 ml-2">
+                  <span className={`text-xs ${activeCat === cat ? "text-neutral-400" : "text-neutral-300"}`}>
+                    {localMenu.filter(m => m.category === cat).length}
+                  </span>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); setRenamingCat(cat); setRenameValue(cat); }}
+                    className={`text-xs ${activeCat === cat ? "text-neutral-400 hover:text-white" : "text-neutral-300 hover:text-neutral-600"} transition-colors`}
+                    title="Rename"
+                  >&#9998;</button>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); handleDeleteCat(cat); }}
+                    className={`text-xs ${activeCat === cat ? "text-rose-300 hover:text-rose-100" : "text-rose-300 hover:text-rose-500"} transition-colors`}
+                    title="Delete category"
+                  >&times;</button>
                 </div>
               </div>
             ))}
           </div>
         </div>
-      ))}
+
+        {/* Items panel */}
+        <div>
+          {activeCat && (
+            <>
+              <div className="text-xs font-bold text-neutral-400 uppercase tracking-wider mb-3">{activeCat} ({activeItems.length})</div>
+              <div className="border border-neutral-200 rounded-lg overflow-hidden">
+                {activeItems.map((item, i) => (
+                  <div
+                    key={item.id}
+                    draggable
+                    onDragStart={() => onItemDragStart(i)}
+                    onDragOver={(e) => onItemDragOver(e, i)}
+                    onDragEnd={onItemDragEnd}
+                    className={`flex items-center justify-between px-4 py-3 ${i > 0 ? "border-t border-neutral-100" : ""} ${!item.available ? "opacity-50" : ""}`}
+                  >
+                    <div className="flex items-center gap-3 min-w-0 flex-1">
+                      <span className="text-neutral-300 cursor-grab text-xs shrink-0">&#9776;</span>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-baseline gap-2">
+                          <span className="text-sm font-semibold text-neutral-900">{item.name}</span>
+                          {item.dietary_flags?.length > 0 && (
+                            <span className="text-xs text-neutral-400">{item.dietary_flags.join(", ")}</span>
+                          )}
+                        </div>
+                        {item.description && <div className="text-xs text-neutral-500 mt-0.5 truncate">{item.description}</div>}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3 shrink-0 ml-4">
+                      {item.price_cents > 0 && <span className="text-sm tabular-nums font-medium text-neutral-700">${(item.price_cents / 100).toFixed(0)}</span>}
+                      <select
+                        value=""
+                        onChange={e => { if (e.target.value) handleMove(item.id, e.target.value); }}
+                        className="text-xs text-neutral-400 bg-transparent border-none cursor-pointer"
+                        title="Move to category"
+                      >
+                        <option value="">Move...</option>
+                        {categories.filter(c => c !== activeCat).map(c => (
+                          <option key={c} value={c}>{c}</option>
+                        ))}
+                      </select>
+                      <button onClick={() => handleToggle(item.id, item.available)}
+                        className="text-xs text-neutral-400 hover:text-neutral-700 transition-colors">
+                        {item.available ? "86" : "Un-86"}
+                      </button>
+                      <button onClick={() => handleDelete(item.id, item.name)}
+                        className="text-xs text-rose-400 hover:text-rose-600 transition-colors">
+                        Delete
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+          {!activeCat && (
+            <div className="text-sm text-neutral-400 py-12 text-center">No categories yet. Add a menu item to create one.</div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

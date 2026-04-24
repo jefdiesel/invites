@@ -31,6 +31,11 @@ export default async function RestaurantPage({ params }: { params: Promise<{ slu
   const hasReservations = !!(biz as Record<string, unknown>).has_reservations;
 
   const categories = [...new Set(menu.map((m) => m.category))];
+  categories.sort((a, b) => {
+    const aMin = Math.min(...menu.filter(m => m.category === a).map(m => m.sort_order));
+    const bMin = Math.min(...menu.filter(m => m.category === b).map(m => m.sort_order));
+    return aMin - bMin;
+  });
   const menuByCategory = categories.map((cat) => ({
     category: cat,
     items: menu.filter((m) => m.category === cat),
