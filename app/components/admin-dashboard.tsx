@@ -1310,7 +1310,7 @@ function PhotosTab({ photos, businessId }: { photos: Photo[]; businessId: string
             <div>
               <textarea placeholder="Describe what you see — the scene, the food, the atmosphere. This caption is shown to all visitors and read aloud by screen readers." value={newPhoto.caption} onChange={e => setNewPhoto({ ...newPhoto, caption: e.target.value })} className={`${inputClass} w-full`} rows={2} />
               <div className="flex justify-between mt-1">
-                <span className="text-xs text-neutral-400">Minimum 30 characters</span>
+                <span className="text-xs text-neutral-400">Minimum 30 characters · <a href="/accessibility/photo-descriptions" target="_blank" className="underline hover:text-neutral-600">Why is this required?</a></span>
                 <span className={`text-xs ${newPhoto.caption.length >= 30 ? "text-emerald-500" : "text-neutral-400"}`}>{newPhoto.caption.length}/30</span>
               </div>
             </div>
