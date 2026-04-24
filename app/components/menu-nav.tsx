@@ -100,8 +100,8 @@ export function MenuNav({
               const catId = `menu-${cat.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`;
               return (
                 <a key={catId} href={`#${catId}`}
-                  className="px-3 py-1.5 text-sm font-medium underline underline-offset-2 transition-colors min-h-[44px] flex items-center focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
-                  style={{ color: accent }}>
+                  className="px-3 py-1.5 text-sm font-medium transition-colors min-h-[44px] flex items-center focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+                  style={{ color: accent, border: `1px solid ${border}`, borderRadius: rBtn }}>
                   {cat}
                 </a>
               );
