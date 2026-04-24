@@ -117,7 +117,7 @@ export function SignupForm() {
       </button>
 
       <p className="text-xs text-neutral-400 text-center">
-        $99/mo after setup. No per-reservation fees. Cancel anytime.
+        $69/mo after setup. Cancel anytime.
       </p>
     </form>
   );

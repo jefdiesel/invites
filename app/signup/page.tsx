@@ -14,7 +14,7 @@ export default function SignupPage() {
             Get started
           </h1>
           <p className="text-neutral-500 mb-8">
-            Create your restaurant's website and reservation system in under 2 minutes.
+            Create your restaurant's website in under 2 minutes.
           </p>
           <SignupForm />
         </div>
