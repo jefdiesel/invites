@@ -59,7 +59,7 @@ export function MenuNav({
               style={{
                 color: isOpen ? "#fff" : accent,
                 background: isOpen ? accent : "transparent",
-                border: `1px solid ${isOpen ? accent : border}`,
+                border: `1px solid ${isOpen ? accent : accent}`,
                 borderRadius: rBtn,
               }}
             >
@@ -101,7 +101,7 @@ export function MenuNav({
               return (
                 <a key={catId} href={`#${catId}`}
                   className="px-3 py-1.5 text-sm font-medium transition-colors min-h-[44px] flex items-center focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
-                  style={{ color: accent, border: `1px solid ${border}`, borderRadius: rBtn }}>
+                  style={{ color: accent, border: `1px solid ${accent}`, borderRadius: rBtn }}>
                   {cat}
                 </a>
               );
