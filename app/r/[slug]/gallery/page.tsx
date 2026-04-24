@@ -29,7 +29,7 @@ export default async function GalleryPage({ params }: { params: Promise<{ slug: 
   return (
     <div style={{ background: t.bg, color: t.text, fontFamily: bodyFont }} className="min-h-screen flex flex-col">
       <ThemeFonts theme={theme} />
-      <SiteNav biz={biz} slug={slug} theme={theme} currentPage="gallery" hasReservations={hasReservations} />
+      <SiteNav biz={biz} slug={slug} theme={theme} currentPage="gallery" hasReservations={hasReservations} hasLocations={((biz as Record<string,unknown>).locations as unknown[] || []).length > 1} />
 
       <main id="main" className="max-w-5xl mx-auto px-6 flex-1 w-full">
         <header className="pt-16 md:pt-24 pb-12">

@@ -42,6 +42,8 @@ CREATE TABLE IF NOT EXISTS businesses (
   custom_domain TEXT UNIQUE,
   -- Menu sections (JSON array of {name, categories[]})
   menu_sections JSONB DEFAULT '[]',
+  -- Locations (JSON array of {name, address, city, state, zip, phone, email})
+  locations JSONB DEFAULT '[]',
   -- Theme: modern, classic, rustic, playful, bright
   theme TEXT DEFAULT 'classic',
   -- Auth

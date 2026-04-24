@@ -2,7 +2,7 @@ import Link from "next/link";
 import type { Theme } from "@/lib/themes";
 import { getThemeVars } from "@/lib/theme-helpers";
 
-type Page = "home" | "about" | "gallery" | "contact" | "accessibility" | "book";
+type Page = "home" | "about" | "gallery" | "contact" | "locations" | "accessibility" | "book";
 
 export function SiteNav({
   biz,
@@ -11,6 +11,7 @@ export function SiteNav({
   currentPage,
   hasReservations,
   hasMenu,
+  hasLocations,
 }: {
   biz: { name: string; logo_url: string };
   slug: string;
@@ -18,6 +19,7 @@ export function SiteNav({
   currentPage: Page;
   hasReservations: boolean;
   hasMenu?: boolean;
+  hasLocations?: boolean;
 }) {
   const { t, displayFont, rBtn } = getThemeVars(theme);
 
@@ -25,6 +27,7 @@ export function SiteNav({
     ...(hasMenu !== false ? [{ href: `/r/${slug}#menu`, label: "Menu", page: "home" as Page }] : []),
     { href: `/r/${slug}/about`, label: "About", page: "about" },
     { href: `/r/${slug}/gallery`, label: "Gallery", page: "gallery" },
+    ...(hasLocations ? [{ href: `/r/${slug}/locations`, label: "Locations", page: "locations" as Page }] : []),
     { href: `/r/${slug}/contact`, label: "Contact", page: "contact" },
   ];
 

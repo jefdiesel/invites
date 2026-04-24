@@ -27,7 +27,7 @@ export default async function AboutPage({ params }: { params: Promise<{ slug: st
   return (
     <div style={{ background: t.bg, color: t.text, fontFamily: bodyFont }} className="min-h-screen flex flex-col">
       <ThemeFonts theme={theme} />
-      <SiteNav biz={biz} slug={slug} theme={theme} currentPage="about" hasReservations={hasReservations} />
+      <SiteNav biz={biz} slug={slug} theme={theme} currentPage="about" hasReservations={hasReservations} hasLocations={((biz as Record<string,unknown>).locations as unknown[] || []).length > 1} />
 
       <main id="main" className="flex-1 w-full max-w-4xl mx-auto px-6">
         <header className="pt-16 md:pt-24 pb-12">

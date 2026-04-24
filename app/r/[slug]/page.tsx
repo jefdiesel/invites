@@ -59,7 +59,7 @@ export default async function RestaurantPage({ params }: { params: Promise<{ slu
   return (
     <div style={{ background: t.bg, color: t.text, fontFamily: bodyFont }} className="min-h-screen scroll-pt-14">
       <ThemeFonts theme={theme} />
-      <SiteNav biz={biz} slug={slug} theme={theme} currentPage="home" hasReservations={hasReservations} hasMenu={menuByCategory.length > 0} />
+      <SiteNav biz={biz} slug={slug} theme={theme} currentPage="home" hasReservations={hasReservations} hasMenu={menuByCategory.length > 0} hasLocations={((biz as Record<string,unknown>).locations as unknown[] || []).length > 1} />
 
       {/* Hero */}
       <header className="relative overflow-hidden">
