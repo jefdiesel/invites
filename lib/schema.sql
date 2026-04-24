@@ -40,6 +40,8 @@ CREATE TABLE IF NOT EXISTS businesses (
   cover_image_url TEXT DEFAULT '',
   -- Custom domain (e.g., "chezlaurent.com") — middleware maps hostname → slug
   custom_domain TEXT UNIQUE,
+  -- Menu sections (JSON array of {name, categories[]})
+  menu_sections JSONB DEFAULT '[]',
   -- Theme: modern, classic, rustic, playful, bright
   theme TEXT DEFAULT 'classic',
   -- Auth

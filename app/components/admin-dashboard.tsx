@@ -78,6 +78,7 @@ type WaitlistEntry = {
 };
 
 type InventoryRow = { id: string; size: number; count: number; turn_time_minutes: number };
+type MenuSection = { name: string; categories: string[] };
 
 export function AdminDashboard({
   business, slug, theme, bookings, clients, tables, hours, menu, photos, stats, waitlist, inventory, allBookings,
@@ -160,7 +161,7 @@ export function AdminDashboard({
         <TablesInventoryTab businessId={business.id} inventory={inventory} currentInterval={business.slot_interval_minutes || 30} />
       )}
       {tab === "menu" && (
-        <MenuTab menu={menu} businessId={business.id} />
+        <MenuTab menu={menu} businessId={business.id} initialSections={(business as Record<string,unknown>).menu_sections as MenuSection[] || []} />
       )}
       {tab === "site" && (
         <SiteTab business={business} slug={slug} hours={hours} isLive={isLive} onToggleLive={handleToggleLive} togglingLive={togglingLive}
@@ -717,7 +718,7 @@ function downloadCSV(csv: string, filename: string) {
 
 // ── Menu Tab ──
 
-function MenuTab({ menu, businessId }: { menu: MenuItem[]; businessId: string }) {
+function MenuTab({ menu, businessId, initialSections }: { menu: MenuItem[]; businessId: string; initialSections: MenuSection[] }) {
   const router = useRouter();
   const [adding, setAdding] = useState(false);
   const [newItem, setNewItem] = useState({ category: "", name: "", description: "", price: "", flags: "" });
@@ -727,6 +728,10 @@ function MenuTab({ menu, businessId }: { menu: MenuItem[]; businessId: string })
   const [dragCatIdx, setDragCatIdx] = useState<number | null>(null);
   const [dragItemIdx, setDragItemIdx] = useState<number | null>(null);
   const [localMenu, setLocalMenu] = useState(menu);
+  const [sections, setSections] = useState<MenuSection[]>(initialSections);
+  const [newSectionName, setNewSectionName] = useState("");
+  const [editingSectionIdx, setEditingSectionIdx] = useState<number | null>(null);
+  const [editingSectionName, setEditingSectionName] = useState("");
 
   // Derive sorted categories from items
   const categories = useMemo(() => {
@@ -841,10 +846,116 @@ function MenuTab({ menu, businessId }: { menu: MenuItem[]; businessId: string })
     router.refresh();
   }
 
+  // ── Section management ──
+  async function saveSections(updated: MenuSection[]) {
+    setSections(updated);
+    await updateBusinessSettings(businessId, { menu_sections: updated } as Record<string, unknown>);
+  }
+
+  function addSection() {
+    if (!newSectionName.trim()) return;
+    saveSections([...sections, { name: newSectionName.trim(), categories: [] }]);
+    setNewSectionName("");
+  }
+
+  function removeSection(idx: number) {
+    saveSections(sections.filter((_, i) => i !== idx));
+  }
+
+  function renameSection(idx: number) {
+    if (!editingSectionName.trim()) return;
+    saveSections(sections.map((s, i) => i === idx ? { ...s, name: editingSectionName.trim() } : s));
+    setEditingSectionIdx(null);
+  }
+
+  function addCatToSection(sectionIdx: number, cat: string) {
+    const updated = sections.map(s => ({ ...s, categories: s.categories.filter(c => c !== cat) }));
+    updated[sectionIdx].categories.push(cat);
+    saveSections(updated);
+  }
+
+  function removeCatFromSection(sectionIdx: number, cat: string) {
+    saveSections(sections.map((s, i) => i === sectionIdx ? { ...s, categories: s.categories.filter(c => c !== cat) } : s));
+  }
+
+  const assignedCats = new Set(sections.flatMap(s => s.categories));
+  const unassignedCats = categories.filter(c => !assignedCats.has(c));
+
   const inputClass = "border border-neutral-200 rounded-lg px-3 py-2 text-sm bg-white text-neutral-900 focus:outline-none focus:ring-2 focus:ring-neutral-900/10";
 
   return (
     <div>
+      {/* ── Menu Sections ── */}
+      <div className="mb-8 border border-neutral-200 rounded-lg p-5 bg-neutral-50">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-sm font-bold text-neutral-600 uppercase tracking-wider">Menu Sections</h3>
+          <span className="text-xs text-neutral-400">Group categories into sections for the public nav</span>
+        </div>
+
+        {sections.map((section, si) => (
+          <div key={si} className="mb-4 border border-neutral-200 rounded-lg bg-white p-4">
+            <div className="flex items-center justify-between mb-3">
+              {editingSectionIdx === si ? (
+                <input value={editingSectionName} onChange={e => setEditingSectionName(e.target.value)}
+                  onKeyDown={e => { if (e.key === "Enter") renameSection(si); if (e.key === "Escape") setEditingSectionIdx(null); }}
+                  onBlur={() => renameSection(si)}
+                  className="text-sm font-bold text-neutral-900 border-b border-neutral-300 outline-none bg-transparent"
+                  autoFocus />
+              ) : (
+                <h4 className="text-sm font-bold text-neutral-900">{section.name}</h4>
+              )}
+              <div className="flex items-center gap-2">
+                <button onClick={() => { setEditingSectionIdx(si); setEditingSectionName(section.name); }}
+                  className="text-xs text-neutral-400 hover:text-neutral-700 transition-colors">Rename</button>
+                <button onClick={() => removeSection(si)}
+                  className="text-xs text-rose-400 hover:text-rose-600 transition-colors">Remove</button>
+              </div>
+            </div>
+            {/* Categories in this section */}
+            <div className="flex flex-wrap gap-2 mb-3">
+              {section.categories.map(cat => (
+                <span key={cat} className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium bg-neutral-100 rounded-lg text-neutral-700">
+                  {cat}
+                  <button onClick={() => removeCatFromSection(si, cat)} className="text-neutral-400 hover:text-rose-500 ml-0.5">&times;</button>
+                </span>
+              ))}
+              {section.categories.length === 0 && <span className="text-xs text-neutral-400">No categories — add from unassigned below</span>}
+            </div>
+            {/* Add category dropdown */}
+            {unassignedCats.length > 0 && (
+              <select onChange={e => { if (e.target.value) addCatToSection(si, e.target.value); e.target.value = ""; }}
+                className="text-xs text-neutral-500 border border-neutral-200 rounded px-2 py-1 bg-white" defaultValue="">
+                <option value="">+ Add category...</option>
+                {unassignedCats.map(c => <option key={c} value={c}>{c}</option>)}
+              </select>
+            )}
+          </div>
+        ))}
+
+        {/* Unassigned categories */}
+        {unassignedCats.length > 0 && (
+          <div className="mb-4">
+            <div className="text-xs font-bold text-neutral-400 uppercase tracking-wider mb-2">Unassigned ({unassignedCats.length})</div>
+            <div className="flex flex-wrap gap-1.5">
+              {unassignedCats.map(cat => (
+                <span key={cat} className="px-2.5 py-1 text-xs font-medium bg-white border border-neutral-200 rounded-lg text-neutral-500">{cat}</span>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Add new section */}
+        <div className="flex gap-2">
+          <input placeholder="New section name (e.g. Food, Drinks, Bar)" value={newSectionName}
+            onChange={e => setNewSectionName(e.target.value)}
+            onKeyDown={e => { if (e.key === "Enter") addSection(); }}
+            className="flex-1 border border-neutral-200 rounded-lg px-3 py-2 text-sm bg-white text-neutral-900 focus:outline-none focus:ring-2 focus:ring-neutral-900/10" />
+          <button onClick={addSection} className="px-4 py-2 bg-neutral-900 text-white text-sm font-bold rounded-lg hover:bg-neutral-700 transition-colors">
+            Add Section
+          </button>
+        </div>
+      </div>
+
       <div className="flex items-center justify-between mb-6">
         <h3 className="text-sm font-bold text-neutral-600 uppercase tracking-wider">Menu ({localMenu.length} items, {categories.length} categories)</h3>
         <button onClick={() => { setAdding(!adding); if (!adding && activeCat) setNewItem(n => ({ ...n, category: activeCat })); }}

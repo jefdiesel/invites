@@ -29,6 +29,7 @@ export default async function RestaurantPage({ params }: { params: Promise<{ slu
   const hours = await getBusinessHours(biz.id);
   const menu = await getMenuItems(biz.id);
   const hasReservations = !!(biz as Record<string, unknown>).has_reservations;
+  const menuSections = ((biz as Record<string, unknown>).menu_sections as { name: string; categories: string[] }[] | null) || [];
 
   const categories = [...new Set(menu.map((m) => m.category))];
   categories.sort((a, b) => {
@@ -104,17 +105,58 @@ export default async function RestaurantPage({ params }: { params: Promise<{ slu
                 Menu
               </h2>
               {menuByCategory.length > 1 && (
-                <nav aria-label="Menu sections" className="flex flex-wrap gap-2 mb-12">
-                  {menuByCategory.map((cat) => {
-                    const catId = `menu-${cat.category.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`;
-                    return (
-                      <a key={catId} href={`#${catId}`}
-                        className="px-3 py-1.5 text-sm font-medium underline underline-offset-2 transition-colors min-h-[44px] flex items-center focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
-                        style={{ color: t.accent }}>
-                        {cat.category}
-                      </a>
-                    );
-                  })}
+                <nav aria-label="Menu sections" className="mb-12">
+                  {menuSections.length > 0 ? (
+                    /* Grouped nav: section headers with category links */
+                    <div className="space-y-3">
+                      {menuSections.filter(s => s.categories.some(c => categories.includes(c))).map((section) => (
+                        <div key={section.name}>
+                          <div className="text-xs font-bold uppercase tracking-widest mb-1.5" style={{ color: t.textLight }}>{section.name}</div>
+                          <div className="flex flex-wrap gap-2">
+                            {section.categories.filter(c => categories.includes(c)).map((cat) => {
+                              const catId = `menu-${cat.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`;
+                              return (
+                                <a key={catId} href={`#${catId}`}
+                                  className="px-3 py-1.5 text-sm font-medium underline underline-offset-2 transition-colors min-h-[44px] flex items-center focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+                                  style={{ color: t.accent }}>
+                                  {cat}
+                                </a>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      ))}
+                      {/* Unassigned categories */}
+                      {menuByCategory.filter(c => !menuSections.some(s => s.categories.includes(c.category))).length > 0 && (
+                        <div className="flex flex-wrap gap-2">
+                          {menuByCategory.filter(c => !menuSections.some(s => s.categories.includes(c.category))).map((cat) => {
+                            const catId = `menu-${cat.category.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`;
+                            return (
+                              <a key={catId} href={`#${catId}`}
+                                className="px-3 py-1.5 text-sm font-medium underline underline-offset-2 transition-colors min-h-[44px] flex items-center focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+                                style={{ color: t.accent }}>
+                                {cat.category}
+                              </a>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    /* Flat nav: all categories as links */
+                    <div className="flex flex-wrap gap-2">
+                      {menuByCategory.map((cat) => {
+                        const catId = `menu-${cat.category.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`;
+                        return (
+                          <a key={catId} href={`#${catId}`}
+                            className="px-3 py-1.5 text-sm font-medium underline underline-offset-2 transition-colors min-h-[44px] flex items-center focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+                            style={{ color: t.accent }}>
+                            {cat.category}
+                          </a>
+                        );
+                      })}
+                    </div>
+                  )}
                 </nav>
               )}
               <div className={theme.menuColumns === 2 ? "md:columns-2 md:gap-x-16 space-y-14" : "space-y-14"}>
