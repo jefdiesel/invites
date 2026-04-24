@@ -90,7 +90,7 @@ export default async function RestaurantPage({ params }: { params: Promise<{ slu
         {/* About */}
         {biz.about && biz.about.length > 60 && (
           <section style={{ background: t.surface }}>
-            <div className="max-w-4xl mx-auto px-6 py-14 md:py-20">
+            <div className="max-w-4xl mx-auto px-6 py-10 md:py-14">
               <p className="text-lg md:text-xl leading-relaxed max-w-2xl font-light" style={{ color: t.textMuted }}>
                 {biz.about}
               </p>
@@ -117,60 +117,14 @@ export default async function RestaurantPage({ params }: { params: Promise<{ slu
                   />
                 </div>
               )}
-              <div className={theme.menuColumns === 2 ? "md:columns-2 md:gap-x-16 space-y-14" : "space-y-14"}>
-                {menuByCategory.map((cat) => {
-                  const catId = `menu-${cat.category.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`;
-                  return (
-                  <div key={cat.category} id={catId} className="break-inside-avoid-column scroll-mt-20">
-                    <h3 className="text-sm font-bold uppercase tracking-widest mb-6 pb-2"
-                        style={{
-                          color: t.accent,
-                          borderBottom: theme.sectionDivider === "accent-line"
-                            ? `2px solid ${t.accent}`
-                            : `1px solid ${t.border}`,
-                        }}>
-                      {cat.category}
-                    </h3>
-                    <div className="space-y-5">
-                      {cat.items.map((item) => (
-                        <div key={item.id}>
-                          <div className="flex items-baseline justify-between gap-3">
-                            <span className="text-base font-semibold" style={{ color: t.text }}>{item.name}</span>
-                            {theme.menuStyle === "dots" && (
-                              <span className="flex-1 min-w-[20px] translate-y-[-4px]" style={{ borderBottom: `1px dotted ${t.border}` }} />
-                            )}
-                            {theme.menuStyle === "line" && (
-                              <span className="flex-1 min-w-[20px] translate-y-[-4px]" style={{ borderBottom: `1px solid ${t.border}` }} />
-                            )}
-                            <span className="text-base font-medium tabular-nums shrink-0" style={{ color: t.textMuted }}>
-                              {item.price_cents > 0 ? `$${(item.price_cents / 100).toFixed(0)}` : ""}
-                            </span>
-                          </div>
-                          {item.description && (
-                            <p className="text-sm mt-1 leading-relaxed" style={{ color: t.textMuted }}>{item.description}</p>
-                          )}
-                          {item.dietary_flags && item.dietary_flags.length > 0 && (
-                            <div className="flex gap-1.5 mt-2">
-                              {item.dietary_flags.map((flag: string) => {
-                                const info = DIETARY[flag];
-                                return (
-                                  <span key={flag}
-                                    className="px-2 py-0.5 text-[11px] font-semibold"
-                                    style={{ background: info?.bg ?? t.accentMuted, color: info?.fg ?? t.textMuted, borderRadius: rBtn }}
-                                    title={info?.label ?? flag} role="img" aria-label={info?.label ?? flag}>
-                                    {flag}
-                                  </span>
-                                );
-                              })}
-                            </div>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                  );
-                })}
-              </div>
+              <MenuBody
+                menuByCategory={menuByCategory}
+                menuSections={menuSections}
+                theme={theme}
+                t={t}
+                displayFont={displayFont}
+                rBtn={rBtn}
+              />
               {allFlags.size > 0 && (
                 <div className="mt-14 pt-6 flex flex-wrap gap-4 text-xs" style={{ borderTop: `1px solid ${t.border}`, color: t.textLight }}>
                   {[...allFlags].map((flag) => {
@@ -368,4 +322,108 @@ function HeroText({
       </div>
     </div>
   );
+}
+
+function MenuBody({
+  menuByCategory, menuSections, theme, t, displayFont, rBtn,
+}: {
+  menuByCategory: { category: string; items: { id: string; name: string; description: string; price_cents: number; dietary_flags: string[] }[] }[];
+  menuSections: { name: string; categories: string[] }[];
+  theme: { menuStyle: string; sectionDivider: string; menuColumns: number };
+  t: Record<string, string>;
+  displayFont: string;
+  rBtn: string;
+}) {
+  // Build ordered list: if sections exist, render section dividers between groups
+  // Otherwise just render categories in a grid
+
+  function renderCategory(cat: typeof menuByCategory[0]) {
+    const catId = `menu-${cat.category.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`;
+    return (
+      <div key={cat.category} id={catId} className="scroll-mt-20">
+        <h3 className="text-sm font-bold uppercase tracking-widest mb-6 pb-2"
+            style={{
+              color: t.accent,
+              borderBottom: theme.sectionDivider === "accent-line"
+                ? `2px solid ${t.accent}`
+                : `1px solid ${t.border}`,
+            }}>
+          {cat.category}
+        </h3>
+        <div className="space-y-5">
+          {cat.items.map((item) => (
+            <div key={item.id}>
+              <div className="flex items-baseline justify-between gap-3">
+                <span className="text-base font-semibold" style={{ color: t.text }}>{item.name}</span>
+                {theme.menuStyle === "dots" && (
+                  <span className="flex-1 min-w-[20px] translate-y-[-4px]" style={{ borderBottom: `1px dotted ${t.border}` }} />
+                )}
+                {theme.menuStyle === "line" && (
+                  <span className="flex-1 min-w-[20px] translate-y-[-4px]" style={{ borderBottom: `1px solid ${t.border}` }} />
+                )}
+                <span className="text-base font-medium tabular-nums shrink-0" style={{ color: t.textMuted }}>
+                  {item.price_cents > 0 ? `$${(item.price_cents / 100).toFixed(0)}` : ""}
+                </span>
+              </div>
+              {item.description && (
+                <p className="text-sm mt-1 leading-relaxed" style={{ color: t.textMuted }}>{item.description}</p>
+              )}
+              {item.dietary_flags && item.dietary_flags.length > 0 && (
+                <div className="flex gap-1.5 mt-2">
+                  {item.dietary_flags.map((flag: string) => {
+                    const info = DIETARY[flag];
+                    return (
+                      <span key={flag}
+                        className="px-2 py-0.5 text-[11px] font-semibold"
+                        style={{ background: info?.bg ?? t.accentMuted, color: info?.fg ?? t.textMuted, borderRadius: rBtn }}
+                        title={info?.label ?? flag} role="img" aria-label={info?.label ?? flag}>
+                        {flag}
+                      </span>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  function renderGrid(cats: typeof menuByCategory) {
+    return (
+      <div className={`grid grid-cols-1 ${theme.menuColumns === 2 ? "md:grid-cols-2" : ""} gap-x-16 gap-y-12`}>
+        {cats.map(renderCategory)}
+      </div>
+    );
+  }
+
+  if (menuSections.length > 0) {
+    const allCategories = menuByCategory.map(c => c.category);
+    const usedSections = menuSections.filter(s => s.categories.some(c => allCategories.includes(c)));
+    const assignedCats = new Set(menuSections.flatMap(s => s.categories));
+    const unassigned = menuByCategory.filter(c => !assignedCats.has(c.category));
+
+    return (
+      <div className="space-y-16">
+        {usedSections.map((section) => {
+          const cats = section.categories
+            .filter(c => allCategories.includes(c))
+            .map(c => menuByCategory.find(m => m.category === c)!);
+          return (
+            <div key={section.name}>
+              <h3 className="text-lg font-bold uppercase tracking-widest mb-8 pb-3 text-center"
+                  style={{ color: t.text, fontFamily: displayFont, borderBottom: `2px solid ${t.accent}` }}>
+                {section.name}
+              </h3>
+              {renderGrid(cats)}
+            </div>
+          );
+        })}
+        {unassigned.length > 0 && renderGrid(unassigned)}
+      </div>
+    );
+  }
+
+  return renderGrid(menuByCategory);
 }
