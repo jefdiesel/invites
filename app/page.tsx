@@ -67,7 +67,7 @@ export default function HomePage() {
             Your restaurant,<br />your website
           </h1>
           <p className="text-xl md:text-2xl text-neutral-500 leading-relaxed mb-10 max-w-2xl mx-auto">
-            Reservations, menu, CRM, and events — built in, not bolted on. One flat fee. Zero per-reservation charges.
+            A beautiful, accessible restaurant website with menu, gallery, and CRM — one flat fee, your domain, your data.
           </p>
           <div className="flex flex-wrap gap-4 justify-center">
             <Link href="/r/volta" className="rounded-full bg-neutral-900 text-white px-8 py-4 text-lg font-bold hover:bg-neutral-700 transition-colors">
@@ -88,7 +88,7 @@ export default function HomePage() {
             <div className="rounded-2xl overflow-hidden border border-neutral-200 group-hover:border-neutral-400 transition-all group-hover:shadow-lg h-full">
               <div className="h-full min-h-[320px] md:min-h-full relative flex items-end">
                 <img src={DEMO_IMAGES.classic} alt="Classic theme — elegant French-American restaurant" className="absolute inset-0 w-full h-full object-cover" />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/40 to-black/10" />
                 <div className="relative z-10 p-6 w-full">
                   <div className="text-xs tracking-widest uppercase text-white/70 mb-1">{DEMO_CUISINES.classic}</div>
                   <div className="text-2xl md:text-3xl font-bold text-white mb-1" style={{ textShadow: "0 2px 8px rgba(0,0,0,0.5)" }}>
@@ -98,7 +98,7 @@ export default function HomePage() {
                     <span className="px-3 py-1 rounded-full text-xs font-bold text-white" style={{ background: themes.classic.colors.accent }}>
                       Classic Theme
                     </span>
-                    <span className="text-xs text-white/70">Menu · Reservations · Gallery · Events</span>
+                    <span className="text-xs text-white/70">Menu · About · Gallery · Contact</span>
                   </div>
                 </div>
               </div>
@@ -111,7 +111,7 @@ export default function HomePage() {
               <div className="rounded-2xl overflow-hidden border border-neutral-200 group-hover:border-neutral-400 transition-all group-hover:shadow-lg">
                 <div className="h-44 relative flex items-end">
                   <img src={DEMO_IMAGES[id]} alt={`${themes[id].label} theme — ${DEMO_CUISINES[id]}`} className="absolute inset-0 w-full h-full object-cover" />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/40 to-black/10" />
                   <div className="relative z-10 p-4 w-full flex items-end justify-between">
                     <div>
                       <div className="text-lg font-bold text-white" style={{ textShadow: "0 1px 4px rgba(0,0,0,0.5)" }}>
@@ -142,7 +142,7 @@ export default function HomePage() {
             Everything a restaurant needs
           </h2>
           <p className="text-lg text-neutral-500 text-center mb-16 max-w-xl mx-auto">
-            One platform replaces your website, reservation system, email marketing, and guest database.
+            A website that works for your restaurant — not a listing on someone else's platform.
           </p>
 
           {/* Group 1: Your Restaurant Online */}
@@ -164,32 +164,11 @@ export default function HomePage() {
               <FeatureCard
                 title="Accessibility Built In"
                 desc="Every site meets WCAG 2.2 AA — the legal standard for ADA, EAA, and AODA compliance. Alt text enforced at the database level. Keyboard navigation, screen reader support, contrast-safe text over images. Your restaurant is protected."
-                highlight
               />
             </div>
           </div>
 
-          {/* Group 2: Run Your Floor */}
-          <div className="mb-16">
-            <h3 className="text-xs font-bold text-neutral-400 uppercase tracking-widest mb-6">Run Your Floor</h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-              <FeatureCard
-                title="Reservations"
-                desc="Built-in booking with real table availability. Party size, turn times, automatic table assignment. Zero per-reservation fees."
-                highlight
-              />
-              <FeatureCard
-                title="Floor Management"
-                desc="Visual floor plan with live table status. Open, occupied, turning. iPad-ready for the host stand. One-tap seat, complete, no-show."
-              />
-              <FeatureCard
-                title="Events"
-                desc="Wine dinners, tasting menus, pop-ups. Event pages with booking, capacity management, and date polling built in."
-              />
-            </div>
-          </div>
-
-          {/* Group 3: Own Your Data */}
+          {/* Group 2: Own Your Data */}
           <div>
             <h3 className="text-xs font-bold text-neutral-400 uppercase tracking-widest mb-6">Own Your Data</h3>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
@@ -210,12 +189,12 @@ export default function HomePage() {
       <section className="border-t border-neutral-100">
         <div className="max-w-4xl mx-auto px-6 py-20 text-center">
           <h2 className="font-[family-name:var(--font-display)] text-3xl md:text-4xl text-neutral-900 mb-6">
-            Stop paying per reservation
+            Your restaurant deserves better
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mt-12">
             <div>
-              <div className="font-[family-name:var(--font-display)] text-5xl text-neutral-900 mb-2">$0</div>
-              <div className="text-base text-neutral-500">per reservation, forever</div>
+              <div className="font-[family-name:var(--font-display)] text-5xl text-neutral-900 mb-2">WCAG 2.2</div>
+              <div className="text-base text-neutral-500">fully accessible, ADA compliant</div>
             </div>
             <div>
               <div className="font-[family-name:var(--font-display)] text-5xl text-neutral-900 mb-2">5</div>
@@ -264,26 +243,26 @@ export default function HomePage() {
             Simple pricing
           </h2>
           <p className="text-lg text-neutral-500 mb-12">
-            One plan. Everything included. No per-reservation fees. No surprise charges.
+            One plan. Everything included. No surprise charges.
           </p>
           <div className="border-2 border-neutral-900 rounded-2xl p-10">
             <div className="text-sm font-bold text-neutral-500 uppercase tracking-wider mb-2">Everything</div>
             <div className="flex items-baseline justify-center gap-1 mb-4">
-              <span className="font-[family-name:var(--font-display)] text-6xl text-neutral-900">$99</span>
+              <span className="font-[family-name:var(--font-display)] text-6xl text-neutral-900">$69</span>
               <span className="text-neutral-500 text-lg">/mo</span>
             </div>
             <div className="flex flex-wrap justify-center gap-x-4 gap-y-1 text-sm text-neutral-500 mb-8">
               <span>Website</span><span className="text-neutral-300">+</span>
-              <span>Reservations</span><span className="text-neutral-300">+</span>
+              <span>Menu</span><span className="text-neutral-300">+</span>
+              <span>Gallery</span><span className="text-neutral-300">+</span>
               <span>CRM</span><span className="text-neutral-300">+</span>
-              <span>Events</span><span className="text-neutral-300">+</span>
               <span>Custom Domain</span>
             </div>
             <Link href="/signup" className="inline-block rounded-full bg-neutral-900 text-white px-10 py-4 text-lg font-bold hover:bg-neutral-700 transition-colors">
-              Get Started — $99/mo
+              Get Started — $69/mo
             </Link>
             <p className="text-sm text-neutral-400 mt-6">
-              No per-cover fees. No setup fees. No contracts. Cancel anytime.
+              No setup fees. No contracts. Cancel anytime.
             </p>
           </div>
         </div>
