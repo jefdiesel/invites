@@ -74,9 +74,9 @@ export function MenuNav({
             onClick={() => setOpenSection(openSection === "__other" ? null : "__other")}
             className="px-4 py-2 text-sm font-bold uppercase tracking-wider min-h-[44px] transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
             style={{
-              color: openSection === "__other" ? "#fff" : textLight,
+              color: openSection === "__other" ? "#fff" : accent,
               background: openSection === "__other" ? accent : "transparent",
-              border: `1px solid ${openSection === "__other" ? accent : border}`,
+              border: `1px solid ${accent}`,
               borderRadius: rBtn,
             }}
           >
@@ -115,8 +115,8 @@ export function MenuNav({
             const catId = `menu-${cat.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`;
             return (
               <a key={catId} href={`#${catId}`}
-                className="px-3 py-1.5 text-sm font-medium underline underline-offset-2 transition-colors min-h-[44px] flex items-center focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
-                style={{ color: accent }}>
+                className="px-3 py-1.5 text-sm font-medium transition-colors min-h-[44px] flex items-center focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+                style={{ color: accent, border: `1px solid ${accent}`, borderRadius: rBtn }}>
                 {cat}
               </a>
             );

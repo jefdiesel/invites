@@ -101,12 +101,12 @@ export default async function RestaurantPage({ params }: { params: Promise<{ slu
         {/* Menu */}
         {menuByCategory.length > 0 && (
           <section id="menu" style={{ background: t.surfaceAlt }}>
-            <div className="max-w-4xl mx-auto px-6 py-16 md:py-24">
-              <h2 style={{ fontFamily: displayFont, color: t.text }} className="text-3xl md:text-4xl mb-6">
+            <div className="max-w-4xl mx-auto px-6 py-12 md:py-16">
+              <h2 style={{ fontFamily: displayFont, color: t.text }} className="text-3xl md:text-4xl mb-5">
                 Menu
               </h2>
               {menuByCategory.length > 1 && (
-                <div className="mb-12">
+                <div className="mb-8">
                   <MenuNav
                     sections={menuSections}
                     allCategories={categories}
@@ -392,7 +392,7 @@ function MenuBody({
 
   function renderGrid(cats: typeof menuByCategory) {
     return (
-      <div className={`grid grid-cols-1 ${theme.menuColumns === 2 ? "md:grid-cols-2" : ""} gap-x-16 gap-y-12`}>
+      <div className={`grid grid-cols-1 ${theme.menuColumns === 2 ? "md:grid-cols-2" : ""} gap-x-12 gap-y-10`}>
         {cats.map(renderCategory)}
       </div>
     );
@@ -405,15 +405,15 @@ function MenuBody({
     const unassigned = menuByCategory.filter(c => !assignedCats.has(c.category));
 
     return (
-      <div className="space-y-16">
+      <div className="space-y-10">
         {usedSections.map((section) => {
           const cats = section.categories
             .filter(c => allCategories.includes(c))
             .map(c => menuByCategory.find(m => m.category === c)!);
           return (
             <div key={section.name}>
-              <h3 className="text-lg font-bold uppercase tracking-widest mb-8 pb-3 text-center"
-                  style={{ color: t.text, fontFamily: displayFont, borderBottom: `2px solid ${t.accent}` }}>
+              <h3 className="text-xs font-bold uppercase tracking-widest mb-6 pb-2 text-center"
+                  style={{ color: t.textLight, borderBottom: `1px solid ${t.border}` }}>
                 {section.name}
               </h3>
               {renderGrid(cats)}
