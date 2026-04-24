@@ -49,6 +49,8 @@ CREATE TABLE IF NOT EXISTS businesses (
   -- (stored in business_magic_links table below)
   -- Go live
   is_live BOOLEAN DEFAULT false, -- false = site visible but bookings disabled
+  -- Reservations addon
+  has_reservations BOOLEAN DEFAULT false, -- false = website only, no booking features
   -- QR check-in
   qr_waitlist_enabled BOOLEAN DEFAULT false,
   qr_checkin_enabled BOOLEAN DEFAULT false,

@@ -1,6 +1,6 @@
 import { getBusiness, getUpcomingBookings, getTables, getWaitlist } from "@/lib/restaurant-queries";
 import { requireAuth } from "@/lib/auth";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { ManageView } from "@/app/components/manage-view";
 
 export const dynamic = "force-dynamic";
@@ -11,6 +11,10 @@ export default async function ManagePage({ params }: { params: Promise<{ slug: s
 
   const biz = await getBusiness(slug);
   if (!biz) return notFound();
+
+  if (!(biz as Record<string, unknown>).has_reservations) {
+    redirect(`/r/${slug}/admin`);
+  }
 
   const [bookings, upcomingBookings, tables, waitlist] = await Promise.all([
     getUpcomingBookings(biz.id, 1),

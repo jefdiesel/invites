@@ -2,7 +2,7 @@ import { getBusiness, getTodaysBookings } from "@/lib/restaurant-queries";
 import { getTheme } from "@/lib/themes";
 import { ThemeFonts } from "@/app/components/theme-fonts";
 import { getGuestSession } from "@/lib/guest-auth";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { CheckinPage } from "@/app/components/checkin-page";
 
 export const dynamic = "force-dynamic";
@@ -11,6 +11,10 @@ export default async function CheckinRoute({ params }: { params: Promise<{ slug:
   const { slug } = await params;
   const biz = await getBusiness(slug);
   if (!biz) return notFound();
+
+  if (!(biz as Record<string, unknown>).has_reservations) {
+    redirect(`/r/${slug}`);
+  }
 
   const theme = getTheme(biz.theme);
   const t = theme.colors;

@@ -1,6 +1,9 @@
 import { getBusiness, getBusinessHours, getMenuItems } from "@/lib/restaurant-queries";
 import { getTheme } from "@/lib/themes";
+import { getThemeVars, formatTime } from "@/lib/theme-helpers";
 import { ThemeFonts } from "@/app/components/theme-fonts";
+import { SiteNav } from "@/app/components/site-nav";
+import { SiteFooter } from "@/app/components/site-footer";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 
@@ -22,8 +25,10 @@ export default async function RestaurantPage({ params }: { params: Promise<{ slu
   if (!biz) return notFound();
 
   const theme = getTheme(biz.theme);
+  const { t, displayFont, bodyFont, rBtn, rCard } = getThemeVars(theme);
   const hours = await getBusinessHours(biz.id);
   const menu = await getMenuItems(biz.id);
+  const hasReservations = !!(biz as Record<string, unknown>).has_reservations;
 
   const categories = [...new Set(menu.map((m) => m.category))];
   const menuByCategory = categories.map((cat) => ({
@@ -38,14 +43,6 @@ export default async function RestaurantPage({ params }: { params: Promise<{ slu
   const allFlags = new Set<string>();
   menu.forEach((m) => m.dietary_flags?.forEach((f: string) => allFlags.add(f)));
 
-  const t = theme.colors;
-  const displayFont = theme.fonts.display === "system" ? "var(--font-geist-sans)" : `'${theme.fonts.display}', serif`;
-  const bodyFont = theme.fonts.body === "system" ? "var(--font-geist-sans)" : `'${theme.fonts.body}', sans-serif`;
-
-  const r = theme.radius === "none" ? "0" : theme.radius === "sm" ? "0.375rem" : theme.radius === "lg" ? "0.75rem" : "9999px";
-  const rBtn = theme.radius === "full" ? "9999px" : r;
-  const rCard = theme.radius === "full" ? "1rem" : r;
-
   const textureOverlay = theme.texture ? (
     <div className="absolute inset-0 pointer-events-none opacity-[0.03]" style={{
       backgroundImage: "url(\"data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E\")",
@@ -55,69 +52,7 @@ export default async function RestaurantPage({ params }: { params: Promise<{ slu
   return (
     <div style={{ background: t.bg, color: t.text, fontFamily: bodyFont }} className="min-h-screen scroll-pt-14">
       <ThemeFonts theme={theme} />
-
-      {/* Skip to content */}
-      <a
-        href="#main"
-        className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 focus:px-4 focus:py-2 focus:text-sm focus:font-bold"
-        style={{ background: t.accent, color: "#fff", borderRadius: rBtn }}
-      >
-        Skip to content
-      </a>
-
-      {/* Nav */}
-      <nav
-        aria-label={`${biz.name} navigation`}
-        className="sticky top-0 z-40 backdrop-blur"
-        style={{
-          background: t.navBg,
-          borderBottom: theme.navStyle === "light" ? `1px solid ${t.border}` : "1px solid rgba(255,255,255,0.1)",
-        }}
-      >
-        <div className="max-w-4xl mx-auto px-6 flex items-center justify-between h-14">
-          <a href={`/r/${slug}`} className="flex items-center gap-3 focus-visible:outline-2 focus-visible:outline-offset-2 rounded"
-             style={{ outlineColor: theme.navStyle === "light" ? t.accent : "#fff" }}>
-            {biz.logo_url && <img src={biz.logo_url} alt="" className="h-8 w-auto" />}
-            <span style={{ fontFamily: displayFont, color: theme.navStyle === "light" ? t.text : "#fff" }}
-                  className="text-xl">
-              {biz.name}
-            </span>
-          </a>
-          {/* Desktop */}
-          <div className="hidden md:flex items-center gap-6 text-sm">
-            {menuByCategory.length > 0 && (
-              <a href="#menu" className="font-medium transition-colors" style={{ color: t.navText }}>Menu</a>
-            )}
-            <Link href={`/r/${slug}/about`} className="font-medium transition-colors" style={{ color: t.navText }}>About</Link>
-            <Link href={`/r/${slug}/gallery`} className="font-medium transition-colors" style={{ color: t.navText }}>Gallery</Link>
-            <Link href={`/r/${slug}/contact`} className="font-medium transition-colors" style={{ color: t.navText }}>Contact</Link>
-            <Link href={`/r/${slug}/book`}
-              className="px-5 py-1.5 text-sm font-bold text-white transition-colors"
-              style={{ background: t.accent, borderRadius: rBtn }}>
-              Reserve
-            </Link>
-          </div>
-          {/* Mobile */}
-          <div className="flex md:hidden">
-            <Link href={`/r/${slug}/book`}
-              className="px-4 py-1.5 text-sm font-bold text-white transition-colors"
-              style={{ background: t.accent, borderRadius: rBtn }}>
-              Reserve
-            </Link>
-          </div>
-        </div>
-        {/* Mobile section links */}
-        <div className="flex md:hidden overflow-x-auto" style={{ borderTop: "1px solid rgba(255,255,255,0.1)" }}>
-          <div className="flex items-center gap-1 px-6 py-2 text-xs">
-            {menuByCategory.length > 0 && (
-              <a href="#menu" className="px-3 py-1 transition-colors" style={{ color: t.navText, borderRadius: rBtn }}>Menu</a>
-            )}
-            <Link href={`/r/${slug}/about`} className="px-3 py-1 transition-colors" style={{ color: t.navText, borderRadius: rBtn }}>About</Link>
-            <Link href={`/r/${slug}/gallery`} className="px-3 py-1 transition-colors" style={{ color: t.navText, borderRadius: rBtn }}>Gallery</Link>
-            <Link href={`/r/${slug}/contact`} className="px-3 py-1 transition-colors" style={{ color: t.navText, borderRadius: rBtn }}>Contact</Link>
-          </div>
-        </div>
-      </nav>
+      <SiteNav biz={biz} slug={slug} theme={theme} currentPage="home" hasReservations={hasReservations} hasMenu={menuByCategory.length > 0} />
 
       {/* Hero */}
       <header className="relative overflow-hidden">
@@ -127,7 +62,8 @@ export default async function RestaurantPage({ params }: { params: Promise<{ slu
             <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-black/20" />
             <div className="relative z-10 h-full flex flex-col justify-end max-w-4xl mx-auto px-6 pb-14">
               <HeroText biz={biz} slug={slug} isOpenToday={isOpenToday} todayHours={todayHours}
-                        displayFont={displayFont} accent={t.accent} rBtn={rBtn} overlay />
+                        displayFont={displayFont} accent={t.accent} rBtn={rBtn} overlay
+                        hasReservations={hasReservations} hasMenu={menuByCategory.length > 0} />
             </div>
           </div>
         ) : (
@@ -136,7 +72,8 @@ export default async function RestaurantPage({ params }: { params: Promise<{ slu
             <div className="relative max-w-4xl mx-auto px-6 py-24 md:py-32">
               <HeroText biz={biz} slug={slug} isOpenToday={isOpenToday} todayHours={todayHours}
                         displayFont={displayFont} accent={t.accent} rBtn={rBtn} overlay={false}
-                        heroText={t.heroText} heroTextMuted={t.heroTextMuted} />
+                        heroText={t.heroText} heroTextMuted={t.heroTextMuted}
+                        hasReservations={hasReservations} hasMenu={menuByCategory.length > 0} />
             </div>
           </div>
         )}
@@ -235,30 +172,36 @@ export default async function RestaurantPage({ params }: { params: Promise<{ slu
             {hours.length > 0 && (
               <div id="hours">
                 <h2 style={{ fontFamily: displayFont, color: t.text }} className="text-3xl mb-8">Hours</h2>
-                <div className="space-y-2.5">
-                  {hours.map((h) => {
-                    const isToday = h.day_of_week === today;
-                    return (
-                      <div key={h.day_of_week} className="flex items-center justify-between py-1.5"
-                           style={{ color: isToday ? t.text : t.textMuted }}>
-                        <span className={`text-sm ${isToday ? "font-semibold" : ""}`}>
-                          {DAYS[h.day_of_week]}
-                          {isToday && (
-                            <span className="ml-2 text-[11px] font-bold text-white px-2 py-0.5 align-middle"
-                                  style={{ background: t.accent, borderRadius: rBtn }}>
-                              Today
-                            </span>
-                          )}
-                        </span>
-                        {h.is_closed ? (
-                          <span className="text-sm italic" style={{ color: t.textLight }}>Closed</span>
-                        ) : (
-                          <span className="text-sm tabular-nums font-medium">{formatTime(h.open_time)} – {formatTime(h.close_time)}</span>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
+                <table className="w-full">
+                  <thead className="sr-only">
+                    <tr><th scope="col">Day</th><th scope="col">Hours</th></tr>
+                  </thead>
+                  <tbody>
+                    {hours.map((h) => {
+                      const isToday = h.day_of_week === today;
+                      return (
+                        <tr key={h.day_of_week} style={{ color: isToday ? t.text : t.textMuted }}>
+                          <td className={`py-1.5 text-sm ${isToday ? "font-semibold" : ""}`}>
+                            {DAYS[h.day_of_week]}
+                            {isToday && (
+                              <span className="ml-2 text-[11px] font-bold text-white px-2 py-0.5 align-middle"
+                                    style={{ background: t.accent, borderRadius: rBtn }}>
+                                Today
+                              </span>
+                            )}
+                          </td>
+                          <td className="py-1.5 text-sm tabular-nums font-medium text-right">
+                            {h.is_closed ? (
+                              <span className="italic" style={{ color: t.textLight }}>Closed</span>
+                            ) : (
+                              <>{formatTime(h.open_time)} – {formatTime(h.close_time)}</>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
               </div>
             )}
             <div id="contact">
@@ -273,10 +216,10 @@ export default async function RestaurantPage({ params }: { params: Promise<{ slu
                   </div>
                 )}
                 {biz.phone && (
-                  <a href={`tel:${biz.phone}`} className="block text-base transition-colors" style={{ color: t.textMuted }}>{biz.phone}</a>
+                  <a href={`tel:${biz.phone}`} className="block text-base underline underline-offset-2 transition-colors" style={{ color: t.textMuted }}>{biz.phone}</a>
                 )}
                 {biz.email && (
-                  <a href={`mailto:${biz.email}`} className="block text-base transition-colors" style={{ color: t.textMuted }}>{biz.email}</a>
+                  <a href={`mailto:${biz.email}`} className="block text-base underline underline-offset-2 transition-colors" style={{ color: t.textMuted }}>{biz.email}</a>
                 )}
               </div>
             </div>
@@ -287,49 +230,55 @@ export default async function RestaurantPage({ params }: { params: Promise<{ slu
         <section className="relative overflow-hidden" style={{ background: t.heroBg }}>
           {textureOverlay}
           <div className="relative max-w-4xl mx-auto px-6 py-20 md:py-28 text-center">
-            <h2 style={{ fontFamily: displayFont, color: t.heroText }} className="text-3xl md:text-4xl mb-4">
-              {isOpenToday ? "Join us tonight" : "Make a reservation"}
-            </h2>
-            <p className="text-base mb-10" style={{ color: t.heroTextMuted }}>
-              {isOpenToday && todayHours
-                ? `Open today until ${formatTime(todayHours.close_time)}`
-                : `${hours.filter(h => !h.is_closed).map(h => SHORT_DAYS[h.day_of_week]).join(", ")}`}
-            </p>
-            <Link href={`/r/${slug}/book`}
-              className="inline-block px-10 py-4 text-lg font-bold text-white transition-colors"
-              style={{ background: t.accent, borderRadius: rBtn }}>
-              Reserve a Table
-            </Link>
+            {hasReservations ? (
+              <>
+                <h2 style={{ fontFamily: displayFont, color: t.heroText }} className="text-3xl md:text-4xl mb-4">
+                  {isOpenToday ? "Join us tonight" : "Make a reservation"}
+                </h2>
+                <p className="text-base mb-10" style={{ color: t.heroTextMuted }}>
+                  {isOpenToday && todayHours
+                    ? `Open today until ${formatTime(todayHours.close_time)}`
+                    : `${hours.filter(h => !h.is_closed).map(h => SHORT_DAYS[h.day_of_week]).join(", ")}`}
+                </p>
+                <Link href={`/r/${slug}/book`}
+                  className="inline-block px-10 py-4 text-lg font-bold text-white transition-colors focus-visible:outline-2 focus-visible:outline-offset-2"
+                  style={{ background: t.accent, borderRadius: rBtn }}>
+                  Reserve a Table
+                </Link>
+              </>
+            ) : (
+              <>
+                <h2 style={{ fontFamily: displayFont, color: t.heroText }} className="text-3xl md:text-4xl mb-4">
+                  {isOpenToday ? "Visit us tonight" : "Come see us"}
+                </h2>
+                <p className="text-base mb-10" style={{ color: t.heroTextMuted }}>
+                  {isOpenToday && todayHours
+                    ? `Open today until ${formatTime(todayHours.close_time)}`
+                    : `${hours.filter(h => !h.is_closed).map(h => SHORT_DAYS[h.day_of_week]).join(", ")}`}
+                </p>
+                {biz.address ? (
+                  <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent([biz.address, biz.city, biz.state, biz.zip].filter(Boolean).join(", "))}`}
+                    target="_blank" rel="noopener noreferrer"
+                    className="inline-block px-10 py-4 text-lg font-bold text-white transition-colors focus-visible:outline-2 focus-visible:outline-offset-2"
+                    style={{ background: t.accent, borderRadius: rBtn }}>
+                    Get Directions
+                  </a>
+                ) : (
+                  <Link href={`/r/${slug}/contact`}
+                    className="inline-block px-10 py-4 text-lg font-bold text-white transition-colors focus-visible:outline-2 focus-visible:outline-offset-2"
+                    style={{ background: t.accent, borderRadius: rBtn }}>
+                    Contact Us
+                  </Link>
+                )}
+              </>
+            )}
           </div>
         </section>
       </main>
 
-      <footer style={{ background: t.footerBg, borderTop: "1px solid rgba(255,255,255,0.1)" }} className="py-10">
-        <div className="max-w-4xl mx-auto px-6">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-4 mb-6">
-            <div>
-              <span style={{ fontFamily: displayFont, color: t.footerText }} className="text-lg">{biz.name}</span>
-              {biz.address && (
-                <span className="text-sm ml-3" style={{ color: t.footerTextMuted }}>
-                  {biz.address}{biz.city ? `, ${biz.city}` : ""}
-                </span>
-              )}
-            </div>
-            <div className="flex items-center gap-4 text-sm" style={{ color: t.footerTextMuted }}>
-              {biz.phone && <a href={`tel:${biz.phone}`} className="transition-colors hover:opacity-80">{biz.phone}</a>}
-              {biz.email && <a href={`mailto:${biz.email}`} className="transition-colors hover:opacity-80">{biz.email}</a>}
-            </div>
-          </div>
-          <div className="flex flex-wrap items-center justify-center md:justify-start gap-4 text-xs" style={{ color: t.footerTextMuted }}>
-            <Link href={`/r/${slug}/about`} className="transition-colors hover:opacity-80">About</Link>
-            <Link href={`/r/${slug}/gallery`} className="transition-colors hover:opacity-80">Gallery</Link>
-            <Link href={`/r/${slug}/contact`} className="transition-colors hover:opacity-80">Contact</Link>
-            <Link href={`/r/${slug}/accessibility`} className="transition-colors hover:opacity-80">Accessibility</Link>
-          </div>
-        </div>
-      </footer>
+      <SiteFooter biz={biz} slug={slug} theme={theme} />
 
-      {/* Hover styles for nav links (can't do inline) */}
+      {/* Hover styles for nav links */}
       <style>{`
         nav a:hover { color: ${t.navTextHover} !important; }
         #contact a:hover { color: ${t.accent} !important; }
@@ -340,7 +289,7 @@ export default async function RestaurantPage({ params }: { params: Promise<{ slu
 
 function HeroText({
   biz, slug, isOpenToday, todayHours, displayFont, accent, rBtn, overlay,
-  heroText, heroTextMuted,
+  heroText, heroTextMuted, hasReservations, hasMenu,
 }: {
   biz: { name: string; cuisine: string; price_range: string; about: string };
   slug: string;
@@ -348,10 +297,10 @@ function HeroText({
   todayHours: { open_time: string; close_time: string } | null | undefined;
   displayFont: string; accent: string; rBtn: string; overlay: boolean;
   heroText?: string; heroTextMuted?: string;
+  hasReservations: boolean; hasMenu: boolean;
 }) {
   const textColor = overlay ? "#ffffff" : (heroText ?? "#ffffff");
   const mutedColor = overlay ? "rgba(255,255,255,0.85)" : (heroTextMuted ?? "rgba(255,255,255,0.6)");
-  // Text shadow guarantees readability over any image (WCAG SC 1.4.3)
   const shadow = overlay ? "0 2px 12px rgba(0,0,0,0.8), 0 1px 3px rgba(0,0,0,0.9)" : "none";
 
   return (
@@ -370,11 +319,25 @@ function HeroText({
         </p>
       )}
       <div className="mt-8 flex flex-wrap items-center gap-4">
-        <Link href={`/r/${slug}/book`}
-          className="px-8 py-3.5 text-base font-bold text-white transition-colors"
-          style={{ background: accent, borderRadius: rBtn, textShadow: "none" }}>
-          Reserve a Table
-        </Link>
+        {hasReservations ? (
+          <Link href={`/r/${slug}/book`}
+            className="px-8 py-3.5 text-base font-bold text-white transition-colors focus-visible:outline-2 focus-visible:outline-offset-2"
+            style={{ background: accent, borderRadius: rBtn, textShadow: "none" }}>
+            Reserve a Table
+          </Link>
+        ) : hasMenu ? (
+          <a href="#menu"
+            className="px-8 py-3.5 text-base font-bold text-white transition-colors focus-visible:outline-2 focus-visible:outline-offset-2"
+            style={{ background: accent, borderRadius: rBtn, textShadow: "none" }}>
+            View Our Menu
+          </a>
+        ) : (
+          <Link href={`/r/${slug}/contact`}
+            className="px-8 py-3.5 text-base font-bold text-white transition-colors focus-visible:outline-2 focus-visible:outline-offset-2"
+            style={{ background: accent, borderRadius: rBtn, textShadow: "none" }}>
+            Contact Us
+          </Link>
+        )}
         {isOpenToday && todayHours && (
           <span className="text-sm font-medium" style={{ color: mutedColor }}>
             Open tonight until {formatTime(todayHours.close_time)}
@@ -383,11 +346,4 @@ function HeroText({
       </div>
     </div>
   );
-}
-
-function formatTime(time: string): string {
-  const [h, m] = time.split(":").map(Number);
-  const ampm = h >= 12 ? "PM" : "AM";
-  const hour = h % 12 || 12;
-  return m === 0 ? `${hour} ${ampm}` : `${hour}:${m.toString().padStart(2, "0")} ${ampm}`;
 }

@@ -1,7 +1,7 @@
 import { getBusiness } from "@/lib/restaurant-queries";
 import { getTheme } from "@/lib/themes";
 import { ThemeFonts } from "@/app/components/theme-fonts";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
 import { BookingForm } from "@/app/components/booking-form";
 
@@ -11,6 +11,10 @@ export default async function BookPage({ params }: { params: Promise<{ slug: str
   const { slug } = await params;
   const biz = await getBusiness(slug);
   if (!biz) return notFound();
+
+  if (!(biz as Record<string, unknown>).has_reservations) {
+    redirect(`/r/${slug}`);
+  }
 
   const theme = getTheme(biz.theme);
   const t = theme.colors;

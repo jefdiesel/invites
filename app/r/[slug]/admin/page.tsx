@@ -14,18 +14,27 @@ export default async function AdminPage({ params }: { params: Promise<{ slug: st
   if (!biz) return notFound();
 
   const theme = getTheme(biz.theme);
-  const [bookings, clients, tables, hours, menu, photos, stats, waitlist, inventory, allBookings] = await Promise.all([
-    getUpcomingBookings(biz.id, 30),
-    getBusinessClients(biz.id),
-    getTables(biz.id),
+  const hasReservations = !!(biz as Record<string, unknown>).has_reservations;
+
+  // Core data — always fetch
+  const [hours, menu, photos, clients] = await Promise.all([
     getBusinessHours(biz.id),
     getMenuItems(biz.id, true),
     getBusinessPhotos(biz.id),
-    getBookingStats(biz.id, 30),
-    getWaitlist(biz.id),
-    getTableInventory(biz.id),
-    getAllBookings(biz.id),
+    getBusinessClients(biz.id),
   ]);
+
+  // Reservation data — only fetch when enabled
+  const [bookings, tables, stats, waitlist, inventory, allBookings] = hasReservations
+    ? await Promise.all([
+        getUpcomingBookings(biz.id, 30),
+        getTables(biz.id),
+        getBookingStats(biz.id, 30),
+        getWaitlist(biz.id),
+        getTableInventory(biz.id),
+        getAllBookings(biz.id),
+      ])
+    : [[], [], [], [], [], []];
 
   return (
     <div className="min-h-screen bg-white">
@@ -36,9 +45,11 @@ export default async function AdminPage({ params }: { params: Promise<{ slug: st
             <span className="text-xs bg-white/20 px-2 py-0.5 rounded-full">Admin</span>
           </div>
           <div className="flex items-center gap-3">
-            <a href={`/r/${slug}/manage`} className="text-sm text-white/70 hover:text-white transition-colors">
-              Floor View
-            </a>
+            {hasReservations && (
+              <a href={`/r/${slug}/manage`} className="text-sm text-white/70 hover:text-white transition-colors">
+                Floor View
+              </a>
+            )}
             <a href={`/r/${slug}`} className="text-sm text-white/70 hover:text-white transition-colors">
               View Site
             </a>

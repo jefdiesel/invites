@@ -2,7 +2,7 @@ import { supabase } from "@/lib/db";
 import { getBusiness } from "@/lib/restaurant-queries";
 import { getTheme } from "@/lib/themes";
 import { ThemeFonts } from "@/app/components/theme-fonts";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { CancelButton } from "./cancel-button";
 
 export const dynamic = "force-dynamic";
@@ -11,6 +11,10 @@ export default async function CancelPage({ params }: { params: Promise<{ slug: s
   const { slug, bookingId } = await params;
   const biz = await getBusiness(slug);
   if (!biz) return notFound();
+
+  if (!(biz as Record<string, unknown>).has_reservations) {
+    redirect(`/r/${slug}`);
+  }
 
   const { data: booking } = await supabase
     .from("bookings")

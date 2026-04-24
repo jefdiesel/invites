@@ -60,6 +60,7 @@ type Business = {
   slot_duration_minutes: number; booking_window_days: number;
   min_party_size: number; max_party_size: number;
   slot_interval_minutes: number;
+  has_reservations?: boolean;
 };
 
 type BookingStat = {
@@ -89,9 +90,11 @@ export function AdminDashboard({
   allBookings: Booking[];
 }) {
   const router = useRouter();
-  const [tab, setTab] = useState<Tab>("reservations");
+  const hasRes = business.has_reservations ?? false;
+  const [tab, setTab] = useState<Tab>(hasRes ? "reservations" : "site");
   const [isLive, setIsLive] = useState((business as Record<string, unknown>).is_live as boolean ?? false);
   const [togglingLive, setTogglingLive] = useState(false);
+  const [hasReservations, setHasReservations] = useState(hasRes);
 
   const today = new Date().toISOString().split("T")[0];
   const todaysBookings = bookings.filter((b) => b.booking_date === today);
@@ -107,8 +110,8 @@ export function AdminDashboard({
 
   return (
     <div>
-      {/* Live status banner */}
-      {!isLive && (
+      {/* Live status banner — only relevant when reservations are on */}
+      {hasReservations && !isLive && (
         <div className="flex items-center justify-between bg-amber-50 border border-amber-200 rounded-lg px-5 py-3 mb-6">
           <div className="flex items-center gap-3">
             <span className="w-2.5 h-2.5 rounded-full bg-amber-400" />
@@ -122,18 +125,25 @@ export function AdminDashboard({
       )}
 
       {/* Stats row */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
-        <StatCard label="Today" value={todaysBookings.length} sub={`${todayCovers} covers`} />
-        <StatCard label="Upcoming" value={upcomingBookings.length} sub="next 14 days" />
-        <StatCard label="Tables" value={tables.filter(t => t.is_active).length} sub={`${tables.reduce((s, t) => s + (t.is_active ? t.capacity : 0), 0)} seats`} />
+      <div className={`grid grid-cols-2 ${hasReservations ? "md:grid-cols-5" : "md:grid-cols-3"} gap-4 mb-8`}>
+        {hasReservations && (
+          <>
+            <StatCard label="Today" value={todaysBookings.length} sub={`${todayCovers} covers`} />
+            <StatCard label="Upcoming" value={upcomingBookings.length} sub="next 14 days" />
+            <StatCard label="Tables" value={tables.filter(t => t.is_active).length} sub={`${tables.reduce((s, t) => s + (t.is_active ? t.capacity : 0), 0)} seats`} />
+          </>
+        )}
         <StatCard label="Menu Items" value={menu.length} sub={`${new Set(menu.map(m => m.category)).size} categories`} />
         <StatCard label="Guests" value={clients.length} sub={`${clients.filter(c => c.visit_count > 1).length} repeat`} />
-        {waitlist.length > 0 && <StatCard label="Waitlist" value={waitlist.length} sub="right now" />}
+        {hasReservations && waitlist.length > 0 && <StatCard label="Waitlist" value={waitlist.length} sub="right now" />}
       </div>
 
       {/* Tabs */}
       <div className="flex items-center gap-1 border-b border-neutral-200 mb-6 overflow-x-auto">
-        {(["reservations", "tables", "menu", "site", "domain", "photos", "guests", "analytics"] as Tab[]).map((t) => {
+        {(hasReservations
+          ? ["reservations", "tables", "menu", "site", "domain", "photos", "guests", "analytics"] as Tab[]
+          : ["site", "menu", "photos", "domain"] as Tab[]
+        ).map((t) => {
           const labels: Record<Tab, string> = {
             reservations: "Reservations", tables: "Tables", menu: "Menu",
             site: "Site Settings", domain: "Domain", photos: "Photos",
@@ -153,7 +163,14 @@ export function AdminDashboard({
         <MenuTab menu={menu} businessId={business.id} />
       )}
       {tab === "site" && (
-        <SiteTab business={business} slug={slug} hours={hours} isLive={isLive} onToggleLive={handleToggleLive} togglingLive={togglingLive} />
+        <SiteTab business={business} slug={slug} hours={hours} isLive={isLive} onToggleLive={handleToggleLive} togglingLive={togglingLive}
+          hasReservations={hasReservations} onToggleReservations={async () => {
+            const next = !hasReservations;
+            await updateBusinessSettings(business.id, { has_reservations: next } as Record<string, unknown>);
+            setHasReservations(next);
+            router.refresh();
+          }}
+        />
       )}
       {tab === "photos" && (
         <PhotosTab photos={photos} businessId={business.id} />
@@ -799,8 +816,9 @@ function MenuTab({ menu, businessId }: { menu: MenuItem[]; businessId: string })
 
 // ── Site Settings Tab ──
 
-function SiteTab({ business, slug, hours, isLive, onToggleLive, togglingLive }: {
+function SiteTab({ business, slug, hours, isLive, onToggleLive, togglingLive, hasReservations, onToggleReservations }: {
   business: Business; slug: string; hours: Hour[]; isLive: boolean; onToggleLive: () => void; togglingLive: boolean;
+  hasReservations: boolean; onToggleReservations: () => void;
 }) {
   const router = useRouter();
   const [saving, setSaving] = useState(false);
@@ -826,27 +844,48 @@ function SiteTab({ business, slug, hours, isLive, onToggleLive, togglingLive }: 
   return (
     <div className="max-w-2xl">
       <div className="space-y-6">
-        {/* Live status */}
+        {/* Live status — only when reservations enabled */}
+        {hasReservations && (
+          <section className="flex items-center justify-between border border-neutral-200 rounded-lg px-5 py-4">
+            <div>
+              <div className="flex items-center gap-2 mb-0.5">
+                <span className={`w-2.5 h-2.5 rounded-full ${isLive ? "bg-emerald-500" : "bg-neutral-300"}`} />
+                <span className="text-sm font-bold text-neutral-900">{isLive ? "Live" : "Not live"}</span>
+              </div>
+              <p className="text-xs text-neutral-500">
+                {isLive ? "Guests can book reservations on your site." : "Your site is visible but reservations are disabled."}
+              </p>
+            </div>
+            <button onClick={onToggleLive} disabled={togglingLive}
+              className={`px-5 py-2.5 text-sm font-bold rounded-lg transition-colors disabled:opacity-50 ${
+                isLive ? "bg-neutral-100 text-neutral-700 hover:bg-neutral-200" : "bg-emerald-600 text-white hover:bg-emerald-700"
+              }`}>
+              {togglingLive ? "..." : isLive ? "Take Offline" : "Go Live"}
+            </button>
+          </section>
+        )}
+
+        {/* Reservations addon */}
         <section className="flex items-center justify-between border border-neutral-200 rounded-lg px-5 py-4">
           <div>
             <div className="flex items-center gap-2 mb-0.5">
-              <span className={`w-2.5 h-2.5 rounded-full ${isLive ? "bg-emerald-500" : "bg-neutral-300"}`} />
-              <span className="text-sm font-bold text-neutral-900">{isLive ? "Live" : "Not live"}</span>
+              <span className={`w-2.5 h-2.5 rounded-full ${hasReservations ? "bg-blue-500" : "bg-neutral-300"}`} />
+              <span className="text-sm font-bold text-neutral-900">{hasReservations ? "Reservations enabled" : "Reservations off"}</span>
             </div>
             <p className="text-xs text-neutral-500">
-              {isLive ? "Guests can book reservations on your site." : "Your site is visible but reservations are disabled."}
+              {hasReservations ? "Guests can book tables on your website." : "Your site is a website only — no booking features."}
             </p>
           </div>
-          <button onClick={onToggleLive} disabled={togglingLive}
-            className={`px-5 py-2.5 text-sm font-bold rounded-lg transition-colors disabled:opacity-50 ${
-              isLive ? "bg-neutral-100 text-neutral-700 hover:bg-neutral-200" : "bg-emerald-600 text-white hover:bg-emerald-700"
+          <button onClick={onToggleReservations}
+            className={`px-5 py-2.5 text-sm font-bold rounded-lg transition-colors ${
+              hasReservations ? "bg-neutral-100 text-neutral-700 hover:bg-neutral-200" : "bg-blue-600 text-white hover:bg-blue-700"
             }`}>
-            {togglingLive ? "..." : isLive ? "Take Offline" : "Go Live"}
+            {hasReservations ? "Disable" : "Enable Reservations"}
           </button>
         </section>
 
         {/* QR Check-in */}
-        <QRCheckinSection business={business} slug={slug} />
+        {hasReservations && <QRCheckinSection business={business} slug={slug} />}
 
         {/* Basic info */}
         <section>

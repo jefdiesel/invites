@@ -384,6 +384,7 @@ export async function updateBusinessSettings(businessId: string, data: {
   cover_image_url?: string; logo_url?: string; theme?: string;
   qr_waitlist_enabled?: boolean; qr_checkin_enabled?: boolean;
   slot_interval_minutes?: number;
+  has_reservations?: boolean;
 }) {
   await takeSnapshot(businessId, "settings", "Before settings update");
   await supabase.from("businesses").update(data).eq("id", businessId);
@@ -778,6 +779,7 @@ export async function seedRestaurant(slug: string) {
     min_party_size: 1,
     max_party_size: 8,
     slot_duration_minutes: 90,
+    has_reservations: true,
   });
 
   // Hours: Tue-Sat dinner, closed Sun-Mon

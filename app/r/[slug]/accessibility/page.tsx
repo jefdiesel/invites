@@ -1,8 +1,10 @@
 import { getBusiness } from "@/lib/restaurant-queries";
 import { getTheme } from "@/lib/themes";
+import { getThemeVars } from "@/lib/theme-helpers";
 import { ThemeFonts } from "@/app/components/theme-fonts";
+import { SiteNav } from "@/app/components/site-nav";
+import { SiteFooter } from "@/app/components/site-footer";
 import { notFound } from "next/navigation";
-import Link from "next/link";
 
 export const dynamic = "force-dynamic";
 
@@ -12,36 +14,17 @@ export default async function AccessibilityPage({ params }: { params: Promise<{ 
   if (!biz) return notFound();
 
   const theme = getTheme(biz.theme);
-  const t = theme.colors;
-  const displayFont = theme.fonts.display === "system" ? "var(--font-geist-sans)" : `'${theme.fonts.display}', serif`;
-  const bodyFont = theme.fonts.body === "system" ? "var(--font-geist-sans)" : `'${theme.fonts.body}', sans-serif`;
-  const rBtn = theme.radius === "full" ? "9999px" : theme.radius === "none" ? "0" : theme.radius === "sm" ? "0.375rem" : "0.75rem";
+  const { t, displayFont, bodyFont } = getThemeVars(theme);
+  const hasReservations = !!(biz as Record<string, unknown>).has_reservations;
 
   const year = new Date().getFullYear();
 
   return (
     <div style={{ background: t.bg, color: t.text, fontFamily: bodyFont }} className="min-h-screen flex flex-col">
       <ThemeFonts theme={theme} />
+      <SiteNav biz={biz} slug={slug} theme={theme} currentPage="accessibility" hasReservations={hasReservations} />
 
-      {/* Nav */}
-      <nav aria-label={`${biz.name} navigation`} className="sticky top-0 z-40 backdrop-blur"
-        style={{ background: t.navBg, borderBottom: theme.navStyle === "light" ? `1px solid ${t.border}` : "1px solid rgba(255,255,255,0.1)" }}>
-        <div className="max-w-4xl mx-auto px-6 flex items-center justify-between h-14">
-          <Link href={`/r/${slug}`} style={{ color: theme.navStyle === "light" ? t.text : "#fff" }}>
-            <span style={{ fontFamily: displayFont }} className="text-xl">{biz.name}</span>
-          </Link>
-          <div className="flex items-center gap-6 text-sm">
-            <Link href={`/r/${slug}#menu`} className="font-medium transition-colors hidden md:inline" style={{ color: t.navText }}>Menu</Link>
-            <Link href={`/r/${slug}/about`} className="font-medium transition-colors hidden md:inline" style={{ color: t.navText }}>About</Link>
-            <Link href={`/r/${slug}/gallery`} className="font-medium transition-colors hidden md:inline" style={{ color: t.navText }}>Gallery</Link>
-            <Link href={`/r/${slug}/contact`} className="font-medium transition-colors hidden md:inline" style={{ color: t.navText }}>Contact</Link>
-            <Link href={`/r/${slug}/book`} className="px-5 py-1.5 text-sm font-bold text-white transition-colors"
-              style={{ background: t.accent, borderRadius: rBtn }}>Reserve</Link>
-          </div>
-        </div>
-      </nav>
-
-      <main className="flex-1 w-full max-w-3xl mx-auto px-6">
+      <main id="main" className="flex-1 w-full max-w-3xl mx-auto px-6">
         <header className="pt-16 md:pt-24 pb-8">
           <h1 style={{ fontFamily: displayFont, color: t.text }} className="text-4xl md:text-5xl">
             Accessibility
@@ -72,10 +55,12 @@ export default async function AccessibilityPage({ params }: { params: Promise<{ 
                 <span style={{ color: t.accent }} className="font-bold shrink-0" aria-hidden="true">&bull;</span>
                 <span>Navigation uses semantic HTML landmarks and ARIA labels. Screen readers can navigate by heading, landmark, or link.</span>
               </li>
-              <li className="flex gap-3">
-                <span style={{ color: t.accent }} className="font-bold shrink-0" aria-hidden="true">&bull;</span>
-                <span>The booking form uses proper labels, fieldsets, and error messages. Required fields are clearly marked.</span>
-              </li>
+              {hasReservations && (
+                <li className="flex gap-3">
+                  <span style={{ color: t.accent }} className="font-bold shrink-0" aria-hidden="true">&bull;</span>
+                  <span>The booking form uses proper labels, fieldsets, and error messages. Required fields are clearly marked.</span>
+                </li>
+              )}
               <li className="flex gap-3">
                 <span style={{ color: t.accent }} className="font-bold shrink-0" aria-hidden="true">&bull;</span>
                 <span>Dietary information uses both color and text labels so meaning is not conveyed by color alone.</span>
@@ -103,7 +88,7 @@ export default async function AccessibilityPage({ params }: { params: Promise<{ 
               {biz.email && (
                 <p>
                   <span className="text-sm font-medium" style={{ color: t.textLight }}>Email: </span>
-                  <a href={`mailto:${biz.email}?subject=Accessibility%20Feedback`} className="text-base font-medium" style={{ color: t.accent }}>
+                  <a href={`mailto:${biz.email}?subject=Accessibility%20Feedback`} className="text-base font-medium underline underline-offset-2" style={{ color: t.accent }}>
                     {biz.email}
                   </a>
                 </p>
@@ -111,7 +96,7 @@ export default async function AccessibilityPage({ params }: { params: Promise<{ 
               {biz.phone && (
                 <p>
                   <span className="text-sm font-medium" style={{ color: t.textLight }}>Phone: </span>
-                  <a href={`tel:${biz.phone}`} className="text-base font-medium" style={{ color: t.accent }}>
+                  <a href={`tel:${biz.phone}`} className="text-base font-medium underline underline-offset-2" style={{ color: t.accent }}>
                     {biz.phone}
                   </a>
                 </p>
@@ -125,23 +110,7 @@ export default async function AccessibilityPage({ params }: { params: Promise<{ 
         </article>
       </main>
 
-      <footer style={{ background: t.footerBg, borderTop: "1px solid rgba(255,255,255,0.1)" }} className="py-10 mt-auto">
-        <div className="max-w-4xl mx-auto px-6">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-4 mb-4">
-            <span style={{ fontFamily: displayFont, color: t.footerText }} className="text-lg">{biz.name}</span>
-            <div className="flex items-center gap-4 text-sm" style={{ color: t.footerText }}>
-              {biz.phone && <a href={`tel:${biz.phone}`} className="opacity-70 hover:opacity-100 transition-opacity">{biz.phone}</a>}
-              {biz.email && <a href={`mailto:${biz.email}`} className="opacity-70 hover:opacity-100 transition-opacity">{biz.email}</a>}
-            </div>
-          </div>
-          <div className="flex flex-wrap items-center justify-center md:justify-start gap-4 text-xs" style={{ color: t.footerText }}>
-            <Link href={`/r/${slug}/about`} className="opacity-60 hover:opacity-100 transition-opacity">About</Link>
-            <Link href={`/r/${slug}/gallery`} className="opacity-60 hover:opacity-100 transition-opacity">Gallery</Link>
-            <Link href={`/r/${slug}/contact`} className="opacity-60 hover:opacity-100 transition-opacity">Contact</Link>
-            <Link href={`/r/${slug}/accessibility`} className="opacity-60 hover:opacity-100 transition-opacity">Accessibility</Link>
-          </div>
-        </div>
-      </footer>
+      <SiteFooter biz={biz} slug={slug} theme={theme} />
     </div>
   );
 }
