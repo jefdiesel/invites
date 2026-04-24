@@ -95,12 +95,28 @@ export default async function RestaurantPage({ params }: { params: Promise<{ slu
         {menuByCategory.length > 0 && (
           <section id="menu" style={{ background: t.surfaceAlt }}>
             <div className="max-w-4xl mx-auto px-6 py-16 md:py-24">
-              <h2 style={{ fontFamily: displayFont, color: t.text }} className="text-3xl md:text-4xl mb-12">
+              <h2 style={{ fontFamily: displayFont, color: t.text }} className="text-3xl md:text-4xl mb-6">
                 Menu
               </h2>
+              {menuByCategory.length > 1 && (
+                <nav aria-label="Menu sections" className="flex flex-wrap gap-2 mb-12">
+                  {menuByCategory.map((cat) => {
+                    const catId = `menu-${cat.category.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`;
+                    return (
+                      <a key={catId} href={`#${catId}`}
+                        className="px-3 py-1.5 text-sm font-medium underline underline-offset-2 transition-colors min-h-[44px] flex items-center focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+                        style={{ color: t.accent }}>
+                        {cat.category}
+                      </a>
+                    );
+                  })}
+                </nav>
+              )}
               <div className={theme.menuColumns === 2 ? "md:columns-2 md:gap-x-16 space-y-14" : "space-y-14"}>
-                {menuByCategory.map((cat) => (
-                  <div key={cat.category} className="break-inside-avoid-column">
+                {menuByCategory.map((cat) => {
+                  const catId = `menu-${cat.category.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`;
+                  return (
+                  <div key={cat.category} id={catId} className="break-inside-avoid-column scroll-mt-20">
                     <h3 className="text-sm font-bold uppercase tracking-widest mb-6 pb-2"
                         style={{
                           color: t.accent,
@@ -147,7 +163,8 @@ export default async function RestaurantPage({ params }: { params: Promise<{ slu
                       ))}
                     </div>
                   </div>
-                ))}
+                  );
+                })}
               </div>
               {allFlags.size > 0 && (
                 <div className="mt-14 pt-6 flex flex-wrap gap-4 text-xs" style={{ borderTop: `1px solid ${t.border}`, color: t.textLight }}>
