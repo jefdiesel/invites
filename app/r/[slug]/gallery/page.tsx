@@ -75,14 +75,14 @@ export default async function GalleryPage({ params }: { params: Promise<{ slug: 
                     <figure key={photo.id} className="break-inside-avoid">
                       <img
                         src={photo.url}
-                        alt={photo.alt}
+                        alt={photo.caption || photo.alt}
                         className="w-full"
                         loading="lazy"
                         style={{ borderRadius: rCard }}
                       />
-                      {photo.caption && (
+                      {(photo.caption || photo.alt) && (
                         <figcaption className="mt-2 text-sm" style={{ color: t.textLight }}>
-                          {photo.caption}
+                          {photo.caption || photo.alt}
                         </figcaption>
                       )}
                     </figure>

@@ -54,7 +54,14 @@ export default async function LocationsPage({ params }: { params: Promise<{ slug
               <section key={locId} id={locId} className="scroll-mt-20">
                 <div className="border rounded-xl overflow-hidden" style={{ borderColor: t.border, borderRadius: rCard }}>
                   {photo && (
-                    <img src={photo.url} alt={photo.alt} className="w-full h-48 md:h-64 object-cover" loading="lazy" />
+                    <figure>
+                      <img src={photo.url} alt={photo.caption || photo.alt} className="w-full h-48 md:h-64 object-cover" loading="lazy" />
+                      {(photo.caption || photo.alt) && (
+                        <figcaption className="px-6 pt-3 text-sm" style={{ color: t.textMuted }}>
+                          {photo.caption || photo.alt}
+                        </figcaption>
+                      )}
+                    </figure>
                   )}
                   <div className="p-6 md:p-8">
                     <h2 style={{ fontFamily: displayFont, color: t.text }} className="text-2xl mb-4">

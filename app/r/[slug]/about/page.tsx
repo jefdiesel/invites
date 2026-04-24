@@ -64,7 +64,7 @@ export default async function AboutPage({ params }: { params: Promise<{ slug: st
                       }`}>
                         <img
                           src={photo.url}
-                          alt={photo.alt}
+                          alt={photo.caption || photo.alt}
                           className="w-full object-cover"
                           loading="lazy"
                           style={{ borderRadius: rCard, maxHeight: photoLayout === 1 ? "480px" : "360px" }}

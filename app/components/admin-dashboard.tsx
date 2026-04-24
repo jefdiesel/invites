@@ -1271,17 +1271,17 @@ function SiteTab({ business, slug, hours, isLive, onToggleLive, togglingLive, ha
 function PhotosTab({ photos, businessId }: { photos: Photo[]; businessId: string }) {
   const router = useRouter();
   const [adding, setAdding] = useState(false);
-  const [newPhoto, setNewPhoto] = useState({ url: "", alt: "", caption: "", category: "gallery" });
+  const [newPhoto, setNewPhoto] = useState({ url: "", caption: "", category: "gallery" });
 
   const categories = [...new Set(photos.map(p => p.category))];
 
   async function handleAdd() {
-    if (!newPhoto.url || !newPhoto.alt.trim()) {
-      alert("URL and alt text are required. Alt text is mandatory for accessibility.");
+    if (!newPhoto.url || newPhoto.caption.trim().length < 30) {
+      alert("Caption must be at least 30 characters. Describe what you see in the photo — the scene, the food, the atmosphere.");
       return;
     }
-    await addPhoto(businessId, newPhoto);
-    setNewPhoto({ url: "", alt: "", caption: "", category: "gallery" });
+    await addPhoto(businessId, { ...newPhoto, alt: newPhoto.caption.trim() });
+    setNewPhoto({ url: "", caption: "", category: "gallery" });
     setAdding(false);
     router.refresh();
   }
@@ -1307,18 +1307,21 @@ function PhotosTab({ photos, businessId }: { photos: Photo[]; businessId: string
         <div className="border border-neutral-200 rounded-lg p-4 mb-6 bg-neutral-50">
           <div className="space-y-3">
             <input placeholder="Image URL" value={newPhoto.url} onChange={e => setNewPhoto({ ...newPhoto, url: e.target.value })} className={`${inputClass} w-full`} />
-            <input placeholder="Alt text (required — describe the image)" value={newPhoto.alt} onChange={e => setNewPhoto({ ...newPhoto, alt: e.target.value })} className={`${inputClass} w-full`} />
-            <div className="grid grid-cols-2 gap-3">
-              <input placeholder="Caption (optional)" value={newPhoto.caption} onChange={e => setNewPhoto({ ...newPhoto, caption: e.target.value })} className={inputClass} />
-              <select value={newPhoto.category} onChange={e => setNewPhoto({ ...newPhoto, category: e.target.value })} className={inputClass}>
-                <option value="gallery">Gallery</option>
-                <option value="food">Food</option>
-                <option value="interior">Interior</option>
-                <option value="team">Team</option>
-                <option value="about">About Page</option>
-              </select>
+            <div>
+              <textarea placeholder="Describe what you see — the scene, the food, the atmosphere. This caption is shown to all visitors and read aloud by screen readers." value={newPhoto.caption} onChange={e => setNewPhoto({ ...newPhoto, caption: e.target.value })} className={`${inputClass} w-full`} rows={2} />
+              <div className="flex justify-between mt-1">
+                <span className="text-xs text-neutral-400">Minimum 30 characters</span>
+                <span className={`text-xs ${newPhoto.caption.length >= 30 ? "text-emerald-500" : "text-neutral-400"}`}>{newPhoto.caption.length}/30</span>
+              </div>
             </div>
-            {newPhoto.url && <img src={newPhoto.url} alt={newPhoto.alt || "Preview"} className="rounded-lg h-32 w-full object-cover" />}
+            <select value={newPhoto.category} onChange={e => setNewPhoto({ ...newPhoto, category: e.target.value })} className={inputClass}>
+              <option value="gallery">Gallery</option>
+              <option value="food">Food</option>
+              <option value="interior">Interior</option>
+              <option value="team">Team</option>
+              <option value="about">About Page</option>
+            </select>
+            {newPhoto.url && <img src={newPhoto.url} alt={newPhoto.caption || "Preview"} className="rounded-lg h-32 w-full object-cover" />}
           </div>
           <button onClick={handleAdd} className="mt-3 px-4 py-2 bg-neutral-900 text-white text-sm font-bold rounded-lg hover:bg-neutral-700 transition-colors">
             Add Photo
