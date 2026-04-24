@@ -90,7 +90,7 @@ export default function HomePage() {
                 <img src={DEMO_IMAGES.classic} alt="Classic theme — elegant French-American restaurant" className="absolute inset-0 w-full h-full object-cover" />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/40 to-black/10" />
                 <div className="relative z-10 p-6 w-full" style={{ textShadow: "0 1px 6px rgba(0,0,0,0.7)" }}>
-                  <div className="text-xs tracking-widest uppercase text-white/90 mb-1">{DEMO_CUISINES.classic}</div>
+                  <div className="text-xs tracking-widest uppercase text-white mb-1">{DEMO_CUISINES.classic}</div>
                   <div className="text-2xl md:text-3xl font-bold text-white mb-1">
                     {DEMO_NAMES.classic}
                   </div>
@@ -98,7 +98,7 @@ export default function HomePage() {
                     <span className="px-3 py-1 rounded-full text-xs font-bold text-white" style={{ background: themes.classic.colors.accent, textShadow: "none" }}>
                       Classic Theme
                     </span>
-                    <span className="text-xs text-white/90">Menu · About · Gallery · Contact</span>
+                    <span className="text-xs text-white">Menu · About · Gallery · Contact</span>
                   </div>
                 </div>
               </div>
@@ -117,7 +117,7 @@ export default function HomePage() {
                       <div className="text-lg font-bold text-white">
                         {DEMO_NAMES[id]}
                       </div>
-                      <div className="text-xs text-white/90">{DEMO_CUISINES[id]}</div>
+                      <div className="text-xs text-white">{DEMO_CUISINES[id]}</div>
                     </div>
                     <span className="px-2.5 py-1 rounded-full text-[11px] font-bold text-white" style={{ background: themes[id].colors.accent }}>
                       {themes[id].label}
