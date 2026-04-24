@@ -235,7 +235,7 @@ export default async function RestaurantPage({ params }: { params: Promise<{ slu
                 <h2 style={{ fontFamily: displayFont, color: t.heroText }} className="text-3xl md:text-4xl mb-4">
                   {isOpenToday ? "Join us tonight" : "Make a reservation"}
                 </h2>
-                <p className="text-base mb-10" style={{ color: t.heroTextMuted }}>
+                <p className="text-base mb-10" style={{ color: t.heroText }}>
                   {isOpenToday && todayHours
                     ? `Open today until ${formatTime(todayHours.close_time)}`
                     : `${hours.filter(h => !h.is_closed).map(h => SHORT_DAYS[h.day_of_week]).join(", ")}`}
@@ -251,7 +251,7 @@ export default async function RestaurantPage({ params }: { params: Promise<{ slu
                 <h2 style={{ fontFamily: displayFont, color: t.heroText }} className="text-3xl md:text-4xl mb-4">
                   {isOpenToday ? "Visit us tonight" : "Come see us"}
                 </h2>
-                <p className="text-base mb-10" style={{ color: t.heroTextMuted }}>
+                <p className="text-base mb-10" style={{ color: t.heroText }}>
                   {isOpenToday && todayHours
                     ? `Open today until ${formatTime(todayHours.close_time)}`
                     : `${hours.filter(h => !h.is_closed).map(h => SHORT_DAYS[h.day_of_week]).join(", ")}`}
@@ -300,7 +300,7 @@ function HeroText({
   hasReservations: boolean; hasMenu: boolean;
 }) {
   const textColor = overlay ? "#ffffff" : (heroText ?? "#ffffff");
-  const mutedColor = overlay ? "rgba(255,255,255,0.85)" : (heroTextMuted ?? "rgba(255,255,255,0.6)");
+  const mutedColor = overlay ? "#ffffff" : (heroText ?? "#ffffff");
   const shadow = overlay ? "0 2px 12px rgba(0,0,0,0.8), 0 1px 3px rgba(0,0,0,0.9)" : "none";
 
   return (
