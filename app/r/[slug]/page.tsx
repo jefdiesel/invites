@@ -13,8 +13,8 @@ const DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", 
 const SHORT_DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 const DIETARY: Record<string, { label: string; bg: string; fg: string }> = {
-  V:  { label: "Vegetarian",  bg: "#e8f0ea", fg: "#5a7a62" },
-  VG: { label: "Vegan",       bg: "#e8f0ea", fg: "#5a7a62" },
+  V:  { label: "Vegetarian",  bg: "#e8f0ea", fg: "#3d6048" },
+  VG: { label: "Vegan",       bg: "#e8f0ea", fg: "#3d6048" },
   GF: { label: "Gluten-Free", bg: "#fef3c7", fg: "#92400e" },
   DF: { label: "Dairy-Free",  bg: "#dbeafe", fg: "#1e40af" },
 };

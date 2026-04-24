@@ -52,7 +52,7 @@ export function SiteNav({
         <div className="max-w-4xl mx-auto px-6 flex items-center justify-between h-14">
           <Link
             href={`/r/${slug}`}
-            className="flex items-center gap-3 rounded focus-visible:outline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+            className="flex items-center gap-3 rounded focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
             style={{ outlineColor: focusOutline }}
           >
             {biz.logo_url && <img src={biz.logo_url} alt="" className="h-8 w-auto" />}
@@ -70,7 +70,7 @@ export function SiteNav({
               <Link
                 key={link.label}
                 href={link.href}
-                className="font-medium transition-colors rounded focus-visible:outline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+                className="font-medium transition-colors rounded focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
                 style={{
                   color: currentPage === link.page ? t.navTextHover : t.navText,
                   outlineColor: focusOutline,
@@ -112,7 +112,7 @@ export function SiteNav({
               <Link
                 key={link.label}
                 href={link.href}
-                className="px-3 py-2 min-h-[44px] flex items-center transition-colors rounded focus-visible:outline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+                className="px-3 py-2 min-h-[44px] flex items-center transition-colors rounded focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
                 style={{
                   color: currentPage === link.page ? t.navTextHover : t.navText,
                   borderRadius: rBtn,

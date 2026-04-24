@@ -45,7 +45,7 @@ export default async function BookPage({ params }: { params: Promise<{ slug: str
         </div>
       </nav>
 
-      <main className="flex-1 w-full">
+      <main id="main" className="flex-1 w-full">
         {/* Hero */}
         <div className={`relative overflow-hidden ${coverImg ? "h-64 md:h-80" : "h-36 md:h-44"}`}
           style={{ background: coverImg ? undefined : t.navBg }}>
