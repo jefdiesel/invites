@@ -137,13 +137,13 @@ export default async function AboutPage({ params }: { params: Promise<{ slug: st
         <section className="pb-20 text-center" style={{ borderTop: `1px solid ${t.border}`, paddingTop: "3rem" }}>
           {hasReservations ? (
             <Link href={`/r/${slug}/book`}
-              className="inline-block px-10 py-4 text-lg font-bold text-white transition-colors focus-visible:outline-2 focus-visible:outline-offset-2"
+              className="inline-block px-10 py-4 text-lg font-bold text-white transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
               style={{ background: t.accent, borderRadius: rBtn }}>
               Reserve a Table
             </Link>
           ) : (
             <Link href={`/r/${slug}/contact`}
-              className="inline-block px-10 py-4 text-lg font-bold text-white transition-colors focus-visible:outline-2 focus-visible:outline-offset-2"
+              className="inline-block px-10 py-4 text-lg font-bold text-white transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
               style={{ background: t.accent, borderRadius: rBtn }}>
               Contact Us
             </Link>

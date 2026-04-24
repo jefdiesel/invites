@@ -241,7 +241,7 @@ export default async function RestaurantPage({ params }: { params: Promise<{ slu
                     : `${hours.filter(h => !h.is_closed).map(h => SHORT_DAYS[h.day_of_week]).join(", ")}`}
                 </p>
                 <Link href={`/r/${slug}/book`}
-                  className="inline-block px-10 py-4 text-lg font-bold text-white transition-colors focus-visible:outline-2 focus-visible:outline-offset-2"
+                  className="inline-block px-10 py-4 text-lg font-bold text-white transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
                   style={{ background: t.accent, borderRadius: rBtn }}>
                   Reserve a Table
                 </Link>
@@ -259,13 +259,13 @@ export default async function RestaurantPage({ params }: { params: Promise<{ slu
                 {biz.address ? (
                   <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent([biz.address, biz.city, biz.state, biz.zip].filter(Boolean).join(", "))}`}
                     target="_blank" rel="noopener noreferrer"
-                    className="inline-block px-10 py-4 text-lg font-bold text-white transition-colors focus-visible:outline-2 focus-visible:outline-offset-2"
+                    className="inline-block px-10 py-4 text-lg font-bold text-white transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
                     style={{ background: t.accent, borderRadius: rBtn }}>
                     Get Directions
                   </a>
                 ) : (
                   <Link href={`/r/${slug}/contact`}
-                    className="inline-block px-10 py-4 text-lg font-bold text-white transition-colors focus-visible:outline-2 focus-visible:outline-offset-2"
+                    className="inline-block px-10 py-4 text-lg font-bold text-white transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
                     style={{ background: t.accent, borderRadius: rBtn }}>
                     Contact Us
                   </Link>
@@ -321,19 +321,19 @@ function HeroText({
       <div className="mt-8 flex flex-wrap items-center gap-4">
         {hasReservations ? (
           <Link href={`/r/${slug}/book`}
-            className="px-8 py-3.5 text-base font-bold text-white transition-colors focus-visible:outline-2 focus-visible:outline-offset-2"
+            className="px-8 py-3.5 text-base font-bold text-white transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
             style={{ background: accent, borderRadius: rBtn, textShadow: "none" }}>
             Reserve a Table
           </Link>
         ) : hasMenu ? (
           <a href="#menu"
-            className="px-8 py-3.5 text-base font-bold text-white transition-colors focus-visible:outline-2 focus-visible:outline-offset-2"
+            className="px-8 py-3.5 text-base font-bold text-white transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
             style={{ background: accent, borderRadius: rBtn, textShadow: "none" }}>
             View Our Menu
           </a>
         ) : (
           <Link href={`/r/${slug}/contact`}
-            className="px-8 py-3.5 text-base font-bold text-white transition-colors focus-visible:outline-2 focus-visible:outline-offset-2"
+            className="px-8 py-3.5 text-base font-bold text-white transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
             style={{ background: accent, borderRadius: rBtn, textShadow: "none" }}>
             Contact Us
           </Link>

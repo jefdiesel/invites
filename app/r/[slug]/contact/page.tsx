@@ -80,13 +80,13 @@ export default async function ContactPage({ params }: { params: Promise<{ slug: 
             <div className="pt-4">
               {hasReservations ? (
                 <Link href={`/r/${slug}/book`}
-                  className="inline-block px-8 py-3.5 text-base font-bold text-white transition-colors focus-visible:outline-2 focus-visible:outline-offset-2"
+                  className="inline-block px-8 py-3.5 text-base font-bold text-white transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
                   style={{ background: t.accent, borderRadius: rBtn }}>
                   Reserve a Table
                 </Link>
               ) : mapsUrl ? (
                 <a href={mapsUrl} target="_blank" rel="noopener noreferrer"
-                  className="inline-block px-8 py-3.5 text-base font-bold text-white transition-colors focus-visible:outline-2 focus-visible:outline-offset-2"
+                  className="inline-block px-8 py-3.5 text-base font-bold text-white transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
                   style={{ background: t.accent, borderRadius: rBtn }}>
                   Get Directions
                 </a>
